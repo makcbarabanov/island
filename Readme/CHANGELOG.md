@@ -2,6 +2,13 @@
 
 Старые пункты могут ссылаться на прежний монолитный `Readme/Readme.md`; актуальная структура — корневой [README.md](../README.md), [PROJECT.md](PROJECT.md), [RUNBOOK.md](RUNBOOK.md).
 
+## 2026-07-02 — Фаза 0: island path, stat site, Bloom docs (v293)
+
+- Локальный канон: `~/Apps/island` (бывший `OSTROV/web-app`); git remote `makcbarabanov/island`.
+- Подсайт `/stat/`: `sites/stat/`, mount в `main.py`, placeholder `marathon_snapshot.json`.
+- Черновик `scripts/build_marathon_snapshot.py` (активные / сдавшие отчёт).
+- Доки: `Readme/bloom-api.md`, `bloom-db-shared.md`, `DECISIONS.md`; обновлены `sites-architecture.md`, `PROJECT.md`.
+
 ## 2026-06-23 — Cursor: FORGE песок / PROD синий (шаблоны в git)
 
 - `.vscode/settings.forge.json` и `settings.prod.json` + `apply-cursor-env.sh`; `settings.json` в `.gitignore` (локально после pull).

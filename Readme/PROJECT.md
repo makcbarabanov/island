@@ -14,7 +14,7 @@
 - **[roadmap.html](../roadmap.html)** — планы (данные в БД, таблица `roadmap`).
 - Резервное копирование: раздел «Резервное копирование БД» ниже; папка `db_backups/`.
 - При необходимости: `main.py`, `db_backups/backup.log`.
-- **Интеграция с ботом Bloom (Bridge):** [island-bridge-contract](https://github.com/makcbarabanov/island-bridge-contract) (`README.md`, `api.md`, `db-shared.md`, `runbook.md`); зеркало в репо бота: `bridge/docs/handbook/`. Поменял API или общие поля — обновить handbook и код на Острове и в боте.
+- **Интеграция с ботом Bloom:** [Readme/bloom-api.md](bloom-api.md), [Readme/bloom-db-shared.md](bloom-db-shared.md); решения — [DECISIONS.md](DECISIONS.md). Репозиторий бота: `~/Apps/bloom`.
 
 **Канонический запуск локально и на проде** описан только в **RUNBOOK.md** (Docker Compose).
 
@@ -145,5 +145,9 @@
 | [tables.md](tables.md) | Схема БД |
 | [migrations_applied.md](migrations_applied.md) | Применённые миграции |
 | [rules.md](rules.md) | Правила по типам мечт (`steps_rules`) |
+| [DECISIONS.md](DECISIONS.md) | Архитектурные решения |
+| [bloom-api.md](bloom-api.md) | API Bloom |
+| [bloom-db-shared.md](bloom-db-shared.md) | БД Остров + Bloom |
+| [sites-architecture.md](sites-architecture.md) | Подсайты |
 | [Forge.md](Forge.md) | Личность Forge |
 | `.cursor/rules/` | Инструкции Cursor; поведение фич — в PROJECT / UI-standards |

@@ -32,7 +32,10 @@
 | **[Readme/rules.md](Readme/rules.md)** | Правила по типам мечт / `steps_rules` |
 | **[Readme/structure.md](Readme/structure.md)** | ЛК, вёрстка, логика экранов |
 | **[Readme/business_logic.md](Readme/business_logic.md)** | Фрагменты бизнес-логики (дневник, шаги) |
-| **[Readme/stable/README.md](Readme/stable/README.md)** | Снимки одобренной разметки (бэкап-якорь вне Git-археологии) |
+| **[Readme/DECISIONS.md](Readme/DECISIONS.md)** | Архитектурные решения (ADR) |
+| **[Readme/bloom-api.md](Readme/bloom-api.md)** | HTTP API Остров ↔ Bloom |
+| **[Readme/bloom-db-shared.md](Readme/bloom-db-shared.md)** | Общие таблицы БД и SSOT |
+| **[Readme/sites-architecture.md](Readme/sites-architecture.md)** | Подсайты `/breakfast/`, `/landing/`, `/stat/` |
 | **[Readme/STABLE_BASELINE.md](Readme/STABLE_BASELINE.md)** | Стабильная baseline, тег, счётчик версии |
 
 Дополнительно: `migrations_applied.md`, `help_flow_spec.md`, `steps-editing-rfc.md`, `delete_users.md`, `archive-special-rules.md`, `Forge.md`. Архив наследия: **[Readme/archive/](Readme/archive/)**.

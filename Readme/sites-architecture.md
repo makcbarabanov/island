@@ -3,11 +3,12 @@
 ## Целевая модель (канон)
 
 ```
-web-app/                          ← репозиторий island (git)
-├── main.py                       ← FastAPI, mount /breakfast/, /landing/
+~/Apps/island/                    ← репозиторий island (git)
+├── main.py                       ← FastAPI, mount /breakfast/, /landing/, /stat/
 ├── sites/
 │   ├── breakfast/                ← islanddream.ru/breakfast/
-│   └── landing/                  ← islanddream.ru/landing/
+│   ├── landing/                  ← islanddream.ru/landing/
+│   └── stat/                     ← islanddream.ru/stat/
 ```
 
 Папка **`sites/`** внутри репозитория = **внутренние подсайты проекта Остров**, не клиентские сайты.
@@ -16,8 +17,8 @@ web-app/                          ← репозиторий island (git)
 
 | Путь | Назначение |
 |------|------------|
-| `web-app/sites/` (в git) | Подсайты Острова: breakfast, landing |
-| `/home/makc/Apps/sites/` (прод, legacy) | **Устарело.** Был rsync breakfast; Docker больше не использует |
+| `island/sites/` (в git) | Подсайты Острова: breakfast, landing, stat |
+| `/home/makc/Apps/sites/` (прод, legacy) | **Устарело.** Был rsync breakfast |
 | `Projects/sites/` (вне git) | Клиентские сайты (proftour78, codex, bk…) |
 
 ## Как отдаётся контент
@@ -26,18 +27,21 @@ web-app/                          ← репозиторий island (git)
 |-----|---------------|------------|
 | `/breakfast/` | `sites/breakfast/` | FastAPI `StaticFiles` + volume в Docker |
 | `/landing/` | `sites/landing/` | FastAPI `StaticFiles` + volume в Docker |
+| `/stat/` | `sites/stat/` | FastAPI `StaticFiles` + volume в Docker |
+
+## Статистика марафона (`/stat/`)
+
+- Снимок: `sites/stat/data/marathon_snapshot.json`
+- Генератор: `scripts/build_marathon_snapshot.py` (cron ~03:05 MSK)
+- Прототип по чату: `sites/stat/legacy/` (не SSOT)
 
 ## Деплой (актуально)
 
-1. **Forge (песок):** правки в `web-app/sites/…` → commit → push `main`
+1. **Forge (песок):** правки в `sites/…` → commit → push `main`
 2. **Продагент:** `git pull --ff-only origin main` → `docker compose up -d --build`
 
-**Не использовать:** rsync в `/home/makc/Apps/sites/breakfast/` — legacy, дубликат.
-
-## Legacy на проде
-
-`/home/makc/Apps/sites/breakfast` — копия вне git, **не используется** при текущем Docker (volume из `island/sites/breakfast`). Можно удалить после бэкапа — только по команде Макса `[ПРОД]`.
+**Не использовать:** rsync в `/home/makc/Apps/sites/breakfast/` — legacy.
 
 ## Монорепо OSTROV (ноут)
 
-На ноуте также есть `OSTROV/sites/breakfast/` — зеркало/рабочая копия для разработки лендингов. **Канон для деплоя:** `OSTROV/web-app/sites/`.
+`OSTROV/bloom/`, `OSTROV/island-bridge-contract/` — соседи; **канон кода Алана:** `~/Apps/island`.

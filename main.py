@@ -169,6 +169,17 @@ def breakfast_root_redirect():
 if BREAKFAST_DIR.is_dir():
     app.mount("/breakfast", StaticFiles(directory=str(BREAKFAST_DIR), html=True), name="breakfast")
 
+STAT_DIR = BASE_DIR / "sites" / "stat"
+
+
+@app.get("/stat", include_in_schema=False)
+def stat_root_redirect():
+    return RedirectResponse(url="/stat/", status_code=307)
+
+
+if STAT_DIR.is_dir():
+    app.mount("/stat", StaticFiles(directory=str(STAT_DIR), html=True), name="stat")
+
 # --- БЛОК БЕЗОПАСНОСТИ (CORS) ---
 app.add_middleware(
     CORSMiddleware,

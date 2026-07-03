@@ -1,0 +1,12 @@
+{
+  "generated_at": null,
+  "timezone": "Europe/Moscow",
+  "report_date": null,
+  "summary": {
+    "active": 0,
+    "reported": 0,
+    "missing": 0,
+    "report_rate_pct": 0
+  },
+  "note": "Placeholder until scripts/build_marathon_snapshot.py runs against DB."
+}
