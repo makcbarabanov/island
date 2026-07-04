@@ -1,4 +1,5 @@
 import os
+import json
 import time
 import calendar
 import logging
@@ -170,6 +171,8 @@ if BREAKFAST_DIR.is_dir():
     app.mount("/breakfast", StaticFiles(directory=str(BREAKFAST_DIR), html=True), name="breakfast")
 
 STAT_DIR = BASE_DIR / "sites" / "stat"
+CHAT_DIR = BASE_DIR / "chat"
+CHAT_LABELS_FILE = CHAT_DIR / "labels.json"
 
 
 @app.get("/stat", include_in_schema=False)
@@ -179,6 +182,51 @@ def stat_root_redirect():
 
 if STAT_DIR.is_dir():
     app.mount("/stat", StaticFiles(directory=str(STAT_DIR), html=True), name="stat")
+
+if CHAT_DIR.is_dir():
+    app.mount("/chat", StaticFiles(directory=str(CHAT_DIR)), name="chat")
+
+
+@app.get("/result.html", include_in_schema=False)
+def chat_result_labeling_page():
+    """Разметка чата марафона (Telegram export)."""
+    path = CHAT_DIR / "result.html"
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="result.html not found")
+    return FileResponse(path, headers=_HTML_NO_CACHE)
+
+
+@app.get("/api/chat-labels", include_in_schema=False)
+def get_chat_labels():
+    if not CHAT_LABELS_FILE.is_file():
+        return {"version": 1, "labels": {}, "comments": {}}
+    try:
+        return json.loads(CHAT_LABELS_FILE.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=500, detail="labels.json corrupted")
+
+
+@app.post("/api/chat-labels", include_in_schema=False)
+async def save_chat_labels(request: Request):
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON")
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="Expected object")
+    labels = body.get("labels")
+    comments = body.get("comments")
+    if not isinstance(labels, dict) or not isinstance(comments, dict):
+        raise HTTPException(status_code=400, detail="labels and comments must be objects")
+    payload = {
+        "version": 1,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "labels": {str(k): v for k, v in labels.items() if v in ("simple", "report", "manifest")},
+        "comments": {str(k): str(v)[:2000] for k, v in comments.items() if str(v).strip()},
+    }
+    CHAT_DIR.mkdir(parents=True, exist_ok=True)
+    CHAT_LABELS_FILE.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return {"ok": True, "updated_at": payload["updated_at"], "labels_count": len(payload["labels"])}
 
 # --- БЛОК БЕЗОПАСНОСТИ (CORS) ---
 app.add_middleware(
@@ -989,6 +1037,10 @@ def dreams_page():
 @app.get("/admin", response_class=FileResponse)
 def admin_page():
     """Админка — веб-интерфейс для управления пользователями"""
+    return FileResponse(Path(__file__).parent / "admin.html", headers=_HTML_NO_CACHE)
+
+@app.get("/admin.html", response_class=FileResponse)
+def admin_page_html():
     return FileResponse(Path(__file__).parent / "admin.html", headers=_HTML_NO_CACHE)
 
 @app.get("/index.html", response_class=FileResponse)
@@ -4886,10 +4938,16 @@ def admin_list_users():
     conn = None
     try:
         conn = get_db_connection()
-        with conn.cursor() as cur:
-            cur.execute("SELECT id, name, surname, phone, city FROM users ORDER BY id")
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT id, name, surname, phone, city, created_at FROM users ORDER BY id")
             rows = cur.fetchall()
-            return [{"id": r["id"], "full_name": _full_name(r), "phone": r["phone"], "city": r["city"]} for r in rows]
+            return [{
+                "id": r["id"],
+                "full_name": _full_name(r),
+                "phone": r["phone"],
+                "city": r["city"],
+                "created_at": r["created_at"].isoformat() if r.get("created_at") else None,
+            } for r in rows]
     finally:
         _return_conn(conn)
 
@@ -4898,12 +4956,18 @@ def admin_get_user(user_id: int):
     conn = None
     try:
         conn = get_db_connection()
-        with conn.cursor() as cur:
-            cur.execute("SELECT id, name, surname, phone, city FROM users WHERE id = %s", (user_id,))
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT id, name, surname, phone, city, created_at FROM users WHERE id = %s", (user_id,))
             row = cur.fetchone()
             if row is None:
                 raise HTTPException(status_code=404, detail="Пользователь не найден")
-            return {"id": row["id"], "full_name": _full_name(row), "phone": row["phone"], "city": row["city"]}
+            return {
+                "id": row["id"],
+                "full_name": _full_name(row),
+                "phone": row["phone"],
+                "city": row["city"],
+                "created_at": row["created_at"].isoformat() if row.get("created_at") else None,
+            }
     finally:
         _return_conn(conn)
 

@@ -24,6 +24,9 @@ services:
       start_period: 15s
 
   app:
+    # Песок: только 8001 на хосте (8000 часто занят Cursor). !reset — не мержить с :8000 из base.
+    ports: !override
+      - "127.0.0.1:8001:8000"
     volumes:
       - .:/app
     environment:

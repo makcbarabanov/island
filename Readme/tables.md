@@ -26,6 +26,7 @@
 | `gender`        | VARCHAR(1) NULL   | Пол: `'m'` — мальчик, `'f'` — девочка. Для фильтра в модалке «Добавить бадди». Миграция mig_users_gender. |
 | `buddy_alert_daily_at` | TIME NOT NULL DEFAULT '23:00:00' | Время ежедневного digest для бадди (пропущенные шаги / отчёт не отправлен). Миграция mig_buddy_alerts. |
 | `timezone`      | VARCHAR(64) NULL | IANA-часовой пояс для `buddy_alert_daily_at`. NULL — default приложения `Europe/Moscow` (v2). Миграция mig_buddy_alerts. |
+| `created_at`    | TIMESTAMPTZ NULL  | Дата/время регистрации. Заполняется для новых пользователей (`DEFAULT NOW()`). У старых записей — **NULL** (дата неизвестна). Миграция `mig_users_created_at.sql`. |
 
 ---
 

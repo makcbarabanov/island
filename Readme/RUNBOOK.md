@@ -42,10 +42,11 @@ docker compose up --build
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.dev.yml ps
-curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:8000/dreams?user_id=1"
+curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:8001/dreams?user_id=1"
 ```
 
-Ожидаемо: контейнер `db` = `healthy` (если используется dev-файл), `GET /dreams` = `200`.
+Ожидаемо: контейнер `db` = `healthy` (если используется dev-файл), `GET /dreams` = `200`.  
+**Песок с dev-файлом:** приложение на **`http://127.0.0.1:8001`** (порт 8000 на хосте часто занят Cursor; в `docker-compose.dev.yml` — `ports: !override` → 8001).
 
 ### 5. Миграции и схема
 
@@ -201,10 +202,26 @@ chmod 644 /home/makc/Apps/island/media/avatars/* 2>/dev/null || true
 
 ## Синхронизация данных БД (отдельно от кода)
 
+**Одна кнопка (песок ← прод):**
+
+```bash
+cd ~/Apps/island
+bash scripts/sync_data.sh      # с подтверждением
+bash scripts/sync_data.sh -y     # без вопросов
+```
+
+Скрипт: дамп с прод-БД (`83.217.220.97` по умолчанию) → restore в `island-db-1` → `build_marathon_snapshot.py`.  
+Клиент `pg_dump`: образ `postgres:17` (прод — PG 17; переопределение `PG_IMAGE` в env).  
+После: **`http://127.0.0.1:8001/stat/`** с реальными данными. Прод **не** меняется.
+
+Ручная процедура (если скрипт недоступен):
+
 1. Продагент: при необходимости свежий dump на проде.  
 2. Перенос дампа в песочницу.  
 3. Forge: restore в Docker-БД песка.  
 4. Проверка пользователей / мечт / аватаров.
+
+**Разовые правки данных на проде** (не схема): отдельные runbook-файлы, например [MERGE_USERS_68_128_PROD.md](MERGE_USERS_68_128_PROD.md) — merge дубликата София Авраменко (68→128).
 
 ### Политика хранения бэкапов (порядок в репозитории)
 

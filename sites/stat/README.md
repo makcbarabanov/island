@@ -1,29 +1,41 @@
 # Статистика марафона (`/stat/`)
 
-Публичная аналитика марафона полезных привычек. Обновление — **раз в сутки** cron-скриптом на Острове.
+Публичная аналитика марафона полезных привычек.
+
+- **Сегодня / текущий цикл:** SSOT = личный кабинет Острова (`dreams_steps`, `buddy_step_daily_reports`).
+- **Legacy-история до миграции в БД:** visual-only обзор из Telegram-чата по ручной разметке; нужен для сверки участников, месяцев и привычек перед staging-импортом.
 
 ## URL
 
-- Прод: `https://islanddream.ru/stat/`
-- Песочница: `http://localhost:8000/stat/`
+- Локально: `http://localhost:8000/stat/`
+- Прод: `https://www.islanddream.ru/stat/`
 
 ## Файлы
 
 | Путь | Назначение |
 |------|------------|
-| `index.html` | Дашборд, читает `data/marathon_snapshot.json` |
-| `data/marathon_snapshot.json` | Снимок агрегатов (генерирует скрипт) |
-| `legacy/` | Прототип по парсингу `chat.txt` (история, не SSOT) |
+| `index.html` | Оболочка страницы |
+| `css/stat.css` | Стили |
+| `js/stat.js` | Рендер из JSON |
+| `data/marathon_snapshot.json` | Ежедневный снимок (генерируется скриптом) |
+| `data/legacy_overview.json` | Legacy-обзор по чату и ручной разметке |
 
-## Сборка снимка
+## Обновление данных
 
 ```bash
-cd ~/Apps/island
+# из корня island, с рабочим .env (DB_*)
 python3 scripts/build_marathon_snapshot.py
+python3 scripts/build_legacy_marathon_overview.py
 ```
 
-Cron (пример, ~03:05 MSK): см. `Readme/RUNBOOK.md`.
+Cron на проде (~03:05 MSK) — см. комментарий в скрипте и `RUNBOOK.md`.
 
-## SSOT
+## Разделы UI
 
-Факты отчётов — **ЛК** (`dreams_steps`, `buddy_step_daily_reports`), не парсинг Telegram-чата.
+1. **Сегодня** — digest по текущему дню из БД
+2. **Участники** — все уникальные участники legacy, плюс исходные имена для сверки склейки
+3. **Марафоны** — помесячная матрица `2025/2026`: участники, привычки, `% выполнения`
+4. **Привычки** — все уникальные привычки legacy: пользователей / сделано / не сделано
+5. **Источники** — пояснение, что в БД, а что ещё legacy
+
+Прототип из чата: `OSTROV/sites/marathon/` (legacy, не SSOT).

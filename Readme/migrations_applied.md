@@ -6,6 +6,21 @@
 
 ---
 
+---
+
+## fix_merge_users_68_into_128 (данные, не схема)
+
+Файл: `_sql/fix_merge_users_68_into_128.sql` — дубликат София Авраменко: перенос `username` `Sofiya_Avram` и мечт с id 68 на id 128, удаление 68.  
+**Песочница:** применено 2026-07-04. **Прод:** [MERGE_USERS_68_128_PROD.md](MERGE_USERS_68_128_PROD.md) (Продагент, `psql -f`).
+
+---
+
+## mig_users_created_at (users.created_at)
+
+Файл: `_sql/mig_users_created_at.sql` — колонка `users.created_at TIMESTAMPTZ NULL`, `DEFAULT NOW()` для новых регистраций; существующие пользователи остаются с `NULL`.
+
+---
+
 ## mig_dreams_steps_waived_events_late (шаги: waived, completed_late, дневник)
 
 Файл: `_sql/mig_dreams_steps_waived_events_late.sql` — колонки `dreams_steps.waived`, `dreams_steps.completed_late`, таблица `dreams_steps_events` (полный текст — в репозитории в этом файле).

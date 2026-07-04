@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Разметка чата марафона</title>
+  <link rel="stylesheet" href="/chat/result.css">
+</head>
+<body>
+  <header>
+    <h1>Разметка чата марафона полезных привычек</h1>
+    <p class="stats" id="meta">Загрузка…</p>
+    <div class="toolbar">
+      <input type="search" id="search" placeholder="Поиск по тексту, автору…">
+      <select id="filter-author"><option value="">Все участники</option></select>
+      <select id="filter-month"><option value="">Все месяцы</option></select>
+      <select id="filter-opinion">
+        <option value="">Мнение: все</option>
+        <option value="simple">Мнение: простое</option>
+        <option value="report">Мнение: отчёт</option>
+        <option value="manifest">Мнение: манифест</option>
+      </select>
+      <select id="filter-manual">
+        <option value="">Разметка: все</option>
+        <option value="__none">Не размечено</option>
+        <option value="simple">Разметка: простое</option>
+        <option value="report">Разметка: отчёт</option>
+        <option value="manifest">Разметка: манифест</option>
+      </select>
+      <label><input type="checkbox" id="only-unlabeled"> Только неразмеченные</label>
+      <label><input type="checkbox" id="only-mismatch"> Только расхождения</label>
+      <button type="button" class="primary" id="btn-save">Сохранить на сервер</button>
+      <button type="button" id="btn-download">Скачать JSON</button>
+      <button type="button" id="btn-import">Импорт JSON</button>
+      <input type="file" id="import-input" accept=".json,application/json">
+    </div>
+    <div class="stats" id="stats"></div>
+    <div class="stats" id="save-status"></div>
+  </header>
+  <main>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th class="sortable asc" data-sort="date">Дата</th>
+            <th class="sortable" data-sort="author">Участник</th>
+            <th>Сообщение</th>
+            <th class="sortable" data-sort="simple">Простое</th>
+            <th class="sortable" data-sort="report">Отчёт</th>
+            <th class="sortable" data-sort="manifest">Манифест</th>
+            <th>Комментарий</th>
+            <th class="sortable" data-sort="opinion">Мнение</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </main>
+  <script src="/chat/result.js"></script>
+</body>
+</html>

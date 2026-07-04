@@ -1,12 +1,605 @@
 {
-  "generated_at": null,
+  "version": 1,
+  "generated_at": "2026-07-04T21:31:37+03:00",
   "timezone": "Europe/Moscow",
-  "report_date": null,
-  "summary": {
-    "active": 0,
-    "reported": 0,
-    "missing": 0,
-    "report_rate_pct": 0
+  "report_date": "2026-07-04",
+  "ssot": "ЛК (dreams_steps, buddy_step_daily_reports). Telegram-чат не учитывается.",
+  "marathon": {
+    "year": 2026,
+    "month": 7,
+    "label": "Июль 2026",
+    "cycle_start": "2026-07-01",
+    "cycle_end": "2026-07-21",
+    "cycle_days_total": 21,
+    "cycle_day": 4,
+    "phase": "in_cycle"
   },
-  "note": "Placeholder until scripts/build_marathon_snapshot.py runs against DB."
+  "today": {
+    "active": 5,
+    "reported": 2,
+    "missing": 3,
+    "avg_steps_pct": 40.0,
+    "active_names": [
+      "Макс Барабанов",
+      "Света Щербинина",
+      "Александр Николаев",
+      "Айгуль",
+      "София Аврамеко"
+    ],
+    "missing_names": [
+      "Макс Барабанов",
+      "Александр Николаев",
+      "София Аврамеко"
+    ],
+    "perfect_names": [
+      "Света Щербинина",
+      "Айгуль"
+    ],
+    "focus": {
+      "user_id": 128,
+      "name": "София Аврамеко",
+      "steps_pct": 0.0,
+      "habits_today": [
+        "Выкидывать по ненужной вещи в день",
+        "Занятия йогой"
+      ]
+    },
+    "digest": "Сегодня (04.07.2026): 5 активных · отчёт сдали 2 · не сдали 3: Макс Барабанов, Александр Николаев, София Аврамеко · средняя успеваемость по шагам 40.0% · 100% шагов: Света Щербинина, Айгуль · Подтянем София Аврамеко (0.0% — Выкидывать по ненужной вещи в день, Занятия йогой)"
+  },
+  "overall": {
+    "participants": 5,
+    "active_today": 5,
+    "avg_report_pct": 45.0,
+    "avg_habit_pct": 7.4
+  },
+  "participants": [
+    {
+      "id": 1,
+      "name": "Макс Барабанов",
+      "slug": "макс-барабанов",
+      "telegram": "@makc_barabanov",
+      "active_today": true,
+      "reported_today": false,
+      "steps_today": {
+        "total": 9,
+        "done": 0,
+        "waived": 0,
+        "pct": 0.0
+      },
+      "cycle": {
+        "reports": 2,
+        "days_elapsed": 4,
+        "report_pct": 50.0,
+        "report_calendar": [
+          {
+            "day": 1,
+            "has_report": true
+          },
+          {
+            "day": 2,
+            "has_report": true
+          },
+          {
+            "day": 3,
+            "has_report": false
+          },
+          {
+            "day": 4,
+            "has_report": false
+          }
+        ],
+        "habits": [
+          {
+            "num": 1,
+            "habit": "15 минут чтения",
+            "plan": 18,
+            "fact": 1,
+            "pct": 5.6
+          },
+          {
+            "num": 2,
+            "habit": "1 сторис в день",
+            "plan": 21,
+            "fact": 1,
+            "pct": 4.8
+          },
+          {
+            "num": 3,
+            "habit": "Бег",
+            "plan": 6,
+            "fact": 0,
+            "pct": 0.0
+          },
+          {
+            "num": 4,
+            "habit": "Вода 2л",
+            "plan": 21,
+            "fact": 0,
+            "pct": 0.0
+          },
+          {
+            "num": 5,
+            "habit": "Время на написание книги",
+            "plan": 3,
+            "fact": 0,
+            "pct": 0.0
+          },
+          {
+            "num": 6,
+            "habit": "Гимнастика",
+            "plan": 15,
+            "fact": 0,
+            "pct": 0.0
+          },
+          {
+            "num": 7,
+            "habit": "Дыхание по ВимХофу",
+            "plan": 18,
+            "fact": 1,
+            "pct": 5.6
+          },
+          {
+            "num": 8,
+            "habit": "Интервальное питание",
+            "plan": 18,
+            "fact": 0,
+            "pct": 0.0
+          },
+          {
+            "num": 9,
+            "habit": "Мантра я люблю и принимаю себя",
+            "plan": 21,
+            "fact": 1,
+            "pct": 4.8
+          },
+          {
+            "num": 10,
+            "habit": "Один урок коддинга в день",
+            "plan": 9,
+            "fact": 1,
+            "pct": 11.1
+          },
+          {
+            "num": 11,
+            "habit": "Пищевая пауза",
+            "plan": 3,
+            "fact": 0,
+            "pct": 0.0
+          },
+          {
+            "num": 12,
+            "habit": "Провести 1000 презентаций",
+            "plan": 8,
+            "fact": 0,
+            "pct": 0.0
+          },
+          {
+            "num": 13,
+            "habit": "Работа с соц сетью, 2 часа в день",
+            "plan": 6,
+            "fact": 1,
+            "pct": 16.7
+          },
+          {
+            "num": 14,
+            "habit": "Работа с соц сетью 4 часа в день",
+            "plan": 3,
+            "fact": 0,
+            "pct": 0.0
+          },
+          {
+            "num": 15,
+            "habit": "Создать сайт",
+            "plan": 1,
+            "fact": 0,
+            "pct": 0.0
+          }
+        ],
+        "habit_pct": 3.5
+      }
+    },
+    {
+      "id": 17,
+      "name": "Света Щербинина",
+      "slug": "света-щербинина",
+      "telegram": "@Svetashcherbinina",
+      "active_today": true,
+      "reported_today": true,
+      "steps_today": {
+        "total": 9,
+        "done": 9,
+        "waived": 0,
+        "pct": 100.0
+      },
+      "cycle": {
+        "reports": 3,
+        "days_elapsed": 4,
+        "report_pct": 75.0,
+        "report_calendar": [
+          {
+            "day": 1,
+            "has_report": false
+          },
+          {
+            "day": 2,
+            "has_report": true
+          },
+          {
+            "day": 3,
+            "has_report": true
+          },
+          {
+            "day": 4,
+            "has_report": true
+          }
+        ],
+        "habits": [
+          {
+            "num": 1,
+            "habit": "Денежная медитация",
+            "plan": 21,
+            "fact": 4,
+            "pct": 19.0
+          },
+          {
+            "num": 2,
+            "habit": "Кофе медитация",
+            "plan": 18,
+            "fact": 1,
+            "pct": 5.6
+          },
+          {
+            "num": 3,
+            "habit": "Откладывать минимум рубль в СВОЙ КАПИТАЛЛ",
+            "plan": 20,
+            "fact": 4,
+            "pct": 20.0
+          },
+          {
+            "num": 4,
+            "habit": "Откладывать рубль на пространство",
+            "plan": 21,
+            "fact": 4,
+            "pct": 19.0
+          },
+          {
+            "num": 5,
+            "habit": "Перевод на мечту Даше минимум рубль",
+            "plan": 21,
+            "fact": 4,
+            "pct": 19.0
+          },
+          {
+            "num": 6,
+            "habit": "Пост в ВК на личной странице",
+            "plan": 21,
+            "fact": 4,
+            "pct": 19.0
+          },
+          {
+            "num": 7,
+            "habit": "Ролик на ютуб",
+            "plan": 21,
+            "fact": 4,
+            "pct": 19.0
+          },
+          {
+            "num": 8,
+            "habit": "Слушать историю про ручку",
+            "plan": 21,
+            "fact": 4,
+            "pct": 19.0
+          },
+          {
+            "num": 9,
+            "habit": "Слушать Историю про Ручку",
+            "plan": 1,
+            "fact": 0,
+            "pct": 0.0
+          },
+          {
+            "num": 10,
+            "habit": "Читать книгу",
+            "plan": 21,
+            "fact": 3,
+            "pct": 14.3
+          }
+        ],
+        "habit_pct": 17.2
+      }
+    },
+    {
+      "id": 19,
+      "name": "Александр Николаев",
+      "slug": "александр-николаев",
+      "telegram": null,
+      "active_today": true,
+      "reported_today": false,
+      "steps_today": {
+        "total": 1,
+        "done": 0,
+        "waived": 0,
+        "pct": 0.0
+      },
+      "cycle": {
+        "reports": 0,
+        "days_elapsed": 4,
+        "report_pct": 0.0,
+        "report_calendar": [
+          {
+            "day": 1,
+            "has_report": false
+          },
+          {
+            "day": 2,
+            "has_report": false
+          },
+          {
+            "day": 3,
+            "has_report": false
+          },
+          {
+            "day": 4,
+            "has_report": false
+          }
+        ],
+        "habits": [
+          {
+            "num": 1,
+            "habit": "Приложение финансы. Заполнение каждый день.",
+            "plan": 21,
+            "fact": 0,
+            "pct": 0.0
+          }
+        ],
+        "habit_pct": 0.0
+      }
+    },
+    {
+      "id": 67,
+      "name": "Айгуль",
+      "slug": "айгуль",
+      "telegram": null,
+      "active_today": true,
+      "reported_today": true,
+      "steps_today": {
+        "total": 4,
+        "done": 4,
+        "waived": 0,
+        "pct": 100.0
+      },
+      "cycle": {
+        "reports": 4,
+        "days_elapsed": 4,
+        "report_pct": 100.0,
+        "report_calendar": [
+          {
+            "day": 1,
+            "has_report": true
+          },
+          {
+            "day": 2,
+            "has_report": true
+          },
+          {
+            "day": 3,
+            "has_report": true
+          },
+          {
+            "day": 4,
+            "has_report": true
+          }
+        ],
+        "habits": [
+          {
+            "num": 1,
+            "habit": "Водный режим",
+            "plan": 20,
+            "fact": 3,
+            "pct": 15.0
+          },
+          {
+            "num": 2,
+            "habit": "Практика щедрости",
+            "plan": 21,
+            "fact": 4,
+            "pct": 19.0
+          },
+          {
+            "num": 3,
+            "habit": "Слушать ручку",
+            "plan": 17,
+            "fact": 2,
+            "pct": 11.8
+          },
+          {
+            "num": 4,
+            "habit": "Сурья Намаскар",
+            "plan": 21,
+            "fact": 4,
+            "pct": 19.0
+          }
+        ],
+        "habit_pct": 16.5
+      }
+    },
+    {
+      "id": 128,
+      "name": "София Аврамеко",
+      "slug": "софия-аврамеко",
+      "telegram": null,
+      "active_today": true,
+      "reported_today": false,
+      "steps_today": {
+        "total": 2,
+        "done": 0,
+        "waived": 0,
+        "pct": 0.0
+      },
+      "cycle": {
+        "reports": 0,
+        "days_elapsed": 4,
+        "report_pct": 0.0,
+        "report_calendar": [
+          {
+            "day": 1,
+            "has_report": false
+          },
+          {
+            "day": 2,
+            "has_report": false
+          },
+          {
+            "day": 3,
+            "has_report": false
+          },
+          {
+            "day": 4,
+            "has_report": false
+          }
+        ],
+        "habits": [
+          {
+            "num": 1,
+            "habit": "Выкидывать по ненужной вещи в день",
+            "plan": 18,
+            "fact": 0,
+            "pct": 0.0
+          },
+          {
+            "num": 2,
+            "habit": "Занятия йогой",
+            "plan": 18,
+            "fact": 0,
+            "pct": 0.0
+          }
+        ],
+        "habit_pct": 0.0
+      }
+    }
+  ],
+  "habits_group": {
+    "hardest": [
+      {
+        "habit": "Бег",
+        "plan": 6,
+        "fact": 0,
+        "pct": 0.0,
+        "users_count": 1
+      },
+      {
+        "habit": "Вода 2л",
+        "plan": 21,
+        "fact": 0,
+        "pct": 0.0,
+        "users_count": 1
+      },
+      {
+        "habit": "Время на написание книги",
+        "plan": 3,
+        "fact": 0,
+        "pct": 0.0,
+        "users_count": 1
+      },
+      {
+        "habit": "Гимнастика",
+        "plan": 15,
+        "fact": 0,
+        "pct": 0.0,
+        "users_count": 1
+      },
+      {
+        "habit": "Интервальное питание",
+        "plan": 18,
+        "fact": 0,
+        "pct": 0.0,
+        "users_count": 1
+      },
+      {
+        "habit": "Пищевая пауза",
+        "plan": 3,
+        "fact": 0,
+        "pct": 0.0,
+        "users_count": 1
+      },
+      {
+        "habit": "Провести 1000 презентаций",
+        "plan": 8,
+        "fact": 0,
+        "pct": 0.0,
+        "users_count": 1
+      },
+      {
+        "habit": "Работа с соц сетью 4 часа в день",
+        "plan": 3,
+        "fact": 0,
+        "pct": 0.0,
+        "users_count": 1
+      }
+    ],
+    "easiest": [
+      {
+        "habit": "Откладывать минимум рубль в СВОЙ КАПИТАЛЛ",
+        "plan": 20,
+        "fact": 4,
+        "pct": 20.0,
+        "users_count": 1
+      },
+      {
+        "habit": "Сурья Намаскар",
+        "plan": 21,
+        "fact": 4,
+        "pct": 19.0,
+        "users_count": 1
+      },
+      {
+        "habit": "Практика щедрости",
+        "plan": 21,
+        "fact": 4,
+        "pct": 19.0,
+        "users_count": 1
+      },
+      {
+        "habit": "Ролик на ютуб",
+        "plan": 21,
+        "fact": 4,
+        "pct": 19.0,
+        "users_count": 1
+      },
+      {
+        "habit": "Пост в ВК на личной странице",
+        "plan": 21,
+        "fact": 4,
+        "pct": 19.0,
+        "users_count": 1
+      },
+      {
+        "habit": "Перевод на мечту Даше минимум рубль",
+        "plan": 21,
+        "fact": 4,
+        "pct": 19.0,
+        "users_count": 1
+      },
+      {
+        "habit": "Откладывать рубль на пространство",
+        "plan": 21,
+        "fact": 4,
+        "pct": 19.0,
+        "users_count": 1
+      },
+      {
+        "habit": "Денежная медитация",
+        "plan": 21,
+        "fact": 4,
+        "pct": 19.0,
+        "users_count": 1
+      }
+    ]
+  },
+  "history": {
+    "marathon_months": 61,
+    "unique_participants_ever": 5,
+    "total_step_completions": 408,
+    "legacy_educ_reports": 619
+  }
 }

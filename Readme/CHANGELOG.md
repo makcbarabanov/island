@@ -2,6 +2,65 @@
 
 Старые пункты могут ссылаться на прежний монолитный `Readme/Readme.md`; актуальная структура — корневой [README.md](../README.md), [PROJECT.md](PROJECT.md), [RUNBOOK.md](RUNBOOK.md).
 
+## 2026-07-04 — MERGE_USERS_68_128_PROD.md: инструкция Продагенту (v307)
+
+- Runbook merge София Авраменко 68→128 на прод-БД; ссылка в RUNBOOK.
+
+## 2026-07-04 — София Авраменко: фамилия + статус merge (v306)
+
+- Фамилия id 128: **Авраменко** (в песочнице исправлено). Скрипт merge обновлён для прода.
+
+## 2026-07-04 — merge users 68→128 (София Авраменко) (v305)
+
+- `_sql/fix_merge_users_68_into_128.sql`: username `Sofiya_Avram` на id 128, 4 мечты перенесены, id 68 удалён. Применено в песочнице; на прод — вручную тем же скриптом.
+
+## 2026-07-04 — sync_data.sh: pg_restore через postgres:17 (v304)
+
+- Restore дампа с прода: клиент `postgres:17` в docker-сети compose (локальный `db` может оставаться PG 15).
+
+## 2026-07-04 — sync_data.sh: pg_dump через postgres:17 (v303)
+
+- Клиент дампа с прода: `postgres:17` (прод-БД PG 17.4; `postgres:15` давал version mismatch).
+
+## 2026-07-04 — scripts/sync_data.sh: песок ← прод-БД одной командой (v302)
+
+- `bash scripts/sync_data.sh` — дамп с `83.217.220.97`, restore в Docker, `build_marathon_snapshot.py`; флаг `-y` без подтверждения.
+
+## 2026-07-04 — Песочница: app на порту 8001 (dev compose)
+
+- `docker-compose.dev.yml`: `ports: !override` → `127.0.0.1:8001:8000` (8000 на хосте занят Cursor).
+
+## 2026-07-04 — users.created_at (v299)
+
+- Миграция `_sql/mig_users_created_at.sql`: `TIMESTAMPTZ NULL`, `DEFAULT NOW()` для новых; старые пользователи — `NULL`.
+- Админка `/admin.html`: колонка «Регистрация»; API `/admin/users` отдаёт `created_at`.
+- Уборка одноразовых файлов: экспорт AI Studio, старый UI-handoff Кроносу, `run.ini`, сгенерированный upload-bundle в `.gitignore`.
+
+## 2026-07-04 — CRONOS: разделение System Instructions и bootstrap
+
+- System Instructions — только постоянные правила; bundle один раз в первом сообщении чата, не на каждый ход.
+
+## 2026-07-04 — CRONOS docs: версии не зашивать в handoff
+
+- System instruction и handoff: `.app-version` только растёт; сверка песок vs прод, актуальные цифры — от Макса в чате.
+
+## 2026-07-04 — CRONOS: upload bundle для AI Studio (без доступа к диску)
+
+- `scripts/build_cronos_upload_bundle.sh` → `Readme/CRONOS-upload-bundle.md` (handoff + ADR + RUNBOOK + AGENTS + хвост Bloom).
+- Обновлены system instruction и bootstrap: явно — контекст только через вложения, не через пути на диске.
+
+## 2026-07-04 — Handoff для CRONOS (новый чат AI Studio)
+
+- `Readme/CRONOS-handoff.md` — контекст проекта, ИИ-семья, топология, хронология диалога, открытые вопросы (Bloom, legacy stat).
+- `Readme/CRONOS-system-instruction.md` — обновлённые System Instructions (актуальные пути, без Bridge/ATLAS/studing).
+- `Readme/CRONOS-bootstrap-prompt.md` — первое сообщение для продолжения диалога после лимита токенов.
+
+## 2026-07-04 — `/stat/`: legacy visual review before DB import (v294)
+
+- Новый `scripts/build_legacy_marathon_overview.py` собирает visual-only legacy JSON из `chat/result-data.json`, `chat/marathon-labels-2026-07-04.json` и готового `june.html`.
+- `/stat/` теперь показывает: **Сегодня** (из БД), **Участники** (склейка имён до БД), **Марафоны** (помесячная матрица 2025–2026) и **Привычки** (уникальные привычки по точному тексту, пользователи / сделано / не сделано).
+- Июнь 2026 берётся из готового `june.html`; legacy-чат нужен только для визуальной сверки перед staging-миграцией в БД.
+
 ## 2026-07-02 — Фаза 0: island path, stat site, Bloom docs (v293)
 
 - Локальный канон: `~/Apps/island` (бывший `OSTROV/web-app`); git remote `makcbarabanov/island`.

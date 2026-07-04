@@ -57,6 +57,7 @@
                         <th>ФИО</th>
                         <th>Телефон</th>
                         <th>Город</th>
+                        <th>Регистрация</th>
                         <th></th>
                     </tr>
                 </thead>
@@ -93,7 +94,14 @@
     </div>
 
     <script>
-        const API_BASE_URL = 'http://23.172.217.180:8000';
+        const API_BASE_URL = window.location.origin;
+
+        function formatCreatedAt(iso) {
+            if (!iso) return '—';
+            const d = new Date(iso);
+            if (Number.isNaN(d.getTime())) return '—';
+            return d.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        }
 
         async function loadUsers() {
             const tbody = document.getElementById('users-body');
@@ -102,7 +110,7 @@
                 if (!res.ok) throw new Error('Ошибка загрузки');
                 const users = await res.json();
                 if (users.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" class="empty">Пользователей пока нет</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="6" class="empty">Пользователей пока нет</td></tr>';
                     return;
                 }
                 tbody.innerHTML = users.map(u => `
@@ -111,6 +119,7 @@
                         <td>${escapeHtml(u.full_name || '—')}</td>
                         <td>${escapeHtml(u.phone || '—')}</td>
                         <td>${escapeHtml(u.city || '—')}</td>
+                        <td>${formatCreatedAt(u.created_at)}</td>
                         <td>
                             <button class="btn-secondary" onclick="editUser(${u.id})">Изменить</button>
                             <button class="btn-danger" onclick="deleteUser(${u.id}, '${escapeHtml(String(u.full_name || ''))}')">Удалить</button>
@@ -118,7 +127,7 @@
                     </tr>
                 `).join('');
             } catch (e) {
-                tbody.innerHTML = '<tr><td colspan="5" class="empty">Ошибка: ' + escapeHtml(e.message) + '</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="empty">Ошибка: ' + escapeHtml(e.message) + '</td></tr>';
             }
         }
 

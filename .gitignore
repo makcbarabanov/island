@@ -24,3 +24,12 @@ logs/*.jsonl
 logs/app.log
 logs/app.log.*
 !logs/.gitkeep
+
+# Сгенерированный bundle для AI Studio (собирается скриптом)
+Readme/CRONOS-upload-bundle.md
+
+# Локальное venv
+.venv/
+
+# Одноразовые экспорты чатов (сумаризация — Readme/CRONOS-handoff.md)
+chat/ai-studio-export-*.md
