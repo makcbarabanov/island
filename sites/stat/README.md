@@ -7,7 +7,8 @@
 
 ## URL
 
-- Локально: `http://localhost:8000/stat/`
+- Локально: `http://localhost:8001/stat/` (песочница; порт см. `docker-compose.dev.yml`)
+- Июнь 2026 (legacy): `http://localhost:8001/stat/legacy/june.html`
 - Прод: `https://www.islanddream.ru/stat/`
 
 ## Файлы
@@ -17,6 +18,7 @@
 | `index.html` | Оболочка страницы |
 | `css/stat.css` | Стили |
 | `js/stat.js` | Рендер из JSON |
+| `legacy/` | Прототип марафона: `june.html`, `stat.html`, `build-june.py`, `chat.txt` |
 | `data/marathon_snapshot.json` | Ежедневный снимок (генерируется скриптом) |
 | `data/legacy_overview.json` | Legacy-обзор по чату и ручной разметке |
 
@@ -38,4 +40,4 @@ Cron на проде (~03:05 MSK) — см. комментарий в скрип
 4. **Привычки** — все уникальные привычки legacy: пользователей / сделано / не сделано
 5. **Источники** — пояснение, что в БД, а что ещё legacy
 
-Прототип из чата: `OSTROV/sites/marathon/` (legacy, не SSOT).
+Legacy-прототип: `sites/stat/legacy/` (`june.html`, `stat.html`).

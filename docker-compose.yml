@@ -13,4 +13,5 @@ services:
       # Прод: git pull в /home/makc/Apps/island → volume из репозитория (не /home/makc/Apps/sites/)
       - ./sites/breakfast:/app/sites/breakfast:ro
       - ./sites/landing:/app/sites/landing:ro
+      - ./media:/app/media
       - ./logs:/app/logs

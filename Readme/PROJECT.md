@@ -150,7 +150,4 @@
 | [bloom-db-shared.md](bloom-db-shared.md) | БД Остров + Bloom |
 | [sites-architecture.md](sites-architecture.md) | Подсайты |
 | [Forge.md](Forge.md) | Личность Forge |
-| [CRONOS-handoff.md](CRONOS-handoff.md) | Handoff для CRONOS (AI Studio): топология, хронология, открытые вопросы |
-| [CRONOS-system-instruction.md](CRONOS-system-instruction.md) | System Instructions для нового чата CRONOS |
-| [CRONOS-bootstrap-prompt.md](CRONOS-bootstrap-prompt.md) | Первое сообщение в новом чате CRONOS |
 | `.cursor/rules/` | Инструкции Cursor; поведение фич — в PROJECT / UI-standards |

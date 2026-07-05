@@ -42,6 +42,6 @@
 
 **Не использовать:** rsync в `/home/makc/Apps/sites/breakfast/` — legacy.
 
-## Монорепо OSTROV (ноут)
+## Bloom (отдельный repo)
 
-`OSTROV/bloom/`, `OSTROV/island-bridge-contract/` — соседи; **канон кода Алана:** `~/Apps/island`.
+Код бота: **`~/Apps/OSTROV/bloom/`** на ноуте (план: `~/Apps/bloom`). Контракты: `Readme/bloom-api.md`, `Readme/bloom-db-shared.md`. **Канон Алана:** только `~/Apps/island`.

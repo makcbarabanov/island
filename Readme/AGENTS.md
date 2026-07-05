@@ -60,6 +60,6 @@ bash .vscode/apply-cursor-env.sh
 
 ## Handoff между чатами
 
-- **CRONOS (новый чат AI Studio):** [CRONOS-handoff.md](CRONOS-handoff.md) + [CRONOS-system-instruction.md](CRONOS-system-instruction.md) + [CRONOS-bootstrap-prompt.md](CRONOS-bootstrap-prompt.md) + **upload:** [CRONOS-upload-bundle.md](CRONOS-upload-bundle.md) (`bash scripts/build_cronos_upload_bundle.sh`)
 - Forge ↔ Bloom: `chat/Bloom.txt`, `Readme/bloom-api.md`, `Readme/DECISIONS.md`
+- Инфра / SRE (CRONOS в AI Studio): `Readme/DECISIONS.md`, `Readme/RUNBOOK.md`, `Readme/PROJECT.md`
 - Версия ЛК: число в `index.html` (`.app-version`)

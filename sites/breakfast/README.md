@@ -112,10 +112,9 @@ sites/breakfast/
 ├── assets/
 │   ├── images/          # hero, about, примеры
 │   └── video/           # promo.mp4, sveta_hello/listen/clap.mp4
-├── FORGE-TASK.md        # ТЗ и открытые вопросы
 └── README.md            # этот файл
 
-web-app/                 # бэкенд (отдельный git-репозиторий)
+~/Apps/island/           # бэкенд (git island)
 ├── breakfast_sveta.py   # AI + save + JSONL
 ├── main.py              # mount /breakfast/ + API routes
 └── logs/
@@ -131,7 +130,7 @@ web-app/                 # бэкенд (отдельный git-репозито
 ### Рекомендуется (лендинг + API на одном порту)
 
 ```bash
-cd /home/makc/Apps/OSTROV/web-app
+cd ~/Apps/island
 
 # В .env минимум:
 # GEMINI_API_KEY=...
@@ -259,9 +258,9 @@ cd sites/breakfast
 
 ## Связанные документы
 
-- `FORGE-TASK.md` — ТЗ, открытые вопросы по воронке
-- `web-app/Readme/RUNBOOK.md` — деплой и smoke-check
-- `../CONTEXT.md` (корень OSTROV) — handoff между сессиями Cursor
+- `Readme/RUNBOOK.md` — деплой и smoke-check
+- `Readme/DECISIONS.md` — архитектурные решения
+- `chat/Bloom.txt` — handoff Forge ↔ Bloom
 
 ---
 

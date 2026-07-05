@@ -123,7 +123,7 @@
 
     return (
       '<h2>Марафоны</h2>' +
-      '<p class="hint">Июнь 2026 берём готовым из <code>june.html</code>. Остальные месяцы — по твоей ручной разметке; привычки считаются по точному тексту.</p>' +
+      '<p class="hint">Июнь 2026 — готовый отчёт: <a href="legacy/june.html" target="_blank" rel="noopener">june.html</a> (откроется в новой вкладке). Остальные месяцы — по ручной разметке; привычки по точному тексту.</p>' +
       '<table class="matrix-table"><thead>' + headTop + headBottom + '</thead><tbody>' +
       metricRow('Кол-во участников', 'participants_count', false) +
       metricRow('Кол-во привычек', 'habits_count', false) +

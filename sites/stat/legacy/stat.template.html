@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Разметка чата марафона</title>
+  <style>
+    :root {
+      --bg: #f4f5f7;
+      --card: #fff;
+      --border: #dde1e6;
+      --text: #1a1a1a;
+      --muted: #6b7280;
+      --accent: #2563eb;
+      --manifest: #7c3aed;
+      --report: #059669;
+      --simple: #6b7280;
+      --warn: #fef08a;
+      --out-window: #f9fafb;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      height: 100%;
+      margin: 0;
+    }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    header {
+      flex-shrink: 0;
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 16px;
+      z-index: 10;
+    }
+    h1 { margin: 0 0 8px; font-size: 1.15rem; }
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+    .toolbar input[type="search"] {
+      min-width: 200px;
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+    .toolbar label {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+    }
+    button, .btn {
+      padding: 6px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--card);
+      cursor: pointer;
+      font-size: 13px;
+    }
+    button.primary {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    button:hover { filter: brightness(0.97); }
+    .stats {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    main {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      padding: 12px 16px 24px;
+    }
+    .table-wrap {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    table {
+      border-collapse: separate;
+      border-spacing: 0;
+      background: var(--card);
+      width: max-content;
+      min-width: 100%;
+    }
+    th, td {
+      border-bottom: 1px solid var(--border);
+      padding: 8px 10px;
+      vertical-align: top;
+      text-align: left;
+    }
+    thead th {
+      background: #eef2ff;
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      box-shadow: 0 1px 0 var(--border);
+    }
+    tr.out-window { background: var(--out-window); opacity: 0.65; }
+    tr.mismatch td.opinion-col { background: var(--warn); }
+    tr.labeled-match .opinion-badge { outline: 2px solid #22c55e; }
+    .msg-col {
+      width: 480px;
+      max-width: 480px;
+    }
+    .msg-text {
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 200px;
+      overflow-y: auto;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+    .opinion-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #fff;
+    }
+    .opinion-badge.simple { background: var(--simple); }
+    .opinion-badge.manifest { background: var(--manifest); }
+    .opinion-badge.report { background: var(--report); }
+    .cb-col {
+      text-align: center;
+      width: 2rem;
+      padding: 8px 2px !important;
+    }
+    .cb-col input { width: 16px; height: 16px; cursor: pointer; margin: 0; }
+    th.cb-col { font-size: 11px; line-height: 1.2; padding: 6px 2px !important; }
+    .date-col { width: 5.5rem; line-height: 1.3; }
+    .date-col .time-part { color: var(--muted); font-size: 12px; }
+    .author-col { white-space: nowrap; width: 5.5rem; }
+    .opinion-col { width: 5.5rem; white-space: nowrap; }
+    .ruchka-col { background: #fffbeb; }
+    th.ruchka-col { background: #fef3c7; font-size: 10px; }
+    #import-input { display: none; }
+    .hidden { display: none !important; }
+    .filter-author { padding: 6px; border-radius: 6px; border: 1px solid var(--border); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Разметка чата марафона</h1>
+    <div class="toolbar">
+      <input type="search" id="search" placeholder="Поиск по тексту, автору…">
+      <select id="filter-author" class="filter-author">
+        <option value="">Все авторы</option>
+      </select>
+      <select id="filter-type" class="filter-author">
+        <option value="">Все типы (мнение)</option>
+        <option value="simple">Мнение: простое</option>
+        <option value="manifest">Мнение: манифест</option>
+        <option value="report">Мнение: отчёт</option>
+      </select>
+      <label><input type="checkbox" id="only-unlabeled"> Только неразмеченные</label>
+      <label><input type="checkbox" id="only-window" checked> Только июньский цикл (25.05–22.06)</label>
+      <label><input type="checkbox" id="only-mismatch"> Только расхождения</label>
+      <label><input type="checkbox" id="only-aigul-reports"> Только отчёты Айгуль</label>
+      <button type="button" class="primary" id="btn-export">Скачать разметку (JSON)</button>
+      <button type="button" class="primary" id="btn-export-ruchka">Скачать ручку (JSON)</button>
+      <button type="button" id="btn-import">Импорт JSON</button>
+      <input type="file" id="import-input" accept=".json,application/json">
+      <button type="button" id="btn-clear">Сбросить разметку</button>
+    </div>
+    <div class="stats" id="stats"></div>
+  </header>
+  <main>
+    <div class="table-wrap">
+    <table>
+      <colgroup>
+        <col class="date-col">
+        <col class="author-col">
+        <col class="msg-col">
+        <col class="cb-col">
+        <col class="cb-col">
+        <col class="cb-col">
+        <col class="ruchka-col">
+        <col class="opinion-col">
+      </colgroup>
+      <thead>
+        <tr>
+          <th class="date-col">Дата</th>
+          <th class="author-col">Автор</th>
+          <th class="msg-col">Сообщение</th>
+          <th class="cb-col">Простое</th>
+          <th class="cb-col">Манифест</th>
+          <th class="cb-col">Отчёт</th>
+          <th class="cb-col ruchka-col">Ручка</th>
+          <th class="opinion-col">Мнение</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    </div>
+  </main>
+
+  <script>
+    const MESSAGES = /*__MESSAGES__*/;
+    const STORAGE_KEY = 'marathon-labels-v1';
+    const RUCHKA_STORAGE_KEY = 'marathon-ruchka-v1';
+    const TYPE_LABELS = { simple: 'простое', manifest: 'манифест', report: 'отчёт' };
+
+    let labels = loadLabels();
+    let ruchkaLabels = loadRuchkaLabels();
+
+    function loadRuchkaLabels() {
+      try {
+        const raw = localStorage.getItem(RUCHKA_STORAGE_KEY);
+        return raw ? JSON.parse(raw) : {};
+      } catch {
+        return {};
+      }
+    }
+
+    function saveRuchkaLabels() {
+      localStorage.setItem(RUCHKA_STORAGE_KEY, JSON.stringify(ruchkaLabels));
+      updateStats();
+    }
+
+    function getRuchka(id) {
+      return !!ruchkaLabels[id];
+    }
+
+    function setRuchka(id, value) {
+      if (value) {
+        ruchkaLabels[id] = true;
+      } else {
+        delete ruchkaLabels[id];
+      }
+      saveRuchkaLabels();
+    }
+
+    function isAigulReport(msg) {
+      if (msg.author !== 'Айгуль') return false;
+      const manual = getLabel(msg.id);
+      return manual === 'report' || msg.opinion === 'report';
+    }
+
+    function ruchkaCell(msg) {
+      if (!isAigulReport(msg)) {
+        return '<td class="cb-col ruchka-col"></td>';
+      }
+      const checked = getRuchka(msg.id) ? 'checked' : '';
+      return `<td class="cb-col ruchka-col"><input type="checkbox" data-ruchka="${msg.id}" title="Ручка выполнена в этом отчёте" ${checked}></td>`;
+    }
+
+    function loadLabels() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        return raw ? JSON.parse(raw) : {};
+      } catch {
+        return {};
+      }
+    }
+
+    function saveLabels() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(labels));
+      updateStats();
+    }
+
+    function getLabel(id) {
+      return labels[id] ?? null;
+    }
+
+    function setLabel(id, type) {
+      if (type === null) {
+        delete labels[id];
+      } else {
+        labels[id] = type;
+      }
+      saveLabels();
+      render();
+    }
+
+    function escapeHtml(s) {
+      return s
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function matchesFilters(msg) {
+      const q = document.getElementById('search').value.trim().toLowerCase();
+      const author = document.getElementById('filter-author').value;
+      const typeFilter = document.getElementById('filter-type').value;
+      const onlyUnlabeled = document.getElementById('only-unlabeled').checked;
+      const onlyWindow = document.getElementById('only-window').checked;
+      const onlyMismatch = document.getElementById('only-mismatch').checked;
+      const onlyAigulReports = document.getElementById('only-aigul-reports').checked;
+
+      if (onlyWindow && !msg.inWindow) return false;
+      if (onlyAigulReports && !isAigulReport(msg)) return false;
+      if (author && msg.author !== author) return false;
+      if (typeFilter && msg.opinion !== typeFilter) return false;
+      if (onlyUnlabeled && getLabel(msg.id)) return false;
+      const manual = getLabel(msg.id);
+      if (onlyMismatch && (!manual || manual === msg.opinion)) return false;
+      if (q) {
+        const hay = `${msg.datetime} ${msg.author} ${msg.text}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    }
+
+    function render() {
+      const tbody = document.getElementById('tbody');
+      const frag = document.createDocumentFragment();
+
+      for (const msg of MESSAGES) {
+        if (!matchesFilters(msg)) continue;
+        const manual = getLabel(msg.id);
+        const tr = document.createElement('tr');
+        if (!msg.inWindow) tr.classList.add('out-window');
+        if (manual && manual !== msg.opinion) tr.classList.add('mismatch');
+        if (manual && manual === msg.opinion) tr.classList.add('labeled-match');
+
+        const [datePart, timePart] = msg.datetime.split(' ');
+        tr.innerHTML = `
+          <td class="date-col">
+            <div>${escapeHtml(datePart)}</div>
+            <div class="time-part">${escapeHtml(timePart)}</div>
+          </td>
+          <td class="author-col" title="${escapeHtml(msg.authorRaw)}">${escapeHtml(msg.author)}</td>
+          <td class="msg-col"><div class="msg-text">${escapeHtml(msg.text)}</div></td>
+          <td class="cb-col"><input type="checkbox" data-id="${msg.id}" data-type="simple" ${manual === 'simple' ? 'checked' : ''}></td>
+          <td class="cb-col"><input type="checkbox" data-id="${msg.id}" data-type="manifest" ${manual === 'manifest' ? 'checked' : ''}></td>
+          <td class="cb-col"><input type="checkbox" data-id="${msg.id}" data-type="report" ${manual === 'report' ? 'checked' : ''}></td>
+          ${ruchkaCell(msg)}
+          <td class="opinion-col"><span class="opinion-badge ${msg.opinion}">${TYPE_LABELS[msg.opinion]}</span></td>
+        `;
+        frag.appendChild(tr);
+      }
+      tbody.replaceChildren(frag);
+      updateStats();
+    }
+
+    function updateStats() {
+      const total = MESSAGES.length;
+      const labeled = Object.keys(labels).length;
+      const inWindow = MESSAGES.filter((m) => m.inWindow);
+      const labeledInWindow = inWindow.filter((m) => labels[m.id]).length;
+      const mismatches = MESSAGES.filter((m) => labels[m.id] && labels[m.id] !== m.opinion).length;
+      const aigulReports = MESSAGES.filter(isAigulReport);
+      const ruchkaMarked = aigulReports.filter((m) => getRuchka(m.id)).length;
+      document.getElementById('stats').textContent =
+        `Всего: ${total} · Размечено: ${labeled} · В цикле: ${inWindow.length} (размечено ${labeledInWindow}) · Расхождений: ${mismatches} · Ручка (Айгуль): ${ruchkaMarked}/${aigulReports.length}`;
+    }
+
+    function exportJson() {
+      const data = {
+        exportedAt: new Date().toISOString(),
+        cycleWindow: '2026-05-25 — 2026-06-22',
+        messages: MESSAGES.map((m) => ({
+          id: m.id,
+          datetime: m.datetime,
+          author: m.author,
+          authorRaw: m.authorRaw,
+          text: m.text,
+          opinion: m.opinion,
+          label: labels[m.id] ?? null,
+          ruchka: isAigulReport(m) ? getRuchka(m.id) : null,
+          inWindow: m.inWindow,
+        })),
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'marathon-labels.json';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    function exportRuchkaJson() {
+      const items = MESSAGES.filter(isAigulReport).map((m) => ({
+        id: m.id,
+        datetime: m.datetime,
+        author: m.author,
+        text: m.text,
+        ruchka: getRuchka(m.id),
+      }));
+      const data = {
+        exportedAt: new Date().toISOString(),
+        purpose: 'проверка привычки Ручка — отчёты Айгуль',
+        messages: items,
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'marathon-ruchka-labels.json';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    function importJson(file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const data = JSON.parse(reader.result);
+          const items = data.messages ?? data;
+          if (!Array.isArray(items)) throw new Error('Нет массива messages');
+          const next = {};
+          const nextRuchka = { ...ruchkaLabels };
+          for (const item of items) {
+            if (item.id != null && item.label) next[item.id] = item.label;
+            if (item.id != null && item.ruchka === true) nextRuchka[item.id] = true;
+            if (item.id != null && item.ruchka === false) delete nextRuchka[item.id];
+          }
+          labels = next;
+          ruchkaLabels = nextRuchka;
+          saveLabels();
+          saveRuchkaLabels();
+          render();
+          alert(`Импортировано меток: ${Object.keys(labels).length}`);
+        } catch (e) {
+          alert('Ошибка импорта: ' + e.message);
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    document.getElementById('tbody').addEventListener('change', (e) => {
+      const cb = e.target;
+      if (cb.type !== 'checkbox') return;
+      if (cb.dataset.ruchka) {
+        setRuchka(+cb.dataset.ruchka, cb.checked);
+        return;
+      }
+      if (!cb.dataset.id) return;
+      const id = +cb.dataset.id;
+      const type = cb.dataset.type;
+      if (cb.checked) {
+        setLabel(id, type);
+      } else if (getLabel(id) === type) {
+        setLabel(id, null);
+      }
+    });
+
+    ['search', 'filter-author', 'filter-type'].forEach((id) => {
+      document.getElementById(id).addEventListener('input', render);
+      document.getElementById(id).addEventListener('change', render);
+    });
+    ['only-unlabeled', 'only-window', 'only-mismatch', 'only-aigul-reports'].forEach((id) => {
+      document.getElementById(id).addEventListener('change', render);
+    });
+
+    document.getElementById('btn-export').addEventListener('click', exportJson);
+    document.getElementById('btn-export-ruchka').addEventListener('click', exportRuchkaJson);
+    document.getElementById('btn-import').addEventListener('click', () => {
+      document.getElementById('import-input').click();
+    });
+    document.getElementById('import-input').addEventListener('change', (e) => {
+      if (e.target.files[0]) importJson(e.target.files[0]);
+      e.target.value = '';
+    });
+    document.getElementById('btn-clear').addEventListener('click', () => {
+      if (confirm('Сбросить всю ручную разметку в localStorage?')) {
+        labels = {};
+        ruchkaLabels = {};
+        saveLabels();
+        saveRuchkaLabels();
+        render();
+      }
+    });
+
+    const authors = [...new Set(MESSAGES.map((m) => m.author))].sort();
+    const sel = document.getElementById('filter-author');
+    for (const a of authors) {
+      const opt = document.createElement('option');
+      opt.value = a;
+      opt.textContent = a;
+      sel.appendChild(opt);
+    }
+
+    render();
+  </script>
+</body>
+</html>

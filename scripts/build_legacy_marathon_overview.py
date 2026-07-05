@@ -5,7 +5,7 @@
 Источники:
 - chat/result-data.json
 - chat/marathon-labels-2026-07-04.json (источник правды)
-- OSTROV/sites/marathon/june.html (готовый июнь 2026)
+- sites/stat/legacy/june.html (готовый июнь 2026; сборка: legacy/build-june.py)
 
 Выход:
 - sites/stat/data/legacy_overview.json
@@ -22,7 +22,7 @@ from zoneinfo import ZoneInfo
 ROOT = Path(__file__).resolve().parent.parent
 RESULT_DATA_PATH = ROOT / "chat" / "result-data.json"
 LABELS_PATH = ROOT / "chat" / "marathon-labels-2026-07-04.json"
-JUNE_HTML_PATH = Path("/home/makc/Apps/OSTROV/sites/marathon/june.html")
+JUNE_HTML_PATH = ROOT / "sites" / "stat" / "legacy" / "june.html"
 OUT_PATH = ROOT / "sites" / "stat" / "data" / "legacy_overview.json"
 TZ = ZoneInfo("Europe/Moscow")
 
@@ -54,6 +54,8 @@ def load_json(path: Path) -> dict:
 
 
 def extract_june_data() -> dict:
+    if not JUNE_HTML_PATH.is_file():
+        raise RuntimeError(f"Не найден {JUNE_HTML_PATH} — пересобери: sites/stat/legacy/build-june.py")
     html = JUNE_HTML_PATH.read_text(encoding="utf-8")
     m = re.search(r"const DATA = (\{.*?\});\s*let current", html, flags=re.S)
     if not m:

@@ -2,6 +2,20 @@
 
 Старые пункты могут ссылаться на прежний монолитный `Readme/Readme.md`; актуальная структура — корневой [README.md](../README.md), [PROJECT.md](PROJECT.md), [RUNBOOK.md](RUNBOOK.md).
 
+## 2026-07-05 — docker-compose: volume media для аватарок на проде (v310)
+
+- `./media:/app/media` — загрузка и Nginx читают один каталог на хосте; RUNBOOK уточнён.
+
+## 2026-07-04 — Уборка: OSTROV → island, удаление одноразовых CRONOS (v309)
+
+- Marathon legacy целиком в `sites/stat/legacy/`; OSTROV `sites/` и `island-bridge-contract` архивированы и удалены с ноута.
+- Удалены `CRONOS-*.md`, `build_cronos_upload_bundle.sh`, `sites/breakfast/FORGE-TASK.md`.
+- Память архитектуры: `chat/Bloom.txt`, `Readme/DECISIONS.md`. OSTROV остался только `bloom/` (до переезда в `~/Apps/bloom`).
+
+## 2026-07-04 — /stat/legacy/june.html: просмотр июня 2026 (v308)
+
+- Копия `june.html` в `sites/stat/legacy/`; ссылка из раздела «Марафоны»; скрипт legacy берёт файл из репо.
+
 ## 2026-07-04 — MERGE_USERS_68_128_PROD.md: инструкция Продагенту (v307)
 
 - Runbook merge София Авраменко 68→128 на прод-БД; ссылка в RUNBOOK.

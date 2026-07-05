@@ -175,6 +175,8 @@ tail -20 logs/buddy_digest.log
 
 ### Раздача `media/`
 
+Загрузка аватаров (`POST /avatar`) пишет в `media/avatars/` на **хосте** — в `docker-compose.yml` обязателен volume `./media:/app/media` (иначе файл остаётся только в контейнере, Nginx отдаёт 404).
+
 ```nginx
 location /media/ {
     alias /home/makc/Apps/island/media/;

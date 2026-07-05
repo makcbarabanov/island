@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Марафон июнь 2026</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --sidebar: #1e293b;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --accent: #3b82f6;
+      --accent-soft: #dbeafe;
+      --good: #059669;
+      --warn: #d97706;
+      --border: #e2e8f0;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #f1f5f9;
+      color: var(--text);
+    }
+    .app {
+      display: flex;
+      flex-direction: column;
+      min-height: 100%;
+    }
+    .topbar {
+      background: linear-gradient(135deg, #1e3a5f, #2563eb);
+      color: #fff;
+      padding: 16px 24px;
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+    }
+    .layout {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+    }
+    .sidebar {
+      width: 220px;
+      flex-shrink: 0;
+      background: var(--sidebar);
+      color: #e2e8f0;
+      padding: 16px 0;
+    }
+    .nav-title {
+      padding: 0 16px 8px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #94a3b8;
+    }
+    .nav-item {
+      display: block;
+      width: 100%;
+      text-align: left;
+      border: none;
+      background: transparent;
+      color: #e2e8f0;
+      padding: 10px 16px;
+      font-size: 14px;
+      cursor: pointer;
+      border-left: 3px solid transparent;
+    }
+    .nav-item:hover { background: rgba(255,255,255,0.06); }
+    .nav-item.active {
+      background: rgba(59,130,246,0.2);
+      border-left-color: #60a5fa;
+      color: #fff;
+      font-weight: 600;
+    }
+    .nav-divider {
+      height: 1px;
+      background: #334155;
+      margin: 12px 16px;
+    }
+    main {
+      flex: 1;
+      padding: 24px;
+      overflow: auto;
+    }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .cards-equal {
+      grid-template-columns: repeat(4, 1fr);
+    }
+    .card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 18px 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    .card-label { font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+    .card-value { font-size: 2rem; font-weight: 700; line-height: 1.1; }
+    .card-value small { font-size: 1rem; font-weight: 500; color: var(--muted); }
+    .card-grid {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px 12px;
+    }
+    .card-grid .report-grid {
+      height: 72px;
+      gap: 3px;
+      width: 100%;
+    }
+    .card-grid .report-day {
+      font-size: 10px;
+      border-radius: 3px;
+    }
+    .report-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      width: 100%;
+    }
+    .report-day {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 8px;
+      font-weight: 600;
+      line-height: 1;
+      border-radius: 2px;
+      color: #fff;
+      min-height: 0;
+      min-width: 0;
+    }
+    .report-day.ok { background: #059669; }
+    .report-day.miss { background: #dc2626; }
+    h2 {
+      margin: 0 0 16px;
+      font-size: 1.2rem;
+    }
+    .section-title {
+      margin: 28px 0 12px;
+      font-size: 1rem;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    table {
+      width: 100%;
+      table-layout: fixed;
+      border-collapse: collapse;
+      background: var(--card);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    .table-group table { border-radius: 0; box-shadow: none; }
+    .table-group table:first-child { border-radius: 12px 12px 0 0; }
+    .table-group table:last-child { border-radius: 0 0 12px 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .table-group table:only-child { border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .col-num { width: 48px; }
+    .col-plan { width: 88px; }
+    .col-fact { width: 88px; }
+    .col-pct { width: 72px; }
+    th, td {
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      background: #f8fafc;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    th.sortable {
+      cursor: pointer;
+      user-select: none;
+    }
+    th.sortable:hover { color: var(--accent); }
+    th.sortable::after {
+      font-size: 11px;
+      opacity: 0.35;
+    }
+    th.sortable:not(.asc):not(.desc)::after { content: ' ⇅'; }
+    th.sortable.asc::after { content: ' ↑'; opacity: 1; color: var(--accent); }
+    th.sortable.desc::after { content: ' ↓'; opacity: 1; color: var(--accent); }
+    tr:last-child td { border-bottom: none; }
+    .section-row td {
+      background: #f1f5f9;
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--muted);
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .num { color: var(--muted); }
+    .pct {
+      font-weight: 600;
+    }
+    .pct.good { color: var(--good); }
+    .pct.mid { color: var(--warn); }
+    .pct.low { color: #dc2626; }
+    .insights {
+      margin-top: 20px;
+      background: var(--card);
+      border-radius: 12px;
+      padding: 16px 18px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    .insight-line {
+      margin: 0 0 8px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .insight-line strong { color: var(--good); }
+    .insight-line.weak strong { color: #dc2626; }
+    .recommendation {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+      font-size: 14px;
+      line-height: 1.55;
+      color: #334155;
+    }
+    .recommendation-title {
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: var(--accent);
+    }
+    .hint {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 12px;
+    }
+    .hidden { display: none; }
+    @media (max-width: 700px) {
+      .layout { flex-direction: column; }
+      .sidebar { width: 100%; display: flex; flex-wrap: wrap; gap: 4px; padding: 8px; }
+      .nav-item { width: auto; border-left: none; border-radius: 8px; padding: 8px 12px; }
+      .nav-divider, .nav-title { display: none; }
+      .cards-equal { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">Марафон июнь 2026</header>
+    <div class="layout">
+      <nav class="sidebar" id="nav"></nav>
+      <main id="content"></main>
+    </div>
+  </div>
+
+  <script>
+    const DATA = {"overall": {"participants": 5, "avgReportPct": 89.5, "avgHabitPct": 52.7}, "participants": [{"id": "макс", "name": "Макс", "habits": [{"num": 1, "habit": "Интервальное питание", "plan": 19, "fact": 8}, {"num": 2, "habit": "Вода 2л", "plan": 21, "fact": 11}, {"num": 3, "habit": "15 минут чтения", "plan": 18, "fact": 5}, {"num": 4, "habit": "Энергопрактика", "plan": 21, "fact": 11}, {"num": 5, "habit": "Дыхание по ВимХофу", "plan": 18, "fact": 1}, {"num": 6, "habit": "1 сторис в день", "plan": 21, "fact": 6}, {"num": 7, "habit": "Работа с соц сетью, 2 часа в день", "plan": 7, "fact": 4}, {"num": 8, "habit": "Гимнастика", "plan": 15, "fact": 5}, {"num": 9, "habit": "Мантра я люблю и принимаю себя", "plan": 21, "fact": 11}, {"num": 10, "habit": "Один урок коддинга в день", "plan": 8, "fact": 6}, {"num": 11, "habit": "Бег", "plan": 6, "fact": 2}, {"num": 12, "habit": "Работа с соц сетью 4 часа в день", "plan": 3, "fact": 0}, {"num": 13, "habit": "Время на написание книги", "plan": 3, "fact": 2}, {"num": 14, "habit": "Пищевая пауза", "plan": 2, "fact": 2}], "starHabits": [], "reports": 19, "reportCalendar": [{"day": 1, "hasReport": true}, {"day": 2, "hasReport": true}, {"day": 3, "hasReport": true}, {"day": 4, "hasReport": true}, {"day": 5, "hasReport": true}, {"day": 6, "hasReport": true}, {"day": 7, "hasReport": false}, {"day": 8, "hasReport": true}, {"day": 9, "hasReport": true}, {"day": 10, "hasReport": true}, {"day": 11, "hasReport": true}, {"day": 12, "hasReport": true}, {"day": 13, "hasReport": false}, {"day": 14, "hasReport": true}, {"day": 15, "hasReport": true}, {"day": 16, "hasReport": true}, {"day": 17, "hasReport": true}, {"day": 18, "hasReport": true}, {"day": 19, "hasReport": true}, {"day": 20, "hasReport": true}, {"day": 21, "hasReport": true}], "reportPct": 90.5, "habitPct": 40.4}, {"id": "света", "name": "Света", "habits": [{"num": 1, "habit": "Чтение книги", "plan": 21, "fact": 9}, {"num": 2, "habit": "Сурья намаскар", "plan": 21, "fact": 9}, {"num": 3, "habit": "Слушать историю про Ручку", "plan": 21, "fact": 9}, {"num": 4, "habit": "Откладывать минимум один рубль в копилку на пространство", "plan": 21, "fact": 9}], "starHabits": [{"num": 1, "habit": "Попить кофе с 5 новыми людьми", "plan": 5, "fact": 12}, {"num": 2, "habit": "10000 шагов", "plan": 21, "fact": 12}], "reports": 20, "reportCalendar": [{"day": 1, "hasReport": true}, {"day": 2, "hasReport": true}, {"day": 3, "hasReport": true}, {"day": 4, "hasReport": true}, {"day": 5, "hasReport": true}, {"day": 6, "hasReport": true}, {"day": 7, "hasReport": true}, {"day": 8, "hasReport": true}, {"day": 9, "hasReport": true}, {"day": 10, "hasReport": false}, {"day": 11, "hasReport": true}, {"day": 12, "hasReport": true}, {"day": 13, "hasReport": true}, {"day": 14, "hasReport": true}, {"day": 15, "hasReport": true}, {"day": 16, "hasReport": true}, {"day": 17, "hasReport": true}, {"day": 18, "hasReport": true}, {"day": 19, "hasReport": true}, {"day": 20, "hasReport": true}, {"day": 21, "hasReport": true}], "reportPct": 95.2, "habitPct": 42.9}, {"id": "айгуль", "name": "Айгуль", "habits": [{"num": 1, "habit": "Сурья Намаскар", "plan": 21, "fact": 20}, {"num": 2, "habit": "Питьевой режим", "plan": 21, "fact": 20}, {"num": 3, "habit": "Ручка", "plan": 21, "fact": 14}, {"num": 4, "habit": "Практика щедрости", "plan": 21, "fact": 20}], "starHabits": [], "reports": 20, "reportCalendar": [{"day": 1, "hasReport": false}, {"day": 2, "hasReport": true}, {"day": 3, "hasReport": true}, {"day": 4, "hasReport": true}, {"day": 5, "hasReport": true}, {"day": 6, "hasReport": true}, {"day": 7, "hasReport": true}, {"day": 8, "hasReport": true}, {"day": 9, "hasReport": true}, {"day": 10, "hasReport": true}, {"day": 11, "hasReport": true}, {"day": 12, "hasReport": true}, {"day": 13, "hasReport": true}, {"day": 14, "hasReport": true}, {"day": 15, "hasReport": true}, {"day": 16, "hasReport": true}, {"day": 17, "hasReport": true}, {"day": 18, "hasReport": true}, {"day": 19, "hasReport": true}, {"day": 20, "hasReport": true}, {"day": 21, "hasReport": true}], "reportPct": 95.2, "habitPct": 88.1}, {"id": "ксения", "name": "Ксения", "habits": [{"num": 1, "habit": "Зарядка или танцы", "plan": 21, "fact": 12}, {"num": 2, "habit": "5000 шагов", "plan": 21, "fact": 19}, {"num": 3, "habit": "Писать благодарности", "plan": 21, "fact": 10}, {"num": 4, "habit": "Писать книгу \"Счастливая женщина\"", "plan": 21, "fact": 9}, {"num": 5, "habit": "По возможности ходить на свидания", "plan": 21, "fact": 5}], "starHabits": [], "reports": 19, "reportCalendar": [{"day": 1, "hasReport": true}, {"day": 2, "hasReport": true}, {"day": 3, "hasReport": true}, {"day": 4, "hasReport": true}, {"day": 5, "hasReport": true}, {"day": 6, "hasReport": true}, {"day": 7, "hasReport": true}, {"day": 8, "hasReport": true}, {"day": 9, "hasReport": true}, {"day": 10, "hasReport": false}, {"day": 11, "hasReport": true}, {"day": 12, "hasReport": true}, {"day": 13, "hasReport": true}, {"day": 14, "hasReport": true}, {"day": 15, "hasReport": false}, {"day": 16, "hasReport": true}, {"day": 17, "hasReport": true}, {"day": 18, "hasReport": true}, {"day": 19, "hasReport": true}, {"day": 20, "hasReport": true}, {"day": 21, "hasReport": true}], "reportPct": 90.5, "habitPct": 52.4}, {"id": "софия", "name": "София", "habits": [{"num": 1, "habit": "Закрыть кредитку", "plan": 21, "fact": 10}, {"num": 2, "habit": "Создать доход на x2… x3", "plan": 21, "fact": 11}, {"num": 3, "habit": "Вернуться в йогу", "plan": 21, "fact": 12}, {"num": 4, "habit": "Закончить 2 курс АСI", "plan": 21, "fact": 0}, {"num": 5, "habit": "Слушать ручку", "plan": 21, "fact": 12}, {"num": 6, "habit": "Кофе-медитация", "plan": 21, "fact": 14}, {"num": 7, "habit": "Отдых выходного дня", "plan": 21, "fact": 2}, {"num": 8, "habit": "Расхламить квартиру", "plan": 21, "fact": 12}, {"num": 9, "habit": "Пройти марафон стройности через NL", "plan": 21, "fact": 2}], "starHabits": [], "reports": 16, "reportCalendar": [{"day": 1, "hasReport": false}, {"day": 2, "hasReport": true}, {"day": 3, "hasReport": true}, {"day": 4, "hasReport": true}, {"day": 5, "hasReport": true}, {"day": 6, "hasReport": true}, {"day": 7, "hasReport": true}, {"day": 8, "hasReport": true}, {"day": 9, "hasReport": true}, {"day": 10, "hasReport": true}, {"day": 11, "hasReport": true}, {"day": 12, "hasReport": true}, {"day": 13, "hasReport": true}, {"day": 14, "hasReport": true}, {"day": 15, "hasReport": true}, {"day": 16, "hasReport": true}, {"day": 17, "hasReport": true}, {"day": 18, "hasReport": false}, {"day": 19, "hasReport": false}, {"day": 20, "hasReport": false}, {"day": 21, "hasReport": false}], "reportPct": 76.2, "habitPct": 39.7}], "cycleDays": 21};
+    let current = 'overall';
+    let tableSort = { col: null, dir: 'asc' };
+
+    function pctClass(v) {
+      if (v >= 70) return 'good';
+      if (v >= 40) return 'mid';
+      return 'low';
+    }
+
+    function habitPct(fact, plan) {
+      return plan ? Math.round(fact / plan * 1000) / 10 : 0;
+    }
+
+    const COLGROUP = `<colgroup>
+      <col class="col-num"><col class="col-habit"><col class="col-plan"><col class="col-fact"><col class="col-pct">
+    </colgroup>`;
+
+    function tableHead() {
+      const habitCls = tableSort.col === 'habit' ? `sortable ${tableSort.dir}` : 'sortable';
+      const pctCls = tableSort.col === 'pct' ? `sortable ${tableSort.dir}` : 'sortable';
+      return `<thead><tr>
+        <th>№</th>
+        <th class="${habitCls}" data-sort="habit">Привычка</th>
+        <th>План (шт)</th>
+        <th>Факт (шт)</th>
+        <th class="${pctCls}" data-sort="pct">%</th>
+      </tr></thead>`;
+    }
+
+    function sortHabits(habits) {
+      if (!tableSort.col || !habits.length) return habits;
+      const sorted = [...habits].sort((a, b) => {
+        if (tableSort.col === 'habit') {
+          const cmp = a.habit.localeCompare(b.habit, 'ru');
+          return tableSort.dir === 'asc' ? cmp : -cmp;
+        }
+        const pa = habitPct(a.fact, a.plan);
+        const pb = habitPct(b.fact, b.plan);
+        if (pa !== pb) return tableSort.dir === 'asc' ? pa - pb : pb - pa;
+        return a.habit.localeCompare(b.habit, 'ru');
+      });
+      return sorted.map((h, i) => ({ ...h, num: i + 1 }));
+    }
+
+    function habitRows(habits) {
+      return habits.map((h) => {
+        const p = habitPct(h.fact, h.plan);
+        return `<tr>
+          <td class="num">${h.num}</td>
+          <td>${escapeHtml(h.habit)}</td>
+          <td>${h.plan}</td>
+          <td>${h.fact}</td>
+          <td class="pct ${pctClass(p)}">${p}%</td>
+        </tr>`;
+      }).join('');
+    }
+
+    function renderHabitsTables(p) {
+      const main = sortHabits(p.habits);
+      const star = p.starHabits && p.starHabits.length ? sortHabits(p.starHabits) : [];
+      let html = `<div class="table-group"><table>${COLGROUP}${tableHead()}<tbody>`;
+      html += habitRows(main);
+      if (star.length) {
+        html += `<tr class="section-row"><td colspan="5">Задачи со звёздочкой</td></tr>`;
+        html += habitRows(star);
+      }
+      html += `</tbody></table></div>`;
+      return html;
+    }
+
+    function analyzeHabits(habits) {
+      if (!habits.length) return { strongest: [], weakest: [] };
+      const items = habits.map((h) => ({ ...h, pct: habitPct(h.fact, h.plan) }));
+      const maxPct = Math.max(...items.map((h) => h.pct));
+      const minPct = Math.min(...items.map((h) => h.pct));
+      return {
+        strongest: items.filter((h) => h.pct === maxPct),
+        weakest: items.filter((h) => h.pct === minPct),
+      };
+    }
+
+    function formatHabitList(items) {
+      return items.map((h) => `«${h.habit}» (${h.pct}%)`).join(', ');
+    }
+
+    function buildRecommendation(p, strongest, weakest) {
+      const tips = [];
+      const hp = habitPct(
+        p.habits.reduce((s, h) => s + h.fact, 0),
+        p.habits.reduce((s, h) => s + h.plan, 0)
+      );
+
+      if (p.reportPct < 80) {
+        tips.push(
+          `Отчётность ${p.reportPct}% — ниже целевых 80%. Зафиксируй одно и то же время для отчёта (например, перед сном), чтобы не терять дни.`
+        );
+      } else if (p.reportPct >= 95) {
+        tips.push('Отчётность на высоте — это сильная дисциплина, на неё можно опереться при подтягивании слабых привычек.');
+      }
+
+      for (const w of weakest) {
+        if (w.pct >= 70) continue;
+        const gap = w.plan - w.fact;
+        if (w.pct < 40) {
+          tips.push(
+            `«${w.habit}» выполнена лишь ${w.pct}% (${w.fact} из ${w.plan}). Разбей на микро-шаг: сделай минимальную версию привычки 5 минут в день — важнее ритм, чем идеальный объём. Не хватает ~${gap} отметок.`
+          );
+        } else {
+          tips.push(
+            `«${w.habit}» — зона роста (${w.pct}%). Добавь напоминание или привяжи привычку к уже стабильному действию (например, после утреннего отчёта).`
+          );
+        }
+      }
+
+      if (strongest.length && weakest.length && strongest[0].pct > weakest[0].pct) {
+        tips.push(
+          `Перенеси приём из сильной привычки «${strongest[0].habit}» на слабую: тот же слот времени, тот же формат отчёта в чате.`
+        );
+      }
+
+      if (hp < 60 && tips.length < 2) {
+        tips.push('Общий процент ниже 60% — на следующий цикл выбери 1–2 привычки в приоритет, остальные держи в поддерживающем режиме.');
+      }
+
+      if (!tips.length) {
+        tips.push('Баланс хороший. Сохраняй текущий ритм и чуть усложни привычку с самым высоким процентом — там есть запас прочности.');
+      }
+
+      return tips.slice(0, 3).join(' ');
+    }
+
+    function renderInsights(p) {
+      const { strongest, weakest } = analyzeHabits(p.habits);
+      if (!strongest.length) return '';
+      const rec = buildRecommendation(p, strongest, weakest);
+      return `<div class="insights">
+        <p class="insight-line"><strong>Самая сильная привычка:</strong> ${formatHabitList(strongest)}</p>
+        <p class="insight-line weak"><strong>Самая слабая привычка:</strong> ${formatHabitList(weakest)}</p>
+        <div class="recommendation">
+          <div class="recommendation-title">Рекомендация</div>
+          ${escapeHtml(rec)}
+        </div>
+      </div>`;
+    }
+
+    function renderTable(habits) {
+      return `<table>${COLGROUP}${tableHead()}<tbody>${habitRows(sortHabits(habits))}</tbody></table>`;
+    }
+
+    function renderReportGrid(calendar) {
+      if (!calendar || !calendar.length) return '';
+      const cells = calendar.map((d) =>
+        `<div class="report-day ${d.hasReport ? 'ok' : 'miss'}" title="${d.hasReport ? 'Отчёт есть' : 'Нет отчёта'}">${d.day}</div>`
+      ).join('');
+      return `<div class="report-grid">${cells}</div>`;
+    }
+
+    function renderOverall() {
+      const o = DATA.overall;
+      const rows = DATA.participants.map((p) => {
+        const totalPlan = p.habits.reduce((s, h) => s + h.plan, 0);
+        const totalFact = p.habits.reduce((s, h) => s + h.fact, 0);
+        const hp = habitPct(totalFact, totalPlan);
+        return `<tr>
+          <td><strong>${escapeHtml(p.name)}</strong></td>
+          <td>${p.reports} / ${DATA.cycleDays}</td>
+          <td class="pct ${pctClass(p.reportPct)}">${p.reportPct}%</td>
+          <td class="pct ${pctClass(hp)}">${hp}%</td>
+        </tr>`;
+      }).join('');
+
+      return `
+        <h2>Общая статистика</h2>
+        <div class="cards">
+          <div class="card">
+            <div class="card-label">Участников</div>
+            <div class="card-value">${o.participants}</div>
+          </div>
+          <div class="card">
+            <div class="card-label">Средний % сдачи отчётности</div>
+            <div class="card-value ${pctClass(o.avgReportPct)}">${o.avgReportPct}<small>%</small></div>
+          </div>
+          <div class="card">
+            <div class="card-label">Средний % выполнения привычек</div>
+            <div class="card-value ${pctClass(o.avgHabitPct)}">${o.avgHabitPct}<small>%</small></div>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Участник</th>
+              <th>Отчёты</th>
+              <th>% отчётности</th>
+              <th>% привычек</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <p class="hint">Период привычек: 1–21 июня. Отчёты учитываются до 22 июня включительно.</p>
+      `;
+    }
+
+    function renderParticipant(p) {
+      const totalPlan = p.habits.reduce((s, h) => s + h.plan, 0);
+      const totalFact = p.habits.reduce((s, h) => s + h.fact, 0);
+      const hp = habitPct(totalFact, totalPlan);
+
+      return `
+        <h2>${escapeHtml(p.name)}</h2>
+        <div class="cards cards-equal">
+          <div class="card card-grid">
+            ${renderReportGrid(p.reportCalendar)}
+          </div>
+          <div class="card">
+            <div class="card-label">Отчётов</div>
+            <div class="card-value">${p.reports}<small>/${DATA.cycleDays}</small></div>
+          </div>
+          <div class="card">
+            <div class="card-label">% отчётности</div>
+            <div class="card-value ${pctClass(p.reportPct)}">${p.reportPct}<small>%</small></div>
+          </div>
+          <div class="card">
+            <div class="card-label">% выполнения привычек</div>
+            <div class="card-value ${pctClass(hp)}">${hp}<small>%</small></div>
+          </div>
+        </div>
+        ${renderHabitsTables(p)}
+        ${renderInsights(p)}
+      `;
+    }
+
+    function escapeHtml(s) {
+      return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
+
+    function render() {
+      document.querySelectorAll('.nav-item').forEach((el) => {
+        el.classList.toggle('active', el.dataset.id === current);
+      });
+      const content = document.getElementById('content');
+      if (current === 'overall') {
+        content.innerHTML = renderOverall();
+      } else {
+        const p = DATA.participants.find((x) => x.id === current);
+        content.innerHTML = p ? renderParticipant(p) : '';
+      }
+    }
+
+    document.getElementById('content').addEventListener('click', (e) => {
+      const th = e.target.closest('th[data-sort]');
+      if (!th || current === 'overall') return;
+      const col = th.dataset.sort;
+      if (tableSort.col === col) {
+        tableSort.dir = tableSort.dir === 'asc' ? 'desc' : 'asc';
+      } else {
+        tableSort.col = col;
+        tableSort.dir = 'asc';
+      }
+      render();
+    });
+
+    function buildNav() {
+      const nav = document.getElementById('nav');
+      let html = '<div class="nav-title">Разделы</div>';
+      html += '<button class="nav-item active" data-id="overall">Общая</button>';
+      html += '<div class="nav-divider"></div>';
+      html += '<div class="nav-title">Участники</div>';
+      for (const p of DATA.participants) {
+        html += `<button class="nav-item" data-id="${p.id}">${escapeHtml(p.name)}</button>`;
+      }
+      nav.innerHTML = html;
+      nav.addEventListener('click', (e) => {
+        const btn = e.target.closest('.nav-item');
+        if (!btn) return;
+        tableSort = { col: null, dir: 'asc' };
+        current = btn.dataset.id;
+        render();
+      });
+    }
+
+    buildNav();
+    render();
+  </script>
+</body>
+</html>
