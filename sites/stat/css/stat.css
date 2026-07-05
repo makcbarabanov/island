@@ -126,13 +126,13 @@ h2 {
 }
 
 .cards-participant {
-  grid-template-columns: minmax(200px, 1.4fr) repeat(4, minmax(120px, 1fr));
+  grid-template-columns: minmax(260px, 320px) repeat(4, minmax(110px, 1fr));
   align-items: stretch;
 }
 
 .card-calendar {
-  grid-row: span 1;
-  min-height: 180px;
+  min-width: 0;
+  padding: 14px 12px;
 }
 
 .card {
@@ -347,18 +347,13 @@ th.sortable.desc::after { content: ' ↓'; opacity: 1; color: var(--accent); }
   width: 100%;
 }
 
-.report-grid-month {
+/* Единая сетка 7×N: шапка Пн–Вс + дни месяца */
+.report-calendar-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 3px;
   width: 100%;
-}
-
-.report-weekdays {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 3px;
-  margin-bottom: 4px;
+  min-width: 238px;
 }
 
 .report-weekday {
@@ -367,11 +362,7 @@ th.sortable.desc::after { content: ' ↓'; opacity: 1; color: var(--accent); }
   font-weight: 600;
   color: var(--muted);
   text-transform: uppercase;
-}
-
-.report-calendar {
-  width: 100%;
-  max-width: 280px;
+  padding-bottom: 2px;
 }
 
 .report-day {
@@ -384,6 +375,7 @@ th.sortable.desc::after { content: ' ↓'; opacity: 1; color: var(--accent); }
   color: #fff;
   aspect-ratio: 1;
   min-height: 0;
+  min-width: 0;
 }
 
 .report-day.pad {
@@ -399,6 +391,10 @@ th.sortable.desc::after { content: ' ↓'; opacity: 1; color: var(--accent); }
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.card-calendar.card-grid {
+  display: block;
 }
 
 .insights {

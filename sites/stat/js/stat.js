@@ -217,21 +217,19 @@
       return '<p class="hint">Нет календаря отчётов</p>';
     }
     const pad = cal.first_weekday || 0;
-    let cells = '';
+    const weekdayCells = WEEKDAYS.map(function (w) {
+      return '<div class="report-weekday">' + w + '</div>';
+    }).join('');
+    let dayCells = '';
     for (let i = 0; i < pad; i++) {
-      cells += '<div class="report-day pad" aria-hidden="true"></div>';
+      dayCells += '<div class="report-day pad" aria-hidden="true"></div>';
     }
     cal.days.forEach(function (d) {
       const cls = d.state || (d.has_report ? 'ok' : 'miss');
       const title = cls === 'future' ? 'Будущий день' : (d.has_report ? 'Отчёт есть' : 'Нет отчёта');
-      cells += '<div class="report-day ' + cls + '" title="' + title + ' · день ' + d.day + '">' + d.day + '</div>';
+      dayCells += '<div class="report-day ' + cls + '" title="' + title + ' · день ' + d.day + '">' + d.day + '</div>';
     });
-    const weekdays = WEEKDAYS.map(function (w) {
-      return '<div class="report-weekday">' + w + '</div>';
-    }).join('');
-    return '<div class="report-calendar">' +
-      '<div class="report-weekdays">' + weekdays + '</div>' +
-      '<div class="report-grid-month">' + cells + '</div></div>';
+    return '<div class="report-calendar-grid">' + weekdayCells + dayCells + '</div>';
   }
 
   function card(label, value, suffix, cls) {

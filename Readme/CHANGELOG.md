@@ -2,6 +2,10 @@
 
 Старые пункты могут ссылаться на прежний монолитный `Readme/Readme.md`; актуальная структура — корневой [README.md](../README.md), [PROJECT.md](PROJECT.md), [RUNBOOK.md](RUNBOOK.md).
 
+## 2026-07-05 — /stat/: фикс сетки календаря отчётов (v319)
+
+- Единая `report-calendar-grid` 7×N; карточка календаря без flex-сжатия.
+
 ## 2026-07-05 — Команда «Деплой»: Форж commit → push → SSH на прод (доки)
 
 - Правило `.cursor/rules/island-deploy.mdc`; обновлены AGENTS, RUNBOOK, Prodagent.
