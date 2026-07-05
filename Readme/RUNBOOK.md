@@ -63,7 +63,25 @@ curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:8001/dreams?user_id=1"
 
 ---
 
-## Прод (Продагент), Docker
+## Деплой из песочницы (Форж) — основной путь
+
+По команде Макса **«Деплой»** Форж выполняет с ноута (SSH-ключ на прод уже настроен):
+
+```bash
+# 1–2. в песочнице, после коммита
+git push origin main
+
+# 3. на проде
+ssh makc@188.225.44.48 'cd /home/makc/Apps/island && git pull --ff-only origin main && docker compose up -d --build'
+```
+
+Правило Cursor: `.cursor/rules/island-deploy.mdc`.
+
+Окно **Продагента** для обычного `git pull` + rebuild **не обязательно**.
+
+---
+
+## Прод (Продагент), Docker — запасной канал
 
 Каталог на сервере: **`/home/makc/Apps/island`**. В команде **не** должно быть `-f docker-compose.dev.yml`.
 

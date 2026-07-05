@@ -16,8 +16,8 @@
 
 | Роль | Где «живёт» | Функция | Git push |
 |------|-------------|---------|----------|
-| **Форж** | Cursor, песочница `~/Apps/island` | Lead Web Developer, код, миграции, UI | Да → `main` (по команде Макса) |
-| **Продагент** | Cursor SSH → `188.225.44.48`, каталог `/home/makc/Apps/island` | `git pull`, Docker, логи, smoke | **Нет** с прода |
+| **Форж** | Cursor, песочница `~/Apps/island` | Lead Web Developer, код, миграции, UI, **деплой на прод по SSH** | Да → `main`; по «Деплой» — pull + rebuild на `188.225.44.48` |
+| **Продагент** | Cursor SSH → `188.225.44.48` (редко) | Логи, smoke, прод-only ops, откат; обычный релиз — у Форжа | **Нет** с прода |
 | **CRONOS** | Google AI Studio | SRE, архитектура, деплой-стандарты | — |
 | **Морфеус** | Gemini | Продукт, промпты, академическая часть УИИ | — |
 | **Bloom** | `bloom/` (отдельный repo) | Telegram-бот `@bloom26bot` | Отдельный repo |
@@ -52,9 +52,15 @@ bash .vscode/apply-cursor-env.sh
 
 ## Конвейер деплоя
 
+**Обычный релиз (команда «Деплой»):**
+
 ```
-Форж (песок) → git push main → Продагент: git pull --ff-only → docker compose up -d --build
+Форж (песок) → commit → git push main → SSH 188.225.44.48 → git pull --ff-only → docker compose up -d --build → smoke
 ```
+
+Правило: `.cursor/rules/island-deploy.mdc`.
+
+**Продагент** — запасной канал: логи на сервере, дампы, откат, hotfix по `ДА ПРОД`, если SSH с ноута недоступен или задача только на проде.
 
 Подробности: [RUNBOOK.md](RUNBOOK.md), [Prodagent.md](Prodagent.md).
 
