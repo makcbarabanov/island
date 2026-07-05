@@ -365,6 +365,71 @@ def _group_overall(participants: list[dict]) -> dict:
     }
 
 
+def _fetch_app_active_users(cur, dream_alive: str) -> dict:
+    """Участники ЛК: ≥1 мечта и ≥1 шаг; без exclude_from_stat и служебных тестов."""
+    has_exclude = _has_column(cur, "users", "exclude_from_stat")
+    has_last_seen = _has_column(cur, "users", "last_seen_at")
+    has_created = _has_column(cur, "users", "created_at")
+    has_waived = _has_column(cur, "dreams_steps", "waived")
+
+    exclude_sql = "AND COALESCE(u.exclude_from_stat, false) = false" if has_exclude else ""
+    waived_expr = "COALESCE(ds.waived, false)" if has_waived else "false"
+    created_sel = "u.created_at" if has_created else "NULL::timestamptz AS created_at"
+    last_seen_sel = "u.last_seen_at" if has_last_seen else "NULL::timestamptz AS last_seen_at"
+    group_by = "u.id, u.name, u.surname"
+    if has_created:
+        group_by += ", u.created_at"
+    if has_last_seen:
+        group_by += ", u.last_seen_at"
+    order_by = "u.last_seen_at DESC NULLS LAST" if has_last_seen else "lower(trim(u.name))"
+
+    cur.execute(
+        f"""
+        SELECT
+            u.id,
+            u.name,
+            u.surname,
+            {created_sel},
+            {last_seen_sel},
+            COUNT(DISTINCT d.id) FILTER (
+                WHERE COALESCE(d.rule_code, '') <> 'diary_journal'
+            )::int AS dreams_count,
+            COUNT(ds.id) FILTER (WHERE COALESCE(ds.deleted, false) = false)::int AS steps_count,
+            COUNT(ds.id) FILTER (
+                WHERE COALESCE(ds.deleted, false) = false
+                  AND (ds.completed = true OR {waived_expr} = true)
+            )::int AS steps_marked
+        FROM users u
+        JOIN dreams d ON d.user_id = u.id {dream_alive}
+        JOIN dreams_steps ds ON ds.dream_id = d.id AND COALESCE(ds.deleted, false) = false
+        WHERE true {exclude_sql}
+        GROUP BY {group_by}
+        HAVING COUNT(DISTINCT d.id) >= 1 AND COUNT(ds.id) >= 1
+        ORDER BY {order_by}, lower(trim(u.name)), lower(trim(u.surname))
+        """
+    )
+    rows = []
+    for r in cur.fetchall():
+        name = f"{r[1] or ''} {r[2] or ''}".strip() or f"Участник #{r[0]}"
+        steps_count = int(r[6] or 0)
+        steps_marked = int(r[7] or 0)
+        created = r[3]
+        last_seen = r[4]
+        rows.append(
+            {
+                "id": int(r[0]),
+                "name": name,
+                "registered_at": created.isoformat() if created else None,
+                "last_seen_at": last_seen.isoformat() if last_seen else None,
+                "dreams_count": int(r[5] or 0),
+                "steps_count": steps_count,
+                "steps_marked": steps_marked,
+                "mark_pct": _pct(steps_marked, steps_count),
+            }
+        )
+    return {"total": len(rows), "rows": rows}
+
+
 def _educ_user_month(cur, user_id: int, start: date, end: date) -> dict | None:
     cur.execute(
         """
@@ -535,8 +600,10 @@ def build_snapshot(cur) -> dict:
 
     participants_out.sort(key=lambda p: (-p["marathons_completed"], p["name"].lower()))
 
+    app_active = _fetch_app_active_users(cur, dream_alive)
+
     return {
-        "version": 3,
+        "version": 4,
         "generated_at": datetime.now(TZ).isoformat(timespec="seconds"),
         "timezone": str(TZ),
         "ssot": "БД: _educ_* (чат, до 2026-07) + ЛК (dreams_steps, buddy_step_daily_reports, с 2026-07)",
@@ -550,7 +617,9 @@ def build_snapshot(cur) -> dict:
         "totals": {
             "participants": len(participants_out),
             "months": len(month_keys),
+            "app_active": app_active["total"],
         },
+        "app_active": app_active,
     }
 
 

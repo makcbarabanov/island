@@ -27,6 +27,8 @@
 | `buddy_alert_daily_at` | TIME NOT NULL DEFAULT '23:00:00' | Время ежедневного digest для бадди (пропущенные шаги / отчёт не отправлен). Миграция mig_buddy_alerts. |
 | `timezone`      | VARCHAR(64) NULL | IANA-часовой пояс для `buddy_alert_daily_at`. NULL — default приложения `Europe/Moscow` (v2). Миграция mig_buddy_alerts. |
 | `created_at`    | TIMESTAMPTZ NULL  | Дата/время регистрации. Заполняется для новых пользователей (`DEFAULT NOW()`). У старых записей — **NULL** (дата неизвестна). Миграция `mig_users_created_at.sql`. |
+| `last_seen_at`  | TIMESTAMPTZ NULL  | Последняя активность в ЛК (логин, отметка шага, отправка отчёта). Миграция `mig_users_last_seen_stat_exclude.sql`. |
+| `exclude_from_stat` | BOOLEAN NOT NULL DEFAULT false | Исключить из блока «Активные участники» в `/stat/` (тестовые аккаунты). |
 
 ---
 

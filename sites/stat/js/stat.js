@@ -47,6 +47,16 @@
     return (map[p[1]] || p[1]) + ' ' + p[0];
   }
 
+  function formatStatDate(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '—';
+    return d.toLocaleString('ru-RU', {
+      day: 'numeric', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit'
+    });
+  }
+
   function findParticipant(id) {
     return (DATA.participants || []).find(function (p) { return p.id === id; });
   }
@@ -275,7 +285,38 @@
       metricRow('Кол-во участников', 'participants_count', false) +
       metricRow('Кол-во привычек', 'habits_count', false) +
       metricRow('% выполнения', 'completion_pct', true) +
-      '</tbody></table>';
+      '</tbody></table>' +
+      renderAppActiveUsers();
+  }
+
+  function renderAppActiveUsers() {
+    const block = DATA.app_active || {};
+    const rows = block.rows || [];
+    const body = rows.map(function (r) {
+      return '<tr>' +
+        '<td><strong>' + escapeHtml(r.name) + '</strong></td>' +
+        '<td>' + escapeHtml(formatStatDate(r.registered_at)) + '</td>' +
+        '<td>' + r.dreams_count + '</td>' +
+        '<td>' + r.steps_count + '</td>' +
+        '<td>' + r.steps_marked + ' <span class="subtle">(' + r.mark_pct + '%)</span></td>' +
+        '<td>' + escapeHtml(formatStatDate(r.last_seen_at)) + '</td>' +
+        '</tr>';
+    }).join('');
+
+    return (
+      '<h3 class="section-title">Активные участники приложения</h3>' +
+      '<p class="hint">Ведут расписание в ЛК: есть мечта и шаги. Отметки ✓/− — показатель вовлечённости. ' +
+      'Марафонские отчёты в чат — отдельно, не обязательны.</p>' +
+      '<div class="cards">' +
+      card('Активных в приложении', block.total != null ? block.total : rows.length, '') +
+      card('С отчётами марафона', (DATA.totals && DATA.totals.participants) || 0, '') +
+      '</div>' +
+      '<table class="app-active-table"><thead><tr>' +
+      '<th>Участник</th><th>Регистрация</th><th>Мечт</th><th>Шагов</th><th>Отметок</th><th>Был в ЛК</th>' +
+      '</tr></thead><tbody>' +
+      (body || '<tr><td colspan="6" class="hint">Нет активных участников</td></tr>') +
+      '</tbody></table>'
+    );
   }
 
   function renderGroupOverall() {

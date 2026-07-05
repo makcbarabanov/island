@@ -632,6 +632,19 @@ def _insert_journal_event_safe(
         raise
 
 
+def _touch_user_last_seen(cur, user_id: int) -> None:
+    """Фиксация последней активности в ЛК (миграция mig_users_last_seen_stat_exclude)."""
+    if not user_id:
+        return
+    try:
+        cur.execute("UPDATE users SET last_seen_at = NOW() WHERE id = %s", (int(user_id),))
+    except psycopg2.ProgrammingError:
+        try:
+            cur.connection.rollback()
+        except Exception:
+            pass
+
+
 def _diary_event_duplicate_exists(
     cur,
     user_id: int,
@@ -1167,6 +1180,8 @@ def login_user(user_login: UserLogin):
                 result["telegram"] = user_data.get("telegram")
             if "vk" in user_data:
                 result["vk"] = user_data.get("vk")
+            _touch_user_last_seen(cur, user_data["id"])
+            conn.commit()
             return result
     except HTTPException:
         raise
@@ -1844,6 +1859,7 @@ def post_daily_report_sent(body: DailyReportSentBody):
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             ensure_buddy_alerts_schema(cur)
             created = mark_daily_report_sent(cur, body.user_id, report_date, method)
+            _touch_user_last_seen(cur, body.user_id)
             conn.commit()
             return {"ok": True, "created": created, "report_date": report_date.isoformat()}
     except HTTPException:
@@ -2085,8 +2101,10 @@ def register_user(user: UserRegister):
                 RETURNING id
             """, (user.name.strip(), user.surname.strip(), user.phone, user.city.strip(), bcrypt.hash(_bcrypt_password(user.password)), tel, vk_val))
             row = cur.fetchone()
+            user_id = row[0] if isinstance(row, tuple) else row["id"]
+            _touch_user_last_seen(cur, user_id)
         conn.commit()
-        return {"id": row["id"]}
+        return {"id": user_id}
     except HTTPException:
         raise
     except Exception as e:
@@ -3851,6 +3869,9 @@ def update_step(dream_id: int, step_id: int, body: StepUpdate, user_id: int, vie
                         fan_out_steps_success_100(cur, owner_id, date.fromisoformat(dl_iso))
                 except Exception:
                     pass
+
+            if body.completed is not None or body.waived is not None:
+                _touch_user_last_seen(cur, owner_id)
 
             conn.commit()
             if not multi_row:

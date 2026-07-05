@@ -2,6 +2,11 @@
 
 Старые пункты могут ссылаться на прежний монолитный `Readme/Readme.md`; актуальная структура — корневой [README.md](../README.md), [PROJECT.md](PROJECT.md), [RUNBOOK.md](RUNBOOK.md).
 
+## 2026-07-05 — /stat/: активные участники ЛК + last_seen_at (v320)
+
+- Блок «Активные участники приложения» в разделе Марафоны (мечты + шаги, без тестов).
+- Миграция `mig_users_last_seen_stat_exclude.sql`: `users.last_seen_at`, `exclude_from_stat`.
+
 ## 2026-07-05 — /stat/: фикс сетки календаря отчётов (v319)
 
 - Единая `report-calendar-grid` 7×N; карточка календаря без flex-сжатия.

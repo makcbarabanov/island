@@ -335,6 +335,18 @@ th.sortable.desc::after { content: ' ↓'; opacity: 1; color: var(--accent); }
   margin-left: auto;
 }
 
+.section-title {
+  margin: 28px 0 12px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.app-active-table th,
+.app-active-table td {
+  font-size: 13px;
+}
+
 .pct { font-weight: 600; }
 .pct.good { color: var(--good); }
 .pct.mid { color: var(--warn); }
