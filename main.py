@@ -3,6 +3,7 @@ import json
 import time
 import calendar
 import logging
+import importlib.util
 from logging.handlers import RotatingFileHandler
 from collections import defaultdict, deque
 from datetime import datetime, date, timedelta, timezone
@@ -15,7 +16,7 @@ from psycopg2 import pool
 from psycopg2.extras import RealDictCursor, Json, execute_values
 from fastapi import FastAPI, HTTPException, File, UploadFile, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import FileResponse, RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import Optional, List, Tuple
@@ -178,6 +179,43 @@ CHAT_LABELS_FILE = CHAT_DIR / "labels.json"
 @app.get("/stat", include_in_schema=False)
 def stat_root_redirect():
     return RedirectResponse(url="/stat/", status_code=307)
+
+
+_stat_snapshot_builder = None
+
+
+def _get_stat_snapshot_builder():
+    global _stat_snapshot_builder
+    if _stat_snapshot_builder is not None:
+        return _stat_snapshot_builder
+    path = BASE_DIR / "scripts" / "build_stat_snapshot.py"
+    if not path.is_file():
+        raise RuntimeError("build_stat_snapshot.py not found")
+    spec = importlib.util.spec_from_file_location("build_stat_snapshot", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    _stat_snapshot_builder = mod
+    return mod
+
+
+@app.get("/stat/api/snapshot.json", include_in_schema=False)
+def stat_snapshot_api():
+    """Актуальный снимок /stat/ из БД (без cron и статического JSON)."""
+    try:
+        mod = _get_stat_snapshot_builder()
+        conn = mod._connect()
+        try:
+            with conn.cursor() as cur:
+                payload = mod.build_snapshot(cur)
+        finally:
+            conn.close()
+        return JSONResponse(
+            payload,
+            headers={"Cache-Control": "no-store, max-age=0"},
+        )
+    except Exception as e:
+        app_logger.exception("stat_snapshot_api failed")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 if STAT_DIR.is_dir():

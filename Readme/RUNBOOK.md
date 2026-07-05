@@ -93,12 +93,13 @@ curl -sk https://islanddream.ru/index.html | grep -o '<span class="app-version"[
 curl -sk -o /dev/null -w "%{http_code}" https://islanddream.ru/stat/
 ```
 
-После обновления `/stat/` — пересобрать снимок из БД (на хосте, с `.env`):
+После обновления `/stat/` — smoke API (живые данные из БД):
 
 ```bash
-cd /home/makc/Apps/island
-.venv/bin/python3 scripts/build_stat_snapshot.py
+curl -sk -o /dev/null -w "%{http_code}" https://islanddream.ru/stat/api/snapshot.json
 ```
+
+Опционально — статический файл для бэкапа: `.venv/bin/python3 scripts/build_stat_snapshot.py`
 
 Проверить вручную: логин, мечты, шаги, аватар.
 

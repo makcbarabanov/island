@@ -24,8 +24,10 @@
 ## Обновление
 
 ```bash
-python3 scripts/build_stat_snapshot.py
+python3 scripts/build_stat_snapshot.py   # опционально, для офлайн-копии
 ```
+
+**В проде UI** берёт данные из **`GET /stat/api/snapshot.json`** (живой запрос к БД).
 
 ## Разделы UI
 

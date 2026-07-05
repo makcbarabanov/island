@@ -436,7 +436,7 @@
   async function load() {
     const content = document.getElementById('content');
     try {
-      const resp = await fetch('data/stat_snapshot.json?_=' + Date.now());
+      const resp = await fetch('/stat/api/snapshot.json?_=' + Date.now(), { cache: 'no-store' });
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
       DATA = await resp.json();
       updateTopbar();
@@ -445,8 +445,8 @@
       render();
     } catch (e) {
       content.innerHTML =
-        '<div class="err"><strong>Не удалось загрузить stat_snapshot.json</strong><br>' +
-        '<code>python3 scripts/build_stat_snapshot.py</code><br><small>' +
+        '<div class="err"><strong>Не удалось загрузить снимок статистики</strong><br>' +
+        '<code>/stat/api/snapshot.json</code> (БД) или <code>python3 scripts/build_stat_snapshot.py</code><br><small>' +
         escapeHtml(String(e.message || e)) + '</small></div>';
     }
   }
