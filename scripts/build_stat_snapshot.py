@@ -34,7 +34,8 @@ def _load_env() -> None:
     except ImportError:
         pass
     host = os.environ.get("DB_HOST", "")
-    if host == "db":
+    # С хоста ноута (не из контейнера): сервис compose `db` доступен как 127.0.0.1:5432
+    if host == "db" and not Path("/.dockerenv").is_file():
         os.environ["DB_HOST"] = "127.0.0.1"
 
 
