@@ -1,43 +1,34 @@
 # Статистика марафона (`/stat/`)
 
-Публичная аналитика марафона полезных привычек.
+Аналитика марафона полезных привычек из **БД**. Интерфейс — как `legacy/june.html`, с историей за все месяцы.
 
-- **Сегодня / текущий цикл:** SSOT = личный кабинет Острова (`dreams_steps`, `buddy_step_daily_reports`).
-- **Legacy-история до миграции в БД:** visual-only обзор из Telegram-чата по ручной разметке; нужен для сверки участников, месяцев и привычек перед staging-импортом.
+| Период | Источник |
+|--------|----------|
+| 2025-07 … 2026-06 | `_educ_*` (импорт из чата) |
+| 2026-07+ | ЛК (`dreams_steps`, `buddy_step_daily_reports`) |
 
 ## URL
 
-- Локально: `http://localhost:8001/stat/` (песочница; порт см. `docker-compose.dev.yml`)
-- Июнь 2026 (legacy): `http://localhost:8001/stat/legacy/june.html`
+- Локально: `http://127.0.0.1:8001/stat/`
 - Прод: `https://www.islanddream.ru/stat/`
+- Legacy (июнь 2026 эталон): `/stat/legacy/june.html`
 
 ## Файлы
 
 | Путь | Назначение |
 |------|------------|
-| `index.html` | Оболочка страницы |
-| `css/stat.css` | Стили |
-| `js/stat.js` | Рендер из JSON |
-| `legacy/` | Прототип марафона: `june.html`, `stat.html`, `build-june.py`, `chat.txt` |
-| `data/marathon_snapshot.json` | Ежедневный снимок (генерируется скриптом) |
-| `data/legacy_overview.json` | Legacy-обзор по чату и ручной разметке |
+| `index.html`, `css/stat.css`, `js/stat.js` | UI |
+| `data/stat_snapshot.json` | Снимок из БД (`build_stat_snapshot.py`, v3) |
+| `legacy/` | Архив прототипов и `build-june.py` |
 
-## Обновление данных
+## Обновление
 
 ```bash
-# из корня island, с рабочим .env (DB_*)
-python3 scripts/build_marathon_snapshot.py
-python3 scripts/build_legacy_marathon_overview.py
+python3 scripts/build_stat_snapshot.py
 ```
-
-Cron на проде (~03:05 MSK) — см. комментарий в скрипте и `RUNBOOK.md`.
 
 ## Разделы UI
 
-1. **Сегодня** — digest по текущему дню из БД
-2. **Участники** — все уникальные участники legacy, плюс исходные имена для сверки склейки
-3. **Марафоны** — помесячная матрица `2025/2026`: участники, привычки, `% выполнения`
-4. **Привычки** — все уникальные привычки legacy: пользователей / сделано / не сделано
-5. **Источники** — пояснение, что в БД, а что ещё legacy
+**Сайдбар:** Марафоны · Общая · список участников
 
-Legacy-прототип: `sites/stat/legacy/` (`june.html`, `stat.html`).
+**Участник:** вкладки **Месяц** / **Общее**, слайдер ‹ месяц ›, календарь отчётов (полный месяц), карточки, таблица привычек (со звёздочкой), рекомендации.

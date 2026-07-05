@@ -90,6 +90,14 @@ docker compose up -d --build
 
 ```bash
 curl -sk https://islanddream.ru/index.html | grep -o '<span class="app-version"[^>]*>[0-9]*</span>' | head -1
+curl -sk -o /dev/null -w "%{http_code}" https://islanddream.ru/stat/
+```
+
+После обновления `/stat/` — пересобрать снимок из БД (на хосте, с `.env`):
+
+```bash
+cd /home/makc/Apps/island
+.venv/bin/python3 scripts/build_stat_snapshot.py
 ```
 
 Проверить вручную: логин, мечты, шаги, аватар.

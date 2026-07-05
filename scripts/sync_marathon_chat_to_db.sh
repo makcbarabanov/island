@@ -7,5 +7,7 @@ echo "== 1/3 Чат 2025-07 … 2026-05 =="
 "$PY" scripts/import_marathon_from_chat.py import
 echo "== 2/3 Июнь 2026 (build-june) =="
 "$PY" scripts/import_marathon_june_2026.py
-echo "== 3/3 Проверка =="
+echo "== 3/4 Проверка импорта =="
 "$PY" scripts/verify_marathon_db_sync.py
+echo "== 4/4 Снимок /stat/ =="
+"$PY" scripts/build_stat_snapshot.py

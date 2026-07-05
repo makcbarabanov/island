@@ -2,6 +2,17 @@
 
 Старые пункты могут ссылаться на прежний монолитный `Readme/Readme.md`; актуальная структура — корневой [README.md](../README.md), [PROJECT.md](PROJECT.md), [RUNBOOK.md](RUNBOOK.md).
 
+## 2026-07-05 — /stat/ UI как june.html: сайдбар, календарь месяца, «Общее» (v317)
+
+- Участники в левой панели; разделы **Марафоны** и **Общая**.
+- Карточка участника: слайдер месяцев, вкладки **Месяц** / **Общее**, полный календарь, insights, звёздочки.
+- `stat_snapshot.json` v3: `overall` по человеку и группе, календарь на весь месяц.
+
+## 2026-07-05 — /stat/ из БД: stat_snapshot + UI Марафоны/Участники (v316)
+
+- `scripts/build_stat_snapshot.py` → `sites/stat/data/stat_snapshot.json` (`_educ_*` + ЛК).
+- `/stat/`: только разделы **Марафоны** (матрица) и **Участники** (деталь по месяцу).
+
 ## 2026-07-05 — Marathon chat import: скрипты + runbook для прода (v315)
 
 - Push: импорт чата/июня в `_educ_*`, merge 110→17, `Readme/MARATHON_CHAT_IMPORT_PROD.md`.
