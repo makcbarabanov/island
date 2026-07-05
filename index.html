@@ -2654,7 +2654,7 @@
                         </div>
                     </div>
                     <button type="button" class="app-footer-logout" id="app-footer-logout" title="Выйти" onclick="logout()">Выйти</button>
-                    <span class="app-version" aria-hidden="true">310</span>
+                    <span class="app-version" aria-hidden="true">315</span>
                 </div>
             </footer>
         </div>
@@ -2866,6 +2866,23 @@
             if (!p) return '';
             var base = API_BASE_URL + '/media/' + p;
             return cacheKey ? (base + '?v=' + encodeURIComponent(String(cacheKey))) : base;
+        }
+        /** После POST /avatar — обновить путь, сбросить кэш картинки, синхронизировать шапку без перезагрузки. */
+        function setCurrentUserAvatarPath(avatarPath) {
+            if (!currentUser) return;
+            currentUser.avatar_path = avatarPath || null;
+            if (avatarPath) {
+                currentUser.avatar_rev = String(Date.now());
+                currentUser.avatar_url = buildMediaUrl(avatarPath, currentUser.avatar_rev);
+            } else {
+                currentUser.avatar_rev = '';
+                currentUser.avatar_url = null;
+            }
+            if (viewableUsersCache && viewableUsersCache.length) {
+                viewableUsersCache.forEach(function(u) {
+                    if (u.is_self && u.id === currentUser.id) u.avatar_path = currentUser.avatar_path;
+                });
+            }
         }
         function syncHeaderCabinetDot() {
             var dot = document.getElementById('header-cabinet-dot');
@@ -7315,7 +7332,10 @@
                 currentUser.telegram = telegram || null;
                 currentUser.vk = vk || null;
                 currentUser.phone = phone || null;
+                if (file) headerView = 'me';
                 applyHeaderView();
+                try { localStorage.setItem('savedUser', JSON.stringify(currentUser)); } catch (e) {}
+                if (fileInput) fileInput.value = '';
                 showToast('Настройки сохранены.');
                 switchMenu(lastCabinetSection);
             }
@@ -7324,8 +7344,7 @@
             if (file) {
                 uploadAvatarWithCompression(file, currentUser.id)
                     .then(function(data) {
-                        currentUser.avatar_path = data.avatar_path;
-                        currentUser.avatar_url = API_BASE_URL + '/media/' + (data.avatar_path || '').replace(/^\//, '') + '?t=' + Date.now();
+                        setCurrentUserAvatarPath(data.avatar_path);
                         return doPatch();
                     })
                     .then(onSuccess)
@@ -7344,14 +7363,10 @@
                 if (!file || !currentUser) return;
                 uploadAvatarWithCompression(file, currentUser.id)
                     .then(function(data) {
-                        currentUser.avatar_path = data.avatar_path;
-                        currentUser.avatar_url = API_BASE_URL + '/media/' + data.avatar_path + '?t=' + Date.now();
-                        var avatarEl = document.getElementById('profile-avatar');
-                        avatarEl.innerHTML = '';
-                        var img = document.createElement('img');
-                        img.src = currentUser.avatar_url;
-                        img.alt = 'Аватар';
-                        avatarEl.appendChild(img);
+                        setCurrentUserAvatarPath(data.avatar_path);
+                        headerView = 'me';
+                        applyHeaderView();
+                        try { localStorage.setItem('savedUser', JSON.stringify(currentUser)); } catch (e) {}
                     })
                     .catch(function() { alert('Не удалось загрузить фото. Разрешены jpg, png, webp, gif (в т.ч. анимированный) до 20 МБ.'); });
                 input.value = '';

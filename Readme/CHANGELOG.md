@@ -2,6 +2,38 @@
 
 Старые пункты могут ссылаться на прежний монолитный `Readme/Readme.md`; актуальная структура — корневой [README.md](../README.md), [PROJECT.md](PROJECT.md), [RUNBOOK.md](RUNBOOK.md).
 
+## 2026-07-05 — Marathon chat import: скрипты + runbook для прода (v315)
+
+- Push: импорт чата/июня в `_educ_*`, merge 110→17, `Readme/MARATHON_CHAT_IMPORT_PROD.md`.
+- `chat/result.json` на прод — scp с ноута (не в git).
+
+## 2026-07-05 — Полная синхронизация чата → БД + verify (v315)
+
+- `scripts/import_marathon_june_2026.py` — июнь 2026 (build-june) в `_educ_*`.
+- `scripts/verify_marathon_db_sync.py`, `scripts/sync_marathon_chat_to_db.sh` — полный прогон и проверка.
+- Песочница: 628 daily, 2868 matches (чат июль25–июнь26); июль26+ — ЛК.
+
+## 2026-07-05 — Импорт чата в _educ_* (2025-07…2026-05) (v314)
+
+- `scripts/import_marathon_from_chat.py import` — wipe legacy + заливка telegram в `_educ_reports_*`, manifest, matches.
+- `scripts/marathon_report_parse.py` — парсер привычек (✅/❌, ➕/➖, LK-формат, Ксения).
+- Песочница: 536 дней отчётов, ~2275 matches. Июнь 2026 — отдельный этап (build-june).
+
+## 2026-07-05 — merge users 110→17 (Щербинина Света) (v313)
+
+- Дубль id 110 (тест) удалён; канон id 17. Runbook: `Readme/MERGE_USERS_110_17_PROD.md`.
+- Импорт чата: неактивные авторы в `skip` в `chat/author-user-map.json`.
+
+## 2026-07-05 — Импорт марафона из чата: скрипт + dry-run (v312)
+
+- `scripts/import_marathon_from_chat.py` — парсинг `chat/result.json` (2025-07…2026-05), матчинг авторов → `users`.
+- `chat/author-user-map.json`, `chat/habit-aliases.json` — ручные привязки имён и нормализация привычек.
+- Режимы: `dry-run-authors`, `dry-run`; `import` — следующий этап.
+
+## 2026-07-05 — аватар: обновление в шапке без перезагрузки (v311)
+
+- После «Сохранить» — `avatar_rev` + cache-bust URL, `applyHeaderView()` и `localStorage` сразу.
+
 ## 2026-07-05 — docker-compose: volume media для аватарок на проде (v310)
 
 - `./media:/app/media` — загрузка и Nginx читают один каталог на хосте; RUNBOOK уточнён.

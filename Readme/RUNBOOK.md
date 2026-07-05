@@ -223,7 +223,7 @@ bash scripts/sync_data.sh -y     # без вопросов
 3. Forge: restore в Docker-БД песка.  
 4. Проверка пользователей / мечт / аватаров.
 
-**Разовые правки данных на проде** (не схема): отдельные runbook-файлы, например [MERGE_USERS_68_128_PROD.md](MERGE_USERS_68_128_PROD.md) — merge дубликата София Авраменко (68→128).
+**Разовые правки данных на проде** (не схема): отдельные runbook-файлы, например [MERGE_USERS_68_128_PROD.md](MERGE_USERS_68_128_PROD.md) — merge дубликата София Авраменко (68→128); [MARATHON_CHAT_IMPORT_PROD.md](MARATHON_CHAT_IMPORT_PROD.md) — импорт истории марафона из `chat/result.json` в `_educ_*`.
 
 ### Политика хранения бэкапов (порядок в репозитории)
 
