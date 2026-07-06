@@ -2,7 +2,8 @@
   'use strict';
 
   let DATA = null;
-  /** @type {'marathons'|'overall'|number} */
+  let SERVER = null;
+  /** @type {'server'|'marathons'|'overall'|number} */
   let current = 'marathons';
   /** @type {'month'|'overall'} */
   let participantView = 'month';
@@ -250,6 +251,114 @@
       (suffix ? '<small>' + suffix + '</small>' : '') + '</div></div>';
   }
 
+  function smokeBadge(code) {
+    if (!code) return '<span class="smoke-badge bad">—</span>';
+    if (code >= 200 && code < 400) return '<span class="smoke-badge good">' + code + '</span>';
+    return '<span class="smoke-badge bad">' + code + '</span>';
+  }
+
+  function metricPctClass(pct) {
+    if (pct == null || pct === '') return '';
+    const v = Number(pct);
+    if (v >= 85) return 'bad';
+    if (v >= 70) return 'warn';
+    return 'good';
+  }
+
+  function formatLoad(load) {
+    if (!load || !load.length) return '—';
+    return load.map(function (x) { return Number(x).toFixed(2); }).join(' · ');
+  }
+
+  function renderServerCharts(history) {
+    if (!history.length) return '';
+    const rows = history.slice(-30);
+    const maxDisk = 100;
+    const maxRam = 100;
+    const diskBars = rows.map(function (h) {
+      const v = h.disk_used_pct != null ? h.disk_used_pct : 0;
+      const hgt = Math.max(4, Math.round(v / maxDisk * 100));
+      return '<div class="server-bar-wrap" title="' + escapeHtml(h.date + ': ' + v + '%') + '">' +
+        '<div class="server-bar disk ' + metricPctClass(v) + '" style="height:' + hgt + '%"></div>' +
+        '<span class="server-bar-label">' + escapeHtml(h.date.slice(5)) + '</span></div>';
+    }).join('');
+    const ramBars = rows.map(function (h) {
+      const v = h.ram_used_pct != null ? h.ram_used_pct : 0;
+      const hgt = Math.max(4, Math.round(v / maxRam * 100));
+      return '<div class="server-bar-wrap" title="' + escapeHtml(h.date + ': ' + v + '%') + '">' +
+        '<div class="server-bar ram ' + metricPctClass(v) + '" style="height:' + hgt + '%"></div>' +
+        '<span class="server-bar-label">' + escapeHtml(h.date.slice(5)) + '</span></div>';
+    }).join('');
+    return (
+      '<div class="server-charts">' +
+      '<div class="server-chart-block">' +
+      '<h3 class="section-title">Диск (% занято) — последние ' + rows.length + ' дн.</h3>' +
+      '<div class="server-bars">' + diskBars + '</div></div>' +
+      '<div class="server-chart-block">' +
+      '<h3 class="section-title">RAM (% занято)</h3>' +
+      '<div class="server-bars">' + ramBars + '</div></div>' +
+      '</div>'
+    );
+  }
+
+  function renderServer() {
+    if (!SERVER) {
+      return '<h2>Сервер</h2><p class="hint">Загрузка снимка…</p>';
+    }
+    const latest = SERVER.latest;
+    if (!latest) {
+      return (
+        '<h2>Сервер</h2>' +
+        '<p class="hint server-empty">Данные появятся после первого cron (ежедневно ~08:00 MSK). ' +
+        'Скрипт: <code>scripts/build_server_health_snapshot.py</code></p>'
+      );
+    }
+    const history = (SERVER.history || []).slice().sort(function (a, b) {
+      return (b.date || '').localeCompare(a.date || '');
+    });
+    const containers = (latest.containers || []).map(function (c) {
+      return '<li>' + escapeHtml(c) + '</li>';
+    }).join('') || '<li class="subtle">—</li>';
+
+    const tableRows = history.map(function (h) {
+      return '<tr>' +
+        '<td>' + escapeHtml(h.date || '—') + '</td>' +
+        '<td class="pct ' + metricPctClass(h.disk_used_pct) + '">' + (h.disk_used_pct != null ? h.disk_used_pct + '%' : '—') + '</td>' +
+        '<td>' + escapeHtml(h.disk_avail || '—') + '</td>' +
+        '<td>' + escapeHtml(h.ram_used || '—') + ' / ' + escapeHtml(h.ram_avail || '—') + '</td>' +
+        '<td>' + escapeHtml(h.swap_used || '—') + '</td>' +
+        '<td>' + escapeHtml(formatLoad(h.load)) + '</td>' +
+        '<td>' + smokeBadge(h.smoke && h.smoke.island) + ' ' + smokeBadge(h.smoke && h.smoke.stat) + '</td>' +
+        '</tr>';
+    }).join('');
+
+    return (
+      '<h2>Сервер</h2>' +
+      '<p class="hint">VPS <strong>' + escapeHtml(SERVER.host || '—') + '</strong> · снимок ' +
+      escapeHtml(formatStatDate(SERVER.updated_at)) + '</p>' +
+      '<div class="cards">' +
+      card('Диск', latest.disk_used_pct, '%', metricPctClass(latest.disk_used_pct)) +
+      card('Свободно', latest.disk_avail, '', '') +
+      card('RAM', (latest.ram_used || '—') + ' / ' + (latest.ram_avail || '—'), '', metricPctClass(latest.ram_used_pct)) +
+      card('Swap', latest.swap_used, '', '') +
+      card('Load', formatLoad(latest.load), '', '') +
+      '</div>' +
+      '<div class="cards server-smoke-cards">' +
+      card('Smoke island', (latest.smoke && latest.smoke.island) || '—', '', (latest.smoke && latest.smoke.island >= 200 && latest.smoke.island < 400) ? 'good' : 'bad') +
+      card('Smoke /stat/', (latest.smoke && latest.smoke.stat) || '—', '', (latest.smoke && latest.smoke.stat >= 200 && latest.smoke.stat < 400) ? 'good' : 'bad') +
+      card('Docker images', latest.docker_images || '—', '', '') +
+      '</div>' +
+      '<h3 class="section-title">Контейнеры</h3><ul class="server-containers">' + containers + '</ul>' +
+      renderServerCharts(history.slice().reverse()) +
+      '<h3 class="section-title">История (' + history.length + ' дн., макс. 60)</h3>' +
+      '<table class="server-history-table"><thead><tr>' +
+      '<th>Дата</th><th>Диск</th><th>Свободно</th><th>RAM</th><th>Swap</th><th>Load</th><th>Smoke</th>' +
+      '</tr></thead><tbody>' +
+      (tableRows || '<tr><td colspan="7" class="hint">Нет записей</td></tr>') +
+      '</tbody></table>'
+    );
+  }
+
   function renderMarathons() {
     const groups = DATA.marathons.year_groups || [];
     const rows = DATA.marathons.rows || {};
@@ -415,6 +524,7 @@
     document.querySelectorAll('.nav-item').forEach(function (el) {
       const id = el.dataset.id;
       let active = false;
+      if (id === 'server' && current === 'server') active = true;
       if (id === 'marathons' && current === 'marathons') active = true;
       if (id === 'overall' && current === 'overall') active = true;
       if (id && id.indexOf('u:') === 0 && currentUserId() === userIdFromNav(id)) active = true;
@@ -424,6 +534,10 @@
     const content = document.getElementById('content');
     if (!DATA) return;
 
+    if (current === 'server') {
+      content.innerHTML = renderServer();
+      return;
+    }
     if (isParticipantView()) {
       content.innerHTML = renderParticipant();
       return;
@@ -435,6 +549,9 @@
   function buildNav() {
     const nav = document.getElementById('nav');
     let html = '<div class="nav-title">Разделы</div>';
+    html += '<button type="button" class="nav-item' + (current === 'server' ? ' active' : '') + '" data-id="server">Сервер</button>';
+    html += '<div class="nav-divider"></div>';
+    html += '<div class="nav-title">Марафон</div>';
     html += '<button type="button" class="nav-item' + (current === 'marathons' ? ' active' : '') + '" data-id="marathons">Марафоны</button>';
     html += '<button type="button" class="nav-item' + (current === 'overall' ? ' active' : '') + '" data-id="overall">Общая</button>';
     html += '<div class="nav-divider"></div>';
@@ -449,8 +566,13 @@
   }
 
   function updateTopbar() {
+    if (current === 'server' && SERVER && SERVER.updated_at) {
+      document.getElementById('topbar-meta').textContent =
+        'Сервер · ' + SERVER.updated_at;
+      return;
+    }
     document.getElementById('topbar-meta').textContent =
-      'БД · ' + (DATA.generated_at || '—');
+      'БД · ' + (DATA ? DATA.generated_at || '—' : '—');
   }
 
   function bindNav() {
@@ -460,7 +582,7 @@
       if (!btn) return;
       tableSort = { col: null, dir: 'asc' };
       const id = btn.dataset.id;
-      if (id === 'marathons' || id === 'overall') {
+      if (id === 'server' || id === 'marathons' || id === 'overall') {
         current = id;
       } else if (id.indexOf('u:') === 0) {
         current = userIdFromNav(id);
@@ -469,15 +591,32 @@
         monthIndex = p && p.months.length ? p.months.length - 1 : 0;
       }
       render();
+      updateTopbar();
     };
+  }
+
+  async function loadServer() {
+    try {
+      const resp = await fetch('data/server_health.json?_=' + Date.now(), { cache: 'no-store' });
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      SERVER = await resp.json();
+    } catch (e) {
+      SERVER = { latest: null, history: [], _error: String(e.message || e) };
+    }
   }
 
   async function load() {
     const content = document.getElementById('content');
     try {
-      const resp = await fetch('/stat/api/snapshot.json?_=' + Date.now(), { cache: 'no-store' });
-      if (!resp.ok) throw new Error('HTTP ' + resp.status);
-      DATA = await resp.json();
+      const [marathonOk] = await Promise.all([
+        fetch('/stat/api/snapshot.json?_=' + Date.now(), { cache: 'no-store' })
+          .then(function (resp) {
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            return resp.json();
+          }),
+        loadServer(),
+      ]);
+      DATA = marathonOk;
       updateTopbar();
       buildNav();
       bindNav();

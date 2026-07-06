@@ -2,6 +2,11 @@
 
 Старые пункты могут ссылаться на прежний монолитный `Readme/Readme.md`; актуальная структура — корневой [README.md](../README.md), [PROJECT.md](PROJECT.md), [RUNBOOK.md](RUNBOOK.md).
 
+## 2026-07-06 — /stat/: раздел «Сервер» (v321)
+
+- `scripts/build_server_health_snapshot.py` → `sites/stat/data/server_health.json` (диск, RAM, swap, load, docker, smoke; история 60 дн.).
+- UI: вкладка **Сервер** над «Марафоны» — карточки, графики диск/RAM, таблица истории.
+
 ## 2026-07-05 — /stat/: активные участники ЛК + last_seen_at (v320)
 
 - Блок «Активные участники приложения» в разделе Марафоны (мечты + шаги, без тестов).

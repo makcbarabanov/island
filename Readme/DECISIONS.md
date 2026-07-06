@@ -15,6 +15,12 @@
 | D-007 | **Контракт** — `Readme/bloom-api.md`, `Readme/bloom-db-shared.md`; `island-bridge-contract` → архив |
 | D-008 | **Поздний отчёт** — в digest Bloom одна строка «зачислен после дедлайна», без флуда в чат |
 
+## 2026-07-06 — Мониторинг VPS в /stat/
+
+| ID | Решение |
+|----|---------|
+| D-009 | **Server health** — `sites/stat/data/server_health.json`, генератор `scripts/build_server_health_snapshot.py` (cron на VPS ~08:00 MSK); UI вкладка «Сервер»; история 60 дней; Telegram-алерты — отдельно |
+
 ## Шаблон новой записи
 
 ```

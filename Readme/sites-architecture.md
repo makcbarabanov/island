@@ -31,8 +31,8 @@
 
 ## Статистика марафона (`/stat/`)
 
-- Снимок: `sites/stat/data/marathon_snapshot.json`
-- Генератор: `scripts/build_marathon_snapshot.py` (cron ~03:05 MSK)
+- Снимок марафона: `sites/stat/data/marathon_snapshot.json` — `scripts/build_marathon_snapshot.py` (cron ~03:05 MSK)
+- **Сервер (VPS):** `sites/stat/data/server_health.json` — `scripts/build_server_health_snapshot.py` (cron ~08:00 MSK); UI → вкладка **Сервер**
 - Прототип по чату: `sites/stat/legacy/` (не SSOT)
 
 ## Деплой (актуально)

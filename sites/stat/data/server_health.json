@@ -1,0 +1,57 @@
+{
+  "updated_at": "2026-07-06T20:33:49+03:00",
+  "host": "188.225.44.48",
+  "latest": {
+    "disk_used_pct": 54,
+    "disk_avail": "12.9Gi",
+    "ram_used": "1.3Gi",
+    "ram_avail": "669.4Mi",
+    "ram_used_pct": 66,
+    "swap_used": "145.9Mi",
+    "load": [
+      0.14,
+      0.17,
+      0.23
+    ],
+    "smoke": {
+      "island": 200,
+      "stat": 200
+    },
+    "containers": [
+      "island-app-1: Up 24 hours",
+      "bookhub: Up 11 days",
+      "mt-app-1: Up 12 days",
+      "dz8-app-1: Up 3 weeks",
+      "dz8-db-1: Up 3 weeks (healthy)"
+    ],
+    "docker_images": "6 images, 2.282GB"
+  },
+  "history": [
+    {
+      "date": "2026-07-06",
+      "disk_used_pct": 54,
+      "disk_avail": "12.9Gi",
+      "ram_used": "1.3Gi",
+      "ram_avail": "669.4Mi",
+      "ram_used_pct": 66,
+      "swap_used": "145.9Mi",
+      "load": [
+        0.14,
+        0.17,
+        0.23
+      ],
+      "smoke": {
+        "island": 200,
+        "stat": 200
+      },
+      "containers": [
+        "island-app-1: Up 24 hours",
+        "bookhub: Up 11 days",
+        "mt-app-1: Up 12 days",
+        "dz8-app-1: Up 3 weeks",
+        "dz8-db-1: Up 3 weeks (healthy)"
+      ],
+      "docker_images": "6 images, 2.282GB"
+    }
+  ]
+}
