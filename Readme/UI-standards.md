@@ -59,6 +59,26 @@
 
 ---
 
+## 0.3. Защита от повторного клика (`actionLock` / `runBusy`)
+
+**Назначение:** при медленной сети один клик → ожидание → результат; повторные нажатия не открывают вторую модалку и не сбрасывают форму.
+
+**Где в коде:** `index.html` — функции `actionLockBegin` / `actionLockEnd` / `runBusy`, класс `.is-busy` (спиннер на кнопке).
+
+| Паттерн | Когда |
+|---------|--------|
+| `runBusy(btn, key, fn)` | Async-действие (сохранение, вход, приглашение бадди) — лок снимается в `finally`. |
+| `runBusy(btn, { key, hold: true }, fn)` + `actionLockEnd` в `close*Modal` | Открытие модалки из футера «+» — лок держится, пока окно открыто. |
+| `actionLockIsHeld(key)` | Повторный клик «+» при уже открытой модалке — игнор (клик уходит в backdrop и закрывает, как раньше). |
+
+**Ключи (примеры):** `modal:diary-free`, `modal:new-dream`, `modal:add-step`, `modal:library-book`, `save:diary-free`, `save:step-comment`, `login`, `buddy-invite:{userId}`.
+
+**Визуал:** кнопка получает `disabled`, `aria-busy="true"`, класс `.is-busy` — кружок по центру; у `.app-footer-add` скрываются «+» и подпись. Уважение `prefers-reduced-motion`.
+
+**Новые кнопки с риском даблклика** — через `runBusy`, не разрозненные `disabled` / `*InProgress` флаги.
+
+---
+
 ## 1. Сегменты-фильтры (активный = зелёный фон)
 
 **Эталон:** блок фильтра мечт / шагов — кнопки `.dreams-filter-btn`, активная `.dreams-filter-btn.active`.

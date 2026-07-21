@@ -777,6 +777,47 @@
             transition: opacity 0.2s;
         }
         .app-footer-add:hover { opacity: 0.9; }
+        .app-footer-add:disabled,
+        .app-footer-add.is-busy { opacity: 0.85; cursor: wait; }
+        .app-footer-add.is-busy .app-footer-add-plus,
+        .app-footer-add.is-busy .app-footer-add-label { visibility: hidden; }
+        /* Единый busy-спиннер (UI-standards §0.3): actionLock / runBusy */
+        button.is-busy,
+        .app-footer-add.is-busy,
+        .modal-foot-link.is-busy {
+            position: relative;
+            pointer-events: none;
+        }
+        button.is-busy:not(.app-footer-add)::after,
+        .app-footer-add.is-busy::after,
+        .modal-foot-link.is-busy::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 1.05em;
+            height: 1.05em;
+            margin: -0.525em 0 0 -0.525em;
+            border: 2px solid rgba(255, 255, 255, 0.35);
+            border-top-color: #fff;
+            border-radius: 50%;
+            box-sizing: border-box;
+            animation: island-btn-spin 0.65s linear infinite;
+        }
+        .modal-foot-link.is-busy::after,
+        button.secondary.is-busy::after,
+        button.island-btn-outline.is-busy::after {
+            border-color: rgba(46, 125, 50, 0.25);
+            border-top-color: var(--island-accent-deep, #2e7d32);
+        }
+        @keyframes island-btn-spin {
+            to { transform: rotate(360deg); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            button.is-busy::after,
+            .app-footer-add.is-busy::after,
+            .modal-foot-link.is-busy::after { animation: none; opacity: 0.7; }
+        }
         .app-footer-add-plus {
             flex: 0 0 var(--app-footer-add-plus-w);
             width: var(--app-footer-add-plus-w);
@@ -2654,7 +2695,7 @@
                         </div>
                     </div>
                     <button type="button" class="app-footer-logout" id="app-footer-logout" title="Выйти" onclick="logout()">Выйти</button>
-                    <span class="app-version" aria-hidden="true">321</span>
+                    <span class="app-version" aria-hidden="true">322</span>
                 </div>
             </footer>
         </div>
@@ -2669,6 +2710,69 @@
             } catch (e) {}
             return 'http://23.172.217.180:8000';
         })();
+        /**
+         * Единый анти-даблклик / busy (UI-standards §0.3).
+         * Ключ держится на время async ИЛИ пока открыта модалка (hold до close*).
+         */
+        var actionLocks = Object.create(null);
+        var actionLockButtons = Object.create(null);
+        function actionLockIsHeld(key) {
+            return !!(key && actionLocks[key]);
+        }
+        function setButtonBusy(btn, busy) {
+            if (!btn) return;
+            btn.classList.toggle('is-busy', !!busy);
+            btn.setAttribute('aria-busy', busy ? 'true' : 'false');
+            if (busy) {
+                if (!btn.hasAttribute('data-busy-was-disabled')) {
+                    btn.setAttribute('data-busy-was-disabled', btn.disabled ? '1' : '0');
+                }
+                btn.disabled = true;
+            } else {
+                var was = btn.getAttribute('data-busy-was-disabled');
+                btn.removeAttribute('data-busy-was-disabled');
+                if (was === '1') btn.disabled = true;
+                else btn.disabled = false;
+            }
+        }
+        function syncActionLockButtons(key) {
+            var busy = actionLockIsHeld(key);
+            (actionLockButtons[key] || []).forEach(function(btn) { setButtonBusy(btn, busy); });
+        }
+        function actionLockBindButton(btn, key) {
+            if (!btn || !key) return;
+            if (!actionLockButtons[key]) actionLockButtons[key] = [];
+            if (actionLockButtons[key].indexOf(btn) < 0) actionLockButtons[key].push(btn);
+            syncActionLockButtons(key);
+        }
+        /** @returns {boolean} true если лок взят впервые */
+        function actionLockBegin(key) {
+            if (!key || actionLocks[key]) return false;
+            actionLocks[key] = true;
+            syncActionLockButtons(key);
+            return true;
+        }
+        function actionLockEnd(key) {
+            if (!key || !actionLocks[key]) return;
+            delete actionLocks[key];
+            syncActionLockButtons(key);
+        }
+        /**
+         * @param {HTMLElement|null} btn
+         * @param {{key:string, hold?:boolean}|string} optsOrKey — hold: не снимать лок в finally (модалка)
+         * @param {function(): (any|Promise)} fn
+         */
+        async function runBusy(btn, optsOrKey, fn) {
+            var opts = typeof optsOrKey === 'string' ? { key: optsOrKey } : (optsOrKey || {});
+            var key = opts.key || ('busy:' + (btn && (btn.id || btn.className) || 'anon'));
+            if (!actionLockBegin(key)) return;
+            if (btn) actionLockBindButton(btn, key);
+            try {
+                await Promise.resolve(fn());
+            } finally {
+                if (!opts.hold) actionLockEnd(key);
+            }
+        }
         var TASK_CODE = 13; // код задачи для проверки кэша: после обновления страницы должно быть "код 13"
         // Особые правила шагов: книги (books_reading) и финансы (модалка «создать 12 месяцев»). false = добавлять по одному шагу как обычно. Код не удаляем — только отключаем до тестов с пользователями.
         var ENABLE_SPECIAL_STEPS_BOOKS_FINANCE = false;
@@ -2831,35 +2935,34 @@
         })();
         async function sendBuddyInvite(toUserId, btnEl, requestId) {
             if (!btnEl || !currentUser || !currentUser.id) return;
-            if (btnEl.disabled) return;
-            btnEl.disabled = true;
-            if (btnEl.classList.contains('waiting') && requestId) {
+            var lockKey = 'buddy-invite:' + toUserId;
+            await runBusy(btnEl, lockKey, async function() {
+                if (btnEl.classList.contains('waiting') && requestId) {
+                    try {
+                        var res = await fetch(API_BASE_URL + '/buddy_requests/' + requestId + '?user_id=' + currentUser.id, { method: 'DELETE' });
+                        if (res.ok) {
+                            buddyRequestsCache.outgoing = (buddyRequestsCache.outgoing || []).filter(function(o) { return o.id !== requestId; });
+                            btnEl.textContent = 'Пригласить';
+                            btnEl.classList.remove('waiting');
+                            btnEl.removeAttribute('data-request-id');
+                        } else { var e = await res.json().catch(function() { return {}; }); alert(e.detail || 'Ошибка отмены'); }
+                    } catch (e) { alert('Ошибка сети'); }
+                    return;
+                }
                 try {
-                    var res = await fetch(API_BASE_URL + '/buddy_requests/' + requestId + '?user_id=' + currentUser.id, { method: 'DELETE' });
-                    if (res.ok) {
-                        buddyRequestsCache.outgoing = (buddyRequestsCache.outgoing || []).filter(function(o) { return o.id !== requestId; });
-                        btnEl.textContent = 'Пригласить';
-                        btnEl.classList.remove('waiting');
-                        btnEl.removeAttribute('data-request-id');
-                    } else { var e = await res.json().catch(function() { return {}; }); alert(e.detail || 'Ошибка отмены'); }
+                    var res = await fetch(API_BASE_URL + '/buddy_requests?user_id=' + currentUser.id, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ to_user_id: toUserId })
+                    });
+                    if (!res.ok) { var e = await res.json().catch(function() { return {}; }); alert(e.detail || 'Ошибка отправки'); return; }
+                    var data = await res.json();
+                    btnEl.textContent = 'Ждём ответа';
+                    btnEl.classList.add('waiting');
+                    btnEl.dataset.requestId = data.id;
+                    if (buddyRequestsCache.outgoing) buddyRequestsCache.outgoing.push({ id: data.id, to_user_id: toUserId });
                 } catch (e) { alert('Ошибка сети'); }
-                btnEl.disabled = false;
-                return;
-            }
-            try {
-                var res = await fetch(API_BASE_URL + '/buddy_requests?user_id=' + currentUser.id, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ to_user_id: toUserId })
-                });
-                if (!res.ok) { var e = await res.json().catch(function() { return {}; }); alert(e.detail || 'Ошибка отправки'); btnEl.disabled = false; return; }
-                var data = await res.json();
-                btnEl.textContent = 'Ждём ответа';
-                btnEl.classList.add('waiting');
-                btnEl.dataset.requestId = data.id;
-                if (buddyRequestsCache.outgoing) buddyRequestsCache.outgoing.push({ id: data.id, to_user_id: toUserId });
-            } catch (e) { alert('Ошибка сети'); }
-            btnEl.disabled = false;
+            });
         }
         function buildMediaUrl(path, cacheKey) {
             var p = (path || '').toString().replace(/^\//, '');
@@ -3001,7 +3104,6 @@
 
         async function login() {
             var loginBtn = document.getElementById('login-btn');
-            if (loginBtn && loginBtn.disabled) return;
             var countryEl = document.getElementById('login-country');
             var countryCode = (countryEl && countryEl.value) || '+7';
             var rawPhone = (document.getElementById('login-phone') && document.getElementById('login-phone').value) ? document.getElementById('login-phone').value.trim() : '';
@@ -3011,37 +3113,37 @@
             var password = document.getElementById('password').value;
             var errorDiv = document.getElementById('login-error');
             errorDiv.classList.add('hidden');
-            if (loginBtn) { loginBtn.disabled = true; loginBtn.textContent = 'Вход…'; }
+            await runBusy(loginBtn, 'login', async function() {
+                var prevLabel = loginBtn ? loginBtn.textContent : '';
+                if (loginBtn) loginBtn.textContent = 'Вход…';
+                try {
+                    const response = await fetch(API_BASE_URL + '/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ phone: phone, password: password })
+                    });
 
-            try {
-                const response = await fetch(API_BASE_URL + '/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ phone: phone, password: password })
-                });
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        errorDiv.innerText = errorData.detail || 'Ошибка входа.';
+                        errorDiv.classList.remove('hidden');
+                        return;
+                    }
 
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    errorDiv.innerText = errorData.detail || 'Ошибка входа.';
+                    currentUser = await response.json();
+                    if (currentUser) lastStepsForDiary = { userId: currentUser.id, isBuddy: false };
+                    if (currentUser && currentUser.buddy_avatar_path) currentUser.buddy_avatar_url = buildMediaUrl(currentUser.buddy_avatar_path, currentUser.buddy_avatar_rev || '');
+                    if (currentUser && currentUser.avatar_path) currentUser.avatar_url = buildMediaUrl(currentUser.avatar_path, currentUser.avatar_rev || '');
+                    try { localStorage.setItem('savedUser', JSON.stringify(currentUser)); } catch (e) {}
+                    showProfile();
+                } catch (error) {
+                    errorDiv.innerText = 'Не удалось подключиться к серверу.';
                     errorDiv.classList.remove('hidden');
-                    if (loginBtn) { loginBtn.disabled = false; loginBtn.textContent = 'Войти'; }
-                    return;
+                    console.error('Ошибка входа:', error);
+                } finally {
+                    if (loginBtn) loginBtn.textContent = prevLabel || 'Войти';
                 }
-
-                currentUser = await response.json();
-                if (currentUser) lastStepsForDiary = { userId: currentUser.id, isBuddy: false };
-                if (currentUser && currentUser.buddy_avatar_path) currentUser.buddy_avatar_url = buildMediaUrl(currentUser.buddy_avatar_path, currentUser.buddy_avatar_rev || '');
-                if (currentUser && currentUser.avatar_path) currentUser.avatar_url = buildMediaUrl(currentUser.avatar_path, currentUser.avatar_rev || '');
-                // Сохраняем данные пользователя
-                try { localStorage.setItem('savedUser', JSON.stringify(currentUser)); } catch (e) {}
-                showProfile(); // Показываем личный кабинет
-
-            } catch (error) {
-                errorDiv.innerText = 'Не удалось подключиться к серверу.';
-                errorDiv.classList.remove('hidden');
-                if (loginBtn) { loginBtn.disabled = false; loginBtn.textContent = 'Войти'; }
-                console.error('Ошибка входа:', error);
-            }
+            });
         }
 
         let dreamStatusesList = [];
@@ -4059,10 +4161,22 @@
             }
         }
         function onAppFooterAddClick() {
-            if (appFooterAddMode === 'dream') openNewDreamModal();
-            else if (appFooterAddMode === 'step') openAddStepModal(0, { requireDreamPick: true });
-            else if (appFooterAddMode === 'diary') openDiaryFreeEntryModal();
-            else if (appFooterAddMode === 'book') openLibraryBookModal(0, 0);
+            var btn = document.getElementById('app-footer-add');
+            if (appFooterAddMode === 'dream') {
+                runBusy(btn, { key: 'modal:new-dream', hold: true }, function() { openNewDreamModal(); });
+            } else if (appFooterAddMode === 'step') {
+                runBusy(btn, { key: 'modal:add-step', hold: true }, function() {
+                    openAddStepModal(0, { requireDreamPick: true });
+                });
+            } else if (appFooterAddMode === 'diary') {
+                runBusy(btn, { key: 'modal:diary-free', hold: true }, function() {
+                    return openDiaryFreeEntryModal();
+                });
+            } else if (appFooterAddMode === 'book') {
+                runBusy(btn, { key: 'modal:library-book', hold: true }, function() {
+                    openLibraryBookModal(0, 0);
+                });
+            }
         }
 
         function normalizeBookLinkedStepId(raw) {
@@ -4504,6 +4618,10 @@
         function openLibraryBookModal(dreamId, bookId) {
             var modal = document.getElementById('modal-library-book');
             if (!modal) return;
+            if (!modal.classList.contains('hidden') && actionLockIsHeld('modal:library-book')) return;
+            actionLockBegin('modal:library-book');
+            var footerAdd = document.getElementById('app-footer-add');
+            if (footerAdd) actionLockBindButton(footerAdd, 'modal:library-book');
             var titleEl = document.getElementById('library-book-title');
             var authorEl = document.getElementById('library-book-author');
             var deadlineEl = document.getElementById('library-book-deadline');
@@ -4529,6 +4647,11 @@
             }
             modal.classList.remove('hidden');
             refreshLibraryBookStepInline().catch(function() {});
+        }
+        function closeLibraryBookModal() {
+            var libraryModal = document.getElementById('modal-library-book');
+            if (libraryModal) libraryModal.classList.add('hidden');
+            actionLockEnd('modal:library-book');
         }
 
         var buddyAlertSettingsCache = null;
@@ -5553,7 +5676,6 @@
                 if (btn) btn.setAttribute('aria-expanded', 'false');
             });
         }
-        var diarySaveInProgress = false;
         var diaryFreeEditEventId = null;
         function updateStepWaivedSaveButtonState() {
             var ta = document.getElementById('step-waived-note-text');
@@ -5805,7 +5927,6 @@
             } catch (e) { alert('Ошибка сети'); }
         }
         var stepCommentModal = { dreamId: 0, stepId: 0 };
-        var stepCommentSaveInProgress = false;
         function updateStepCommentSaveState() {
             var ta = document.getElementById('step-comment-note-text');
             var saveBtn = document.getElementById('step-comment-save');
@@ -6905,21 +7026,17 @@
         document.getElementById('step-comment-skip') && document.getElementById('step-comment-skip').addEventListener('click', closeStepCommentModal);
         document.getElementById('step-comment-save') && document.getElementById('step-comment-save').addEventListener('click', function(e) {
             e.preventDefault();
-            if (stepCommentSaveInProgress) return;
             if (!stepCommentModal.dreamId) { closeStepCommentModal(); return; }
             var note = (document.getElementById('step-comment-note-text') && document.getElementById('step-comment-note-text').value || '').trim();
             if (!note) { closeStepCommentModal(); return; }
             var did = stepCommentModal.dreamId;
             var saveBtn = document.getElementById('step-comment-save');
-            stepCommentSaveInProgress = true;
-            if (saveBtn) saveBtn.disabled = true;
-            patchStep(stepCommentModal.dreamId, stepCommentModal.stepId, { note: note }).then(function() {
-                closeStepCommentModal();
-                dreamIdToRestoreAfterRefresh = did;
-                refreshAfterDreamChange();
-            }).catch(function() { alert('Не удалось сохранить'); }).finally(function() {
-                stepCommentSaveInProgress = false;
-                if (saveBtn) saveBtn.disabled = false;
+            runBusy(saveBtn, 'save:step-comment', function() {
+                return patchStep(stepCommentModal.dreamId, stepCommentModal.stepId, { note: note }).then(function() {
+                    closeStepCommentModal();
+                    dreamIdToRestoreAfterRefresh = did;
+                    refreshAfterDreamChange();
+                }).catch(function() { alert('Не удалось сохранить'); });
             });
         });
         var modalStepComment = document.getElementById('modal-step-comment');
@@ -7025,7 +7142,9 @@
             closeCabinetPicker();
         });
         var libraryAddBtn = document.getElementById('library-add-btn');
-        if (libraryAddBtn) libraryAddBtn.addEventListener('click', function() { openLibraryBookModal(0, 0); });
+        if (libraryAddBtn) libraryAddBtn.addEventListener('click', function() {
+            runBusy(libraryAddBtn, { key: 'modal:library-book', hold: true }, function() { openLibraryBookModal(0, 0); });
+        });
         var appFooterAddBtn = document.getElementById('app-footer-add');
         if (appFooterAddBtn) appFooterAddBtn.addEventListener('click', onAppFooterAddClick);
         var addStepDreamSel = document.getElementById('modal-add-step-dream-select');
@@ -7119,8 +7238,8 @@
                 if (ok2) await refreshLibraryBookStepInline();
             }
         });
-        if (libraryCancelBtn) libraryCancelBtn.addEventListener('click', function() { if (libraryModal) libraryModal.classList.add('hidden'); });
-        if (libraryModal) libraryModal.addEventListener('click', function(e) { if (e.target === libraryModal) libraryModal.classList.add('hidden'); });
+        if (libraryCancelBtn) libraryCancelBtn.addEventListener('click', closeLibraryBookModal);
+        if (libraryModal) libraryModal.addEventListener('click', function(e) { if (e.target === libraryModal) closeLibraryBookModal(); });
         if (librarySaveBtn) librarySaveBtn.addEventListener('click', async function() {
             if (!currentUser || !currentUser.id) return;
             var titleEl = document.getElementById('library-book-title');
@@ -7142,7 +7261,7 @@
                 var res = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
                 if (!res.ok) throw new Error('book_save_failed');
                 var rawSave = await res.json().catch(function() { return {}; });
-                if (libraryModal) libraryModal.classList.add('hidden');
+                if (libraryModal) closeLibraryBookModal();
                 var snapSave = snapshotBooksReadingLinkedIds();
                 await libraryReloadDreamsCache({ mergeBooksReadingLinksSnapshot: snapSave });
                 if (bookIdBeforeSave && rawSave.book) {
@@ -7165,7 +7284,7 @@
             try {
                 var res = await fetch(API_BASE_URL + '/dreams/' + libraryDraft.dreamId + '/books/' + libraryDraft.bookId + '?user_id=' + currentUser.id, { method: 'DELETE' });
                 if (!res.ok) throw new Error('book_delete_failed');
-                if (libraryModal) libraryModal.classList.add('hidden');
+                if (libraryModal) closeLibraryBookModal();
                 await libraryReloadDreamsCache();
             } catch (e) {
                 if (errEl) { errEl.textContent = 'Не удалось удалить книгу'; errEl.classList.remove('hidden'); }
@@ -9586,6 +9705,10 @@
             });
         }
         function openNewDreamModal() {
+            if (!document.getElementById('modal-new-dream').classList.contains('hidden') && actionLockIsHeld('modal:new-dream')) return;
+            actionLockBegin('modal:new-dream');
+            var footerAdd = document.getElementById('app-footer-add');
+            if (footerAdd) actionLockBindButton(footerAdd, 'modal:new-dream');
             islandCalClose();
             document.getElementById('new-dream-text').value = '';
             var nd = document.getElementById('new-dream-deadline');
@@ -9615,6 +9738,7 @@
         function closeNewDreamModal() {
             islandCalClose();
             document.getElementById('modal-new-dream').classList.add('hidden');
+            actionLockEnd('modal:new-dream');
             if (pendingAddStepAfterNewDream) {
                 pendingAddStepAfterNewDream = false;
                 openAddStepModal(0, { requireDreamPick: true });
@@ -10189,9 +10313,15 @@ var res = await fetch(API_BASE_URL + '/dreams/' + dreamId + '?' + dreamApiUserPa
         }
         function openDiaryFreeEntryModal() {
             if (!currentUser) return;
+            var m = document.getElementById('modal-diary-free');
+            if (m && !m.classList.contains('hidden') && actionLockIsHeld('modal:diary-free')) return;
+            if (!actionLockIsHeld('modal:diary-free')) {
+                if (!actionLockBegin('modal:diary-free')) return;
+                var footerAdd = document.getElementById('app-footer-add');
+                if (footerAdd) actionLockBindButton(footerAdd, 'modal:diary-free');
+            }
             diaryFreeEditEventId = null;
             var open = function() {
-                var m = document.getElementById('modal-diary-free');
                 var ta = document.getElementById('diary-free-text');
                 var titleEl = m && m.querySelector('h3');
                 if (titleEl) titleEl.textContent = 'Запись в дневник';
@@ -10205,10 +10335,9 @@ var res = await fetch(API_BASE_URL + '/dreams/' + dreamId + '?' + dreamApiUserPa
                 if (ta) setTimeout(function() { try { ta.focus(); } catch (e) {} }, 50);
             };
             if (!stepsFlatCache.length) {
-                loadSteps(currentUser.id, false).then(open).catch(open);
-            } else {
-                open();
+                return loadSteps(currentUser.id, false).then(open).catch(open);
             }
+            open();
         }
         function closeDiaryFreeEntryModal() {
             var m = document.getElementById('modal-diary-free');
@@ -10216,9 +10345,11 @@ var res = await fetch(API_BASE_URL + '/dreams/' + dreamId + '?' + dreamApiUserPa
             diaryFreeEditEventId = null;
             closeDiaryLinkDropdowns();
             closeDiaryLinksPopover();
+            actionLockEnd('modal:diary-free');
         }
         function openDiaryEditModal(eventRow) {
             if (!currentUser || !eventRow) return;
+            actionLockBegin('modal:diary-free');
             diaryFreeEditEventId = eventRow.id;
             var m = document.getElementById('modal-diary-free');
             var ta = document.getElementById('diary-free-text');
@@ -10259,7 +10390,6 @@ var res = await fetch(API_BASE_URL + '/dreams/' + dreamId + '?' + dreamApiUserPa
         }
         async function submitDiaryFreeEntry() {
             if (!currentUser) return;
-            if (diarySaveInProgress) return;
             var ta = document.getElementById('diary-free-text');
             var saveBtn = document.getElementById('diary-free-save');
             var text = ta ? (ta.value || '').trim() : '';
@@ -10268,54 +10398,63 @@ var res = await fetch(API_BASE_URL + '/dreams/' + dreamId + '?' + dreamApiUserPa
             var links = buildDiaryEntryLinksPayload();
             payload.linked_dream_ids = links.linked_dream_ids;
             payload.linked_step_ids = links.linked_step_ids;
-            diarySaveInProgress = true;
-            if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Сохранение…'; }
-            try {
-                var url, method;
-                if (diaryFreeEditEventId) {
-                    url = API_BASE_URL + '/steps/events/' + diaryFreeEditEventId + '?user_id=' + encodeURIComponent(currentUser.id);
-                    method = 'PATCH';
-                } else {
-                    url = API_BASE_URL + '/diary/free-entry?user_id=' + encodeURIComponent(currentUser.id);
-                    method = 'POST';
-                }
-                var res = await fetch(url, {
-                    method: method,
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                if (!res.ok) {
-                    var t = await res.text();
-                    var msg = 'Не удалось сохранить запись';
-                    try {
-                        var err = JSON.parse(t);
-                        if (err && err.detail) msg = typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail);
-                    } catch (parseErr) {
-                        if (t && t.trim()) msg = t.trim().slice(0, 200);
+            await runBusy(saveBtn, 'save:diary-free', async function() {
+                var prevLabel = saveBtn ? saveBtn.textContent : '';
+                if (saveBtn) saveBtn.textContent = 'Сохранение…';
+                try {
+                    var url, method;
+                    if (diaryFreeEditEventId) {
+                        url = API_BASE_URL + '/steps/events/' + diaryFreeEditEventId + '?user_id=' + encodeURIComponent(currentUser.id);
+                        method = 'PATCH';
+                    } else {
+                        url = API_BASE_URL + '/diary/free-entry?user_id=' + encodeURIComponent(currentUser.id);
+                        method = 'POST';
                     }
-                    alert(msg);
-                    return;
-                }
-                var data = null;
-                try { data = await res.json(); } catch (jsonErr) { data = null; }
-                if (data && data.already_exists && !diaryFreeEditEventId) {
+                    var res = await fetch(url, {
+                        method: method,
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!res.ok) {
+                        var t = await res.text();
+                        var msg = 'Не удалось сохранить запись';
+                        try {
+                            var err = JSON.parse(t);
+                            if (err && err.detail) msg = typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail);
+                        } catch (parseErr) {
+                            if (t && t.trim()) msg = t.trim().slice(0, 200);
+                        }
+                        alert(msg);
+                        return;
+                    }
+                    var data = null;
+                    try { data = await res.json(); } catch (jsonErr) { data = null; }
+                    if (data && data.already_exists && !diaryFreeEditEventId) {
+                        closeDiaryFreeEntryModal();
+                        loadStepDiary();
+                        return;
+                    }
                     closeDiaryFreeEntryModal();
                     loadStepDiary();
-                    return;
+                } catch (err) {
+                    alert('Ошибка сети');
+                } finally {
+                    if (saveBtn) saveBtn.textContent = prevLabel || 'Сохранить';
                 }
-                closeDiaryFreeEntryModal();
-                loadStepDiary();
-            } catch (err) {
-                alert('Ошибка сети');
-            } finally {
-                diarySaveInProgress = false;
-                if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Сохранить'; }
-            }
+            });
         }
         function openAddStepModal(dreamId, opts) {
             opts = opts || {};
             var overlay = document.getElementById('modal-add-step');
             if (!overlay) return;
+            if (!opts.prepareForEdit) {
+                if (!overlay.classList.contains('hidden') && actionLockIsHeld('modal:add-step')) return;
+                if (!actionLockIsHeld('modal:add-step')) {
+                    actionLockBegin('modal:add-step');
+                    var footerAddStep = document.getElementById('app-footer-add');
+                    if (footerAddStep) actionLockBindButton(footerAddStep, 'modal:add-step');
+                }
+            }
             overlay.dataset.stepModalUi = 'create';
             overlay.dataset.mode = 'create';
             var pickedDreamId = opts.requireDreamPick ? 0 : (parseInt(dreamId, 10) || 0);
@@ -10382,6 +10521,7 @@ var res = await fetch(API_BASE_URL + '/dreams/' + dreamId + '?' + dreamApiUserPa
         function openEditStepModal(stepObj) {
             var overlay = document.getElementById('modal-add-step');
             if (!overlay || !stepObj) return;
+            if (!actionLockIsHeld('modal:add-step')) actionLockBegin('modal:add-step');
             openAddStepModal(stepObj.dream_id, { prepareForEdit: true });
             delete overlay._seriesStepsForEdit;
             var pool = getStepSeriesSiblingPool(stepObj);
@@ -10543,6 +10683,7 @@ var res = await fetch(API_BASE_URL + '/dreams/' + dreamId + '?' + dreamApiUserPa
             if (bulkOv) bulkOv.classList.add('hidden');
             bulkEndConfirmState = null;
             stepBatchSeriesId = null;
+            actionLockEnd('modal:add-step');
         }
         function showStepBatchOverlay(total) {
             stepBatchInProgress = true;

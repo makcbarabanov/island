@@ -2,6 +2,12 @@
 
 Старые пункты могут ссылаться на прежний монолитный `Readme/Readme.md`; актуальная структура — корневой [README.md](../README.md), [PROJECT.md](PROJECT.md), [RUNBOOK.md](RUNBOOK.md).
 
+## 2026-07-10 — actionLock: защита от повторного клика (v322)
+
+- Единый хелпер `actionLock` / `runBusy` + спиннер `.is-busy` на кнопках.
+- Футер «+» (мечта/шаг/запись/книга), сохранение дневника, комментарий шага, вход, приглашение бадди.
+- UI-standards §0.3.
+
 ## 2026-07-06 — /stat/: раздел «Сервер» (v321)
 
 - `scripts/build_server_health_snapshot.py` → `sites/stat/data/server_health.json` (диск, RAM, swap, load, docker, smoke; история 60 дн.).
