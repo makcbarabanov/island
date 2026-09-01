@@ -2,6 +2,13 @@
 
 Старые пункты могут ссылаться на прежний монолитный `Readme/Readme.md`; актуальная структура — корневой [README.md](../README.md), [PROJECT.md](PROJECT.md), [RUNBOOK.md](RUNBOOK.md).
 
+## 2026-09-01 — Bloom MVP + сентябрьский марафон (v323)
+
+- **Bloom** в `island/bloom/` (`send_digest.py`); bootstrap на проде — [BLOOM_BOOTSTRAP.md](BLOOM_BOOTSTRAP.md).
+- Счётчик целевых серий **X/N** (выполнено/цель) при `series_total > 31`; «Ручка» 3000 — первый пример ([business_logic.md](business_logic.md)).
+- Сидер `scripts/seed_marathon_september_2026.py`, консолидация `scripts/consolidate_aigul_ruchka.py`.
+- Формат Telegram: `scripts/marathon_digest_format.py`; тесты `tests/test_series_counter.py`.
+
 ## 2026-07-10 — actionLock: защита от повторного клика (v322)
 
 - Единый хелпер `actionLock` / `runBusy` + спиннер `.is-busy` на кнопках.

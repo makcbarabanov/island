@@ -2695,7 +2695,7 @@
                         </div>
                     </div>
                     <button type="button" class="app-footer-logout" id="app-footer-logout" title="Выйти" onclick="logout()">Выйти</button>
-                    <span class="app-version" aria-hidden="true">322</span>
+                    <span class="app-version" aria-hidden="true">323</span>
                 </div>
             </footer>
         </div>
@@ -3839,7 +3839,28 @@
             var et = ((stepObj && stepObj.end_time) || '').toString().slice(0, 5);
             return 'd:' + did + '|f:' + t + '|' + st + '|' + et;
         }
-        /** Карта заголовков с прогрессом серии: исторический N (series_index), знаменатель — фактический размер серии (неудалённые шаги). */
+        /** Порог: series_total > 31 → целевая серия (X/N выполнено); иначе календарная (день N из M). */
+        var SERIES_COUNTER_CUMULATIVE_THRESHOLD = 31;
+        function isCumulativeStepSeries(arr) {
+            var best = 0;
+            (arr || []).forEach(function(s) {
+                var st = parseInt(s && s.series_total, 10);
+                if (Number.isFinite(st) && st > best) best = st;
+            });
+            return best > SERIES_COUNTER_CUMULATIVE_THRESHOLD;
+        }
+        function cumulativeSeriesProgress(arr) {
+            var target = 0;
+            (arr || []).forEach(function(s) {
+                var st = parseInt(s && s.series_total, 10);
+                if (Number.isFinite(st) && st > target) target = st;
+            });
+            var done = 0;
+            (arr || []).forEach(function(s) { if (s && s.completed) done += 1; });
+            if (!target) target = (arr || []).length;
+            return { done: done, target: target };
+        }
+        /** Карта заголовков: календарный N/M или целевой X/N (см. Readme/business_logic.md). */
         function buildStepTitleCounterMap(steps, sourceSteps) {
             var shown = (steps || []).filter(function(s) { return !!s; });
             var source = (sourceSteps && sourceSteps.length ? sourceSteps : shown).filter(function(s) { return s && !s.deleted; });
@@ -3870,11 +3891,17 @@
                     if (ad !== bd) return ad.localeCompare(bd);
                     return (Number(a.id) || 0) - (Number(b.id) || 0);
                 });
-                arr.forEach(function(s, idx) {
-                    var n = parseInt(s.series_index, 10);
-                    if (!Number.isFinite(n) || n < 1) n = idx + 1;
-                    out[String(s.id)] = pack.title + ' (' + n + '/' + total + ')';
-                });
+                if (isCumulativeStepSeries(arr)) {
+                    var prog = cumulativeSeriesProgress(arr);
+                    var cumLabel = pack.title + ' (' + prog.done + '/' + prog.target + ')';
+                    arr.forEach(function(s) { out[String(s.id)] = cumLabel; });
+                } else {
+                    arr.forEach(function(s, idx) {
+                        var n = parseInt(s.series_index, 10);
+                        if (!Number.isFinite(n) || n < 1) n = idx + 1;
+                        out[String(s.id)] = pack.title + ' (' + n + '/' + total + ')';
+                    });
+                }
             });
             return out;
         }

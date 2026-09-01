@@ -9,11 +9,18 @@
 | D-001 | **SSOT отчётов марафона** — ЛК (`dreams_steps`, 📋/✈️, `buddy_step_daily_reports`), не парсинг Telegram-чата |
 | D-002 | **Активный участник v1** — есть шаги с `deadline = сегодня` (Europe/Moscow) |
 | D-003 | **Stat** — `sites/stat/` в git, URL `/stat/`, снимок `data/marathon_snapshot.json`, cron `scripts/build_marathon_snapshot.py` |
-| D-004 | **Bloom** — отдельный репо `~/Apps/bloom` на **188.225.44.48**; LLM через OpenRouter; **нет** US-сервера `23.172.217.180` |
+| D-004 | **Bloom** — каталог `island/bloom/` в том же git (MVP digest); runtime на **188.225.44.48**; bootstrap — [BLOOM_BOOTSTRAP.md](BLOOM_BOOTSTRAP.md). *(ранее: отдельный repo `~/Apps/bloom` — отложено)* |
 | D-005 | **Git** — канон `makcbarabanov/island` (бывший `studing`); архив `island_archive` |
 | D-006 | **Локальный путь** — `~/Apps/island` (не `OSTROV/web-app`, без symlink) |
 | D-007 | **Контракт** — `Readme/bloom-api.md`, `Readme/bloom-db-shared.md`; `island-bridge-contract` → архив |
 | D-008 | **Поздний отчёт** — в digest Bloom одна строка «зачислен после дедлайна», без флуда в чат |
+
+## 2026-09-01 — Bloom MVP
+
+| ID | Решение |
+|----|---------|
+| D-010 | **Bloom bootstrap** — Продагент на проде: `git pull`, `bloom/.env`, cron `send_digest.py`, dry-run/apply сидера; код только из git |
+| D-011 | **Счётчик целевых серий** — `X/N` = выполнено/цель из `completed`; календарный `N/M` при `series_total ≤ 31` |
 
 ## 2026-07-06 — Мониторинг VPS в /stat/
 

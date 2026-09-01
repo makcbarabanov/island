@@ -20,7 +20,7 @@
 | **Продагент** | Cursor SSH → `188.225.44.48` (редко) | Логи, smoke, прод-only ops, откат; обычный релиз — у Форжа | **Нет** с прода |
 | **CRONOS** | Google AI Studio | SRE, архитектура, деплой-стандарты | — |
 | **Морфеус** | Gemini | Продукт, промпты, академическая часть УИИ | — |
-| **Bloom** | `bloom/` (отдельный repo) | Telegram-бот `@bloom26bot` | Отдельный repo |
+| **Bloom** | `island/bloom/` (тот же git) | Telegram digest `@bloom26bot` | Код в `makcbarabanov/island` |
 
 ## Два окна Cursor — как не перепутать
 

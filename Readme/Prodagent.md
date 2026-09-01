@@ -51,3 +51,11 @@ curl -sS -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/
 ```
 
 Полный runbook: [RUNBOOK.md](RUNBOOK.md).
+
+## Bootstrap Bloom (марафон Telegram)
+
+По решению D-010: Продагент **может** на проде развернуть Bloom из git (не писать код на сервере).
+
+- Инструкция: [BLOOM_BOOTSTRAP.md](BLOOM_BOOTSTRAP.md)
+- Dry-run сидера и консолидации «Ручка» — **обязательно** перед `--apply`
+- Выполнение `--apply` на БД — только после **«ДА ПРОД»** от Макса
