@@ -14,30 +14,28 @@ Bloom — вечерняя сводка марафона в Telegram.
   DB_* — подключение к PostgreSQL
   TELEGRAM_BOT_TOKEN — токен @bloom26bot
   MARATHON_CHAT_ID — id группы (например -1002782157458)
+  TELEGRAM_PROXY_URL — прокси до api.telegram.org (обязательно на РФ VPS)
 """
 from __future__ import annotations
 
 import argparse
-import json
 import os
 import sys
 import urllib.error
-import urllib.parse
-import urllib.request
 from datetime import date, datetime
 from pathlib import Path
-from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parent.parent
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
-if str(ROOT / "scripts") not in sys.path:
-    sys.path.insert(0, str(ROOT / "scripts"))
+BLOOM_DIR = Path(__file__).resolve().parent
+for p in (ROOT, ROOT / "scripts", BLOOM_DIR):
+    if str(p) not in sys.path:
+        sys.path.insert(0, str(p))
 
 from build_marathon_snapshot import TZ, _connect, _load_env, build_snapshot  # noqa: E402
 from marathon_digest_format import format_telegram_evening_digest  # noqa: E402
+from telegram_client import probe_telegram_api, send_telegram_message  # noqa: E402
 
-BLOOM_ENV = Path(__file__).resolve().parent / ".env"
+BLOOM_ENV = BLOOM_DIR / ".env"
 
 
 def _load_bloom_env() -> None:
@@ -58,23 +56,19 @@ def _load_bloom_env() -> None:
                 os.environ[k.strip()] = v.strip().strip("\"'")
 
 
-def send_telegram_message(token: str, chat_id: str, text: str) -> dict:
-    url = "https://api.telegram.org/bot" + urllib.parse.quote(token) + "/sendMessage"
-    body = urllib.parse.urlencode(
-        {"chat_id": chat_id, "text": text, "disable_web_page_preview": "true"}
-    ).encode("utf-8")
-    req = urllib.request.Request(url, data=body, method="POST")
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        return json.loads(resp.read().decode("utf-8"))
-
-
 def main() -> int:
     _load_bloom_env()
     p = argparse.ArgumentParser(description="Bloom: вечерний digest марафона")
     p.add_argument("--date", help="YYYY-MM-DD (по умолчанию сегодня MSK)")
     p.add_argument("--dry-run", action="store_true", help="Только вывести текст")
     p.add_argument("--send", action="store_true", help="Отправить в Telegram")
+    p.add_argument("--probe", action="store_true", help="Проверить доступ к api.telegram.org (с прокси из .env)")
     args = p.parse_args()
+
+    if args.probe:
+        ok, msg = probe_telegram_api()
+        print(msg)
+        return 0 if ok else 4
 
     if args.date:
         report_date = date.fromisoformat(args.date)
@@ -107,8 +101,9 @@ def main() -> int:
 
     try:
         result = send_telegram_message(token, chat_id, text)
-    except urllib.error.HTTPError as e:
-        print(f"Telegram HTTP {e.code}: {e.read().decode()}", file=sys.stderr)
+    except urllib.error.URLError as e:
+        print(f"Telegram: {e}", file=sys.stderr)
+        print("Подсказка: задайте TELEGRAM_PROXY_URL в bloom/.env (VPN/прокси для РФ VPS)", file=sys.stderr)
         return 3
 
     if not result.get("ok"):

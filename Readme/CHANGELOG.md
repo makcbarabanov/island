@@ -2,6 +2,11 @@
 
 Старые пункты могут ссылаться на прежний монолитный `Readme/Readme.md`; актуальная структура — корневой [README.md](../README.md), [PROJECT.md](PROJECT.md), [RUNBOOK.md](RUNBOOK.md).
 
+## 2026-09-01 — Bloom: прокси для Telegram на РФ VPS (v324)
+
+- `bloom/telegram_client.py` — отправка через `curl -x` и `TELEGRAM_PROXY_URL`
+- `bloom/send_digest.py --probe` — проверка доступа к api.telegram.org
+
 ## 2026-09-01 — Bloom MVP + сентябрьский марафон (v323)
 
 - **Bloom** в `island/bloom/` (`send_digest.py`); bootstrap на проде — [BLOOM_BOOTSTRAP.md](BLOOM_BOOTSTRAP.md).

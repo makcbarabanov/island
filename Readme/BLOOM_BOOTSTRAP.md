@@ -29,8 +29,33 @@ chmod 600 bloom/.env
 
 - `TELEGRAM_BOT_TOKEN` — токен @bloom26bot
 - `MARATHON_CHAT_ID=-1002782157458` (или `310055372` для smoke в личку)
+- **`TELEGRAM_PROXY_URL`** — прокси до `api.telegram.org` (на РФ VPS **обязательно**)
 
 `DB_*` уже в `/home/makc/Apps/island/.env` — `send_digest.py` читает оба файла.
+
+### 2.1 Прокси (РФ VPS + Telegram)
+
+С российского сервера **напрямую** до Telegram не достучаться. VPN на ноуте **не помогает серверу** — нужен **прокси, доступный с VPS**:
+
+| Источник | Что сделать |
+|----------|-------------|
+| **Провайдер VPN** | В личном кабинете часто есть HTTP/SOCKS5 endpoint — вписать в `TELEGRAM_PROXY_URL` |
+| **Свой VPS за рубежом** | Поднять tiny proxy или SOCKS |
+| **Нет прокси** | Digest с ноута по cron (отдельная настройка) |
+
+Примеры в `bloom/.env`:
+
+```
+TELEGRAM_PROXY_URL=socks5://user:pass@host:1080
+TELEGRAM_PROXY_URL=http://user:pass@host:8080
+```
+
+Проверка (после `git pull` с поддержкой прокси):
+
+```bash
+venv/bin/python3 bloom/send_digest.py --probe
+# ожидание: curl HTTP 302 proxy=socks5://...
+```
 
 ---
 
