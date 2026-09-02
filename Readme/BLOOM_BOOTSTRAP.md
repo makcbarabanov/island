@@ -122,27 +122,24 @@ venv/bin/python3 bloom/send_digest.py --send
 
 ## 5. Cron
 
-### Ночная / вечерняя (23:10 Europe/Moscow)
+Сервер: **Etc/UTC**. Ubuntu Vixie cron (`cron 3.0pl1`) **не** поддерживает `CRON_TZ` / per-user timezone:
+`TZ=` в crontab влияет только на окружение команды, **не** на момент запуска.
+Поэтому Bloom-слоты задаём в **UTC**, эквивалентных Europe/Moscow (MSK = UTC+3, без DST).
 
-```bash
-crontab -e
-```
-
-```
-TZ=Europe/Moscow
-10 23 * * * cd /home/makc/Apps/island && /home/makc/Apps/island/venv/bin/python3 bloom/send_digest.py --type evening --send >> /home/makc/Apps/island/logs/bloom_digest.log 2>&1
-```
-
-Без `TZ=Europe/Moscow` на UTC-сервере cron сдвигается (см. `Readme/BLOOM_POSTMORTEM_2026-09-02.md`).
-
-### Контрольная сверка (12:00 Europe/Moscow)
+### Вечерняя перекличка — 23:59 MSK = 20:59 UTC
 
 ```
-TZ=Europe/Moscow
-0 12 * * * cd /home/makc/Apps/island && /home/makc/Apps/island/venv/bin/python3 bloom/send_digest.py --type control --send >> /home/makc/Apps/island/logs/bloom_control.log 2>&1
+59 20 * * * cd /home/makc/Apps/island && /home/makc/Apps/island/venv/bin/python3 bloom/send_digest.py --type evening --send >> /home/makc/Apps/island/logs/bloom_digest.log 2>&1
 ```
 
-`target_date` = вчера (MSK), свежая БД, досдавшие с ночной сверки, `group_done/total/pct`, diagnostics в `logs/bloom_digest_diag.jsonl`.
+### Контрольная сверка — 12:00 MSK = 09:00 UTC
+
+```
+0 9 * * * cd /home/makc/Apps/island && /home/makc/Apps/island/venv/bin/python3 bloom/send_digest.py --type control --send >> /home/makc/Apps/island/logs/bloom_control.log 2>&1
+```
+
+`target_date` = вчера (MSK). Skip, если на вечерней/ночной сверке уже было N/N и к 12:00 никто не досдал.
+Свежая БД; `group_done/total/pct`; diagnostics → `logs/bloom_digest_diag.jsonl`.
 
 Пересчёт вручную:
 

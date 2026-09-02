@@ -14,6 +14,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from digest_core import DayStep, build_digest_payload, resolve_target_date_for_control_run  # noqa: E402
 from marathon_digest_format import format_telegram_control_check  # noqa: E402
+from send_digest import should_send_control_digest  # noqa: E402
 
 SEP2 = date(2026, 9, 2)
 MSK = ZoneInfo("Europe/Moscow")
@@ -73,6 +74,43 @@ class ControlCheckTests(unittest.TestCase):
         self.assertIn("все 3 из 3 сдали", text)
         self.assertIn("📊 Команда выполнила", text)
         self.assertNotIn("🆕", text)
+
+    def test_skip_when_night_already_complete_and_unchanged(self):
+        ok, reason = should_send_control_digest(
+            {
+                "participant_ids": [1, 17, 29],
+                "submitted_user_ids": [1, 17, 29],
+                "waiting_user_ids": [],
+                "newly_submitted_user_ids": [],
+                "previous_rollcall_submitted_user_ids": [1, 17, 29],
+            }
+        )
+        self.assertFalse(ok)
+        self.assertIn("skip", reason)
+
+    def test_send_when_newly_submitted(self):
+        ok, _ = should_send_control_digest(
+            {
+                "participant_ids": [1, 17, 29],
+                "submitted_user_ids": [1, 17, 29],
+                "waiting_user_ids": [],
+                "newly_submitted_user_ids": [17],
+                "previous_rollcall_submitted_user_ids": [1, 29],
+            }
+        )
+        self.assertTrue(ok)
+
+    def test_send_when_still_waiting(self):
+        ok, _ = should_send_control_digest(
+            {
+                "participant_ids": [1, 17, 29],
+                "submitted_user_ids": [1, 29],
+                "waiting_user_ids": [17],
+                "newly_submitted_user_ids": [],
+                "previous_rollcall_submitted_user_ids": [1, 29],
+            }
+        )
+        self.assertTrue(ok)
 
 
 if __name__ == "__main__":

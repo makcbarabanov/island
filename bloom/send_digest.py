@@ -72,12 +72,15 @@ def _log_diagnostics(diagnostics: dict, *, target_date: date, sent: bool) -> Non
 
 def _load_last_digest_diag(
     target_date: date,
-    digest_type: str,
+    digest_types: str | tuple[str, ...],
     *,
     sent_only: bool = False,
 ) -> dict | None:
     if not DIAG_LOG.exists():
         return None
+    if isinstance(digest_types, str):
+        digest_types = (digest_types,)
+    wanted = set(digest_types)
     td = target_date.isoformat()
     last: dict | None = None
     with DIAG_LOG.open(encoding="utf-8") as f:
@@ -89,7 +92,7 @@ def _load_last_digest_diag(
                 row = json.loads(line)
             except json.JSONDecodeError:
                 continue
-            if row.get("target_date") != td or row.get("digest_type") != digest_type:
+            if row.get("target_date") != td or row.get("digest_type") not in wanted:
                 continue
             if sent_only and not row.get("sent"):
                 continue
@@ -102,6 +105,32 @@ def _participant_by_id(snapshot: dict, user_id: int) -> dict | None:
         if int(p.get("id") or 0) == user_id:
             return p
     return None
+
+
+def should_send_control_digest(diagnostics: dict) -> tuple[bool, str]:
+    """
+    Условия отправки control (12:00 MSK):
+      - если на вечерней/ночной сверке уже было N/N и newly пусто → не писать;
+      - если есть newly → писать (🆕 Досдали);
+      - если есть waiting → писать.
+    """
+    participants = diagnostics.get("participant_ids") or []
+    n_part = len(participants)
+    submitted = list(diagnostics.get("submitted_user_ids") or [])
+    waiting = list(diagnostics.get("waiting_user_ids") or [])
+    newly = list(diagnostics.get("newly_submitted_user_ids") or [])
+    prev = list(diagnostics.get("previous_rollcall_submitted_user_ids") or [])
+
+    prev_complete = bool(n_part) and len(prev) >= n_part and not (
+        set(participants) - set(prev)
+    )
+    if prev_complete and not newly and not waiting:
+        return False, "skip: уже N/N на вечерней/ночной сверке, без изменений"
+    if newly or waiting:
+        return True, "send: newly or waiting"
+    if n_part and len(submitted) >= n_part:
+        return True, "send: все сдали к 12:00 (краткий итог)"
+    return True, "send: default"
 
 
 def _enrich_diagnostics(
@@ -129,8 +158,13 @@ def _enrich_diagnostics(
     )
     waiting = sorted(int(uid) for uid in active_allow if uid not in submitted)
 
-    prev_night = _load_last_digest_diag(target_date, "night", sent_only=True)
-    prev_submitted = set(prev_night.get("submitted_user_ids") or []) if prev_night else set()
+    # Сравниваем с последней отправленной перекличкой (evening 23:59 или night)
+    prev_rollcall = _load_last_digest_diag(
+        target_date, ("evening", "night"), sent_only=True
+    )
+    prev_submitted = (
+        set(prev_rollcall.get("submitted_user_ids") or []) if prev_rollcall else set()
+    )
     newly = sorted(uid for uid in submitted if uid not in prev_submitted)
 
     return {
@@ -140,7 +174,8 @@ def _enrich_diagnostics(
         "waiting_user_ids": waiting,
         "newly_submitted_user_ids": newly,
         "participant_ids": sorted(allow),
-        "previous_night_submitted_user_ids": sorted(prev_submitted),
+        "previous_rollcall_submitted_user_ids": sorted(prev_submitted),
+        "previous_rollcall_type": (prev_rollcall or {}).get("digest_type"),
     }
 
 
@@ -219,6 +254,18 @@ def main() -> int:
         f"group={diagnostics.get('group_done')}/{diagnostics.get('group_total')} "
         f"({diagnostics.get('group_pct')}%)"
     )
+
+    if digest_type == "control":
+        do_send, reason = should_send_control_digest(diagnostics)
+        diagnostics["control_send_decision"] = reason
+        if not do_send:
+            print(f"SKIP control: {reason}")
+            _log_diagnostics(
+                {**diagnostics, "skipped": True, "skip_reason": reason},
+                target_date=target_date,
+                sent=False,
+            )
+            return 0
 
     if args.dry_run or not args.send:
         _log_diagnostics(diagnostics, target_date=target_date, sent=False)

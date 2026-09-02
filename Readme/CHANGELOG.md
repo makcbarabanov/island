@@ -2,6 +2,12 @@
 
 Старые пункты могут ссылаться на прежний монолитный `Readme/Readme.md`; актуальная структура — корневой [README.md](../README.md), [PROJECT.md](PROJECT.md), [RUNBOOK.md](RUNBOOK.md).
 
+## 2026-09-03 — Cron UTC + skip control при 5/5 (v330)
+
+- Вечерний cron: **23:59 MSK** = `59 20 * * *` UTC (Vixie cron на UTC не уважает `TZ=`/`CRON_TZ` для расписания)
+- Control: **12:00 MSK** = `0 9 * * *` UTC; skip если ночью уже N/N и newly пусто
+- group_pct только из БД (manual_admin Айгуль/Ксения — после переноса пересчёт сам)
+
 ## 2026-09-03 — Контрольная сверка 12:00 MSK + текст ночной (v329)
 
 - `--type control` — утренняя сверка (вчера, досдавшие, group_pct, diagnostics)
