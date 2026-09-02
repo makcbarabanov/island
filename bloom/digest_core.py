@@ -52,6 +52,12 @@ def resolve_target_date_for_evening_run(now: datetime | None = None) -> date:
     return local.date()
 
 
+def resolve_target_date_for_control_run(now: datetime | None = None) -> date:
+    """Контрольная сверка 12:00 MSK — всегда вчерашний отчётный день."""
+    local = (now or datetime.now(TZ)).astimezone(TZ)
+    return local.date() - timedelta(days=1)
+
+
 def marathon_cycle(target_date: date) -> dict[str, Any]:
     start = target_date.replace(day=1)
     end = target_date.replace(day=21)

@@ -120,25 +120,35 @@ venv/bin/python3 bloom/send_digest.py --send
 
 ---
 
-## 5. Cron (23:10 Europe/Moscow)
+## 5. Cron
+
+### Ночная / вечерняя (23:10 Europe/Moscow)
 
 ```bash
 crontab -e
 ```
 
-Добавить:
+```
+TZ=Europe/Moscow
+10 23 * * * cd /home/makc/Apps/island && /home/makc/Apps/island/venv/bin/python3 bloom/send_digest.py --type evening --send >> /home/makc/Apps/island/logs/bloom_digest.log 2>&1
+```
+
+Без `TZ=Europe/Moscow` на UTC-сервере cron сдвигается (см. `Readme/BLOOM_POSTMORTEM_2026-09-02.md`).
+
+### Контрольная сверка (12:00 Europe/Moscow)
 
 ```
 TZ=Europe/Moscow
-10 23 * * * cd /home/makc/Apps/island && /home/makc/Apps/island/venv/bin/python3 bloom/send_digest.py --send >> /home/makc/Apps/island/logs/bloom_digest.log 2>&1
+0 12 * * * cd /home/makc/Apps/island && /home/makc/Apps/island/venv/bin/python3 bloom/send_digest.py --type control --send >> /home/makc/Apps/island/logs/bloom_control.log 2>&1
 ```
 
-Без `TZ=Europe/Moscow` на UTC-сервере cron 23:10 UTC = 02:10 MSK **следующего** дня → неверный `target_date` (см. `Readme/BLOOM_POSTMORTEM_2026-09-02.md`). Альтернатива: явный `--date` или grace в `resolve_target_date_for_evening_run()`.
+`target_date` = вчера (MSK), свежая БД, досдавшие с ночной сверки, `group_done/total/pct`, diagnostics в `logs/bloom_digest_diag.jsonl`.
 
-Пересчёт истории:
+Пересчёт вручную:
 
 ```bash
-venv/bin/python3 bloom/send_digest.py --date 2026-09-01 --dry-run --json-diag
+venv/bin/python3 bloom/send_digest.py --date 2026-09-02 --type night --dry-run --json-diag
+venv/bin/python3 bloom/send_digest.py --type control --dry-run --json-diag
 ```
 
 Опционально снимок stat (если ещё нет):

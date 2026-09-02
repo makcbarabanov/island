@@ -2,10 +2,10 @@
 """
 Bloom — вечерняя сводка марафона в Telegram.
 
-  venv/bin/python3 bloom/send_digest.py --date 2026-09-01 --dry-run
-  venv/bin/python3 bloom/send_digest.py --date 2026-09-01 --send
+  venv/bin/python3 bloom/send_digest.py --date 2026-09-01 --type night --dry-run
+  venv/bin/python3 bloom/send_digest.py --type control --send   # 12:00 MSK, вчера
 
-Без --date: resolve_target_date_for_evening_run() (MSK, grace до 06:00 = вчера).
+Без --date: control → вчера (MSK); night/evening → resolve_target_date_for_evening_run().
 """
 from __future__ import annotations
 
@@ -24,8 +24,13 @@ for p in (ROOT, ROOT / "scripts", BLOOM_DIR):
         sys.path.insert(0, str(p))
 
 from build_marathon_snapshot import TZ, _connect, _load_env  # noqa: E402
-from digest_core import build_digest, resolve_target_date_for_evening_run  # noqa: E402
+from digest_core import (  # noqa: E402
+    build_digest,
+    resolve_target_date_for_control_run,
+    resolve_target_date_for_evening_run,
+)
 from marathon_digest_format import (  # noqa: E402
+    format_telegram_control_check,
     format_telegram_evening_digest,
     format_telegram_evening_rollcall,
     format_telegram_night_rollcall,
@@ -65,15 +70,89 @@ def _log_diagnostics(diagnostics: dict, *, target_date: date, sent: bool) -> Non
         f.write(json.dumps(row, ensure_ascii=False) + "\n")
 
 
+def _load_last_digest_diag(
+    target_date: date,
+    digest_type: str,
+    *,
+    sent_only: bool = False,
+) -> dict | None:
+    if not DIAG_LOG.exists():
+        return None
+    td = target_date.isoformat()
+    last: dict | None = None
+    with DIAG_LOG.open(encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if row.get("target_date") != td or row.get("digest_type") != digest_type:
+                continue
+            if sent_only and not row.get("sent"):
+                continue
+            last = row
+    return last
+
+
+def _participant_by_id(snapshot: dict, user_id: int) -> dict | None:
+    for p in snapshot.get("participants") or []:
+        if int(p.get("id") or 0) == user_id:
+            return p
+    return None
+
+
+def _enrich_diagnostics(
+    snapshot: dict,
+    diagnostics: dict,
+    *,
+    digest_type: str,
+    target_date: date,
+) -> dict:
+    allow = set(
+        diagnostics.get("allowlist_user_ids")
+        or diagnostics.get("marathon_participant_user_ids")
+        or []
+    )
+    per_user = diagnostics.get("per_user") or {}
+    active_allow = {
+        int(uid)
+        for uid, u in per_user.items()
+        if int(uid) in allow and (u.get("active_today") or u.get("marathon_member"))
+    }
+    submitted = sorted(
+        int(uid)
+        for uid, u in per_user.items()
+        if int(uid) in active_allow and u.get("report_submitted")
+    )
+    waiting = sorted(int(uid) for uid in active_allow if uid not in submitted)
+
+    prev_night = _load_last_digest_diag(target_date, "night", sent_only=True)
+    prev_submitted = set(prev_night.get("submitted_user_ids") or []) if prev_night else set()
+    newly = sorted(uid for uid in submitted if uid not in prev_submitted)
+
+    return {
+        **diagnostics,
+        "digest_type": digest_type,
+        "submitted_user_ids": submitted,
+        "waiting_user_ids": waiting,
+        "newly_submitted_user_ids": newly,
+        "participant_ids": sorted(allow),
+        "previous_night_submitted_user_ids": sorted(prev_submitted),
+    }
+
+
 def main() -> int:
     _load_bloom_env()
-    p = argparse.ArgumentParser(description="Bloom: вечерний digest марафона")
-    p.add_argument("--date", help="Отчётный день YYYY-MM-DD (явный target_date)")
+    p = argparse.ArgumentParser(description="Bloom: digest марафона")
+    p.add_argument("--date", help="Отчётный день YYYY-MM-DD (для control без --date = вчера MSK)")
     p.add_argument(
         "--type",
-        choices=("evening", "night", "final"),
+        choices=("evening", "night", "control", "final"),
         default="evening",
-        help="evening|night=перекличка; final=итог с %",
+        help="evening|night=перекличка; control=12:00; final=legacy итог",
     )
     p.add_argument("--dry-run", action="store_true", help="Только вывести текст + diagnostics")
     p.add_argument("--send", action="store_true", help="Отправить в Telegram")
@@ -86,11 +165,14 @@ def main() -> int:
         print(msg)
         return 0 if ok else 4
 
+    digest_type = args.type
+
     if args.date:
         target_date = date.fromisoformat(args.date)
+    elif digest_type == "control":
+        target_date = resolve_target_date_for_control_run()
     else:
-        print("Укажите --date YYYY-MM-DD (target_date обязателен)", file=sys.stderr)
-        return 2
+        target_date = resolve_target_date_for_evening_run()
 
     conn = None
     try:
@@ -101,44 +183,39 @@ def main() -> int:
         if conn:
             conn.close()
 
-    digest_type = args.type
-    diagnostics = {
-        **diagnostics,
-        "digest_type": digest_type,
-        "submitted_user_ids": [
-            int(u["user_id"])
-            for u in diagnostics.get("per_user", {}).values()
-            if u.get("report_submitted") and (u.get("active_today") or u.get("marathon_member"))
-        ],
-        "waiting_user_ids": [
-            int(u["user_id"])
-            for u in diagnostics.get("per_user", {}).values()
-            if (u.get("active_today") or u.get("marathon_member")) and not u.get("report_submitted")
-        ],
-        "newly_submitted_user_ids": [],
-    }
-    # Restrict submitted/waiting to allowlist
-    allow = set(diagnostics.get("allowlist_user_ids") or diagnostics.get("marathon_participant_user_ids") or [])
-    if allow:
-        diagnostics["submitted_user_ids"] = [i for i in diagnostics["submitted_user_ids"] if i in allow]
-        diagnostics["waiting_user_ids"] = [i for i in diagnostics["waiting_user_ids"] if i in allow]
-        diagnostics["participant_ids"] = sorted(allow)
+    diagnostics = _enrich_diagnostics(
+        snapshot, diagnostics, digest_type=digest_type, target_date=target_date
+    )
 
     if args.json_diag:
         print(json.dumps(diagnostics, ensure_ascii=False, indent=2), file=sys.stderr)
+
+    newly_participants = [
+        p
+        for uid in diagnostics.get("newly_submitted_user_ids") or []
+        if (p := _participant_by_id(snapshot, int(uid)))
+    ]
 
     if digest_type == "night":
         text = format_telegram_night_rollcall(snapshot, report_date=target_date)
     elif digest_type == "evening":
         text = format_telegram_evening_rollcall(snapshot, report_date=target_date)
+    elif digest_type == "control":
+        text = format_telegram_control_check(
+            snapshot,
+            report_date=target_date,
+            newly_submitted=newly_participants,
+        )
     else:
         text = format_telegram_evening_digest(snapshot, report_date=target_date)
+
     print(text)
     print("---")
+    n_part = len(diagnostics.get("participant_ids") or [])
     print(
         f"target_date={target_date} type={digest_type} marathon_day={diagnostics.get('marathon_day')} "
-        f"submitted={len(diagnostics.get('submitted_user_ids', []))}/"
-        f"{len(diagnostics.get('participant_ids') or diagnostics.get('allowlist_user_ids') or [])} "
+        f"submitted={len(diagnostics.get('submitted_user_ids', []))}/{n_part} "
+        f"newly={diagnostics.get('newly_submitted_user_ids')} "
         f"group={diagnostics.get('group_done')}/{diagnostics.get('group_total')} "
         f"({diagnostics.get('group_pct')}%)"
     )

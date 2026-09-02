@@ -85,12 +85,78 @@ def format_telegram_night_rollcall(snapshot: dict, *, report_date: date | None =
     if waiting:
         if submitted:
             lines.append("")
-        lines.append(f"⏳ Отчёт за {day_label} пока ждём от:")
+        lines.append(f"⏳ Пока ждём отчёты за {day_label} от:")
         lines.append("")
         for p in waiting:
             lines.append(_participant_label(p))
-        lines.extend(["", "Можно досдать утром 🙂"])
+        lines.extend(["", "Можно досдать утром 🙂", "В 12:00 всё ещё раз перепроверю 🤖"])
     return "\n".join(lines)
+
+
+def format_telegram_control_check(
+    snapshot: dict,
+    *,
+    report_date: date | None = None,
+    newly_submitted: list[dict] | None = None,
+) -> str:
+    """Контрольная сверка 12:00 MSK — досдавшие, ожидающие, итог команды."""
+    if report_date is None:
+        rd = snapshot.get("report_date") or ""
+        report_date = date.fromisoformat(rd) if rd else date.today()
+
+    today = snapshot.get("today") or {}
+    roster = _rollcall_roster(snapshot, report_date)
+    submitted = sorted([p for p in roster if p.get("reported_today")], key=_sort_key)
+    waiting = sorted([p for p in roster if not p.get("reported_today")], key=_sort_key)
+    total = len(roster)
+    n_sub = len(submitted)
+    day_label = _report_day_label(report_date)
+    month = MONTH_GENITIVE[report_date.month]
+    newly = newly_submitted or []
+
+    group_done = today.get("group_done")
+    group_total = today.get("group_total")
+    group_pct = today.get("group_pct")
+    stats_line = ""
+    if group_done is not None and group_total is not None:
+        stats_line = f"📊 Команда выполнила {group_done} из {group_total} действий — {float(group_pct or 0):g}%."
+
+    if n_sub >= total and total > 0 and not waiting and not newly:
+        lines = [
+            f"☀️ Контрольная сверка за {report_date.day} {month}",
+            "",
+            f"📋 Отчёт за {day_label}: все {n_sub} из {total} сдали ✅",
+        ]
+        if stats_line:
+            lines.extend(["", stats_line])
+        return "\n".join(lines)
+
+    lines = [
+        f"☀️ Контрольная сверка за {report_date.day} {month}",
+        "",
+        f"📋 Отчёт за {day_label} сдали: {n_sub} из {total}",
+        "",
+    ]
+    if newly:
+        lines.append("🆕 Досдали с ночной сверки:")
+        lines.append("")
+        for p in newly:
+            lines.append(f"✅ {_participant_label(p)}")
+        lines.append("")
+    if submitted:
+        lines.append("✅ Сдавшие:")
+        for p in submitted:
+            lines.append(_participant_label(p))
+        lines.append("")
+    if waiting:
+        lines.append(f"⏳ Ещё не сдали отчёт за {day_label}:")
+        lines.append("")
+        for p in waiting:
+            lines.append(_participant_label(p))
+        lines.append("")
+    if stats_line:
+        lines.append(stats_line)
+    return "\n".join(lines).rstrip()
 
 
 def format_telegram_evening_rollcall(snapshot: dict, *, report_date: date | None = None) -> str:
