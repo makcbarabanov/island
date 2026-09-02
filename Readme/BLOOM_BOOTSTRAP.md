@@ -33,29 +33,50 @@ chmod 600 bloom/.env
 
 `DB_*` уже в `/home/makc/Apps/island/.env` — `send_digest.py` читает оба файла.
 
-### 2.1 Прокси (РФ VPS + Telegram)
+### 2.2 Allowlist участников (Bloom digest)
 
-С российского сервера **напрямую** до Telegram не достучаться. VPN на ноуте **не помогает серверу** — нужен **прокси, доступный с VPS**:
+Файл `bloom/cycle_allowlist.json` — ключ `YYYY-MM` → список `user_id`.
 
-| Источник | Что сделать |
-|----------|-------------|
-| **Провайдер VPN** | В личном кабинете часто есть HTTP/SOCKS5 endpoint — вписать в `TELEGRAM_PROXY_URL` |
-| **Свой VPS за рубежом** | Поднять tiny proxy или SOCKS |
-| **Нет прокси** | Digest с ноута по cron (отдельная настройка) |
+Сентябрь 2026: Макс (1), Света (17), Тимур (29), Айгуль (67), Ксения (58).
 
-Примеры в `bloom/.env`:
+Октябрь: добавить `"2026-10": [...]`. Stat (`build_marathon_snapshot`) allowlist **не** использует.
 
-```
-TELEGRAM_PROXY_URL=socks5://user:pass@host:1080
-TELEGRAM_PROXY_URL=http://user:pass@host:8080
-```
+### 2.3 Ручной отчёт (manual_admin)
 
-Проверка (после `git pull` с поддержкой прокси):
+Миграция: `_sql/mig_buddy_reports_manual_admin.sql`
 
 ```bash
-venv/bin/python3 bloom/send_digest.py --probe
-# ожидание: curl HTTP 302 proxy=socks5://...
+venv/bin/python3 bloom/manual_report.py --user Айгуль --date 2026-09-01 \\
+  --complete 7938 --admin-id 1 --note "Telegram: щедрость" --dry-run
 ```
+
+Только явно указанные `step id` → `completed=true`; отчёт `manual_admin` идемпотентен.
+
+---
+
+С российского сервера **напрямую** до Telegram не достучаться. VPN на ноуте **не помогает серверу** — на VPS нужен **клиент с тем же ключом**, что в v2rayN.
+
+**Рекомендуемый путь:** Xray + локальный SOCKS → `TELEGRAM_PROXY_URL`.
+
+| Шаг | Действие |
+|-----|----------|
+| 1 | Бинарь: `~/bin/xray` (релиз [Xray-core](https://github.com/XTLS/Xray-core/releases)) |
+| 2 | Конфиг: `~/.config/xray/config.json` — **лучше экспорт из v2rayN** (см. ниже), не руками из `vless://` |
+| 3 | SOCKS inbound: `127.0.0.1:10808` |
+| 4 | systemd user: `xray-bloom.service` + `loginctl enable-linger makc` |
+| 5 | `bloom/.env`: `TELEGRAM_PROXY_URL=socks5://127.0.0.1:10808` |
+
+**Экспорт из v2rayN (важно для XHTTP+Reality):** сервер в списке → ПКМ → *Экспорт конфигурации* / *Просмотр конфигурации* → outbound JSON. Вставить в `~/.config/xray/config.json` (добавить socks inbound на 10808). Ручная сборка из `vless://` часто не совпадает с тем, что шлёт v2rayN.
+
+Проверка:
+
+```bash
+systemctl --user status xray-bloom.service
+curl -x socks5h://127.0.0.1:10808 -o /dev/null -w "%{http_code}\n" https://api.telegram.org/
+venv/bin/python3 bloom/send_digest.py --probe
+```
+
+Ожидание: HTTP `302` / `200` от api.telegram.org.
 
 ---
 
@@ -108,7 +129,16 @@ crontab -e
 Добавить:
 
 ```
+TZ=Europe/Moscow
 10 23 * * * cd /home/makc/Apps/island && /home/makc/Apps/island/venv/bin/python3 bloom/send_digest.py --send >> /home/makc/Apps/island/logs/bloom_digest.log 2>&1
+```
+
+Без `TZ=Europe/Moscow` на UTC-сервере cron 23:10 UTC = 02:10 MSK **следующего** дня → неверный `target_date` (см. `Readme/BLOOM_POSTMORTEM_2026-09-02.md`). Альтернатива: явный `--date` или grace в `resolve_target_date_for_evening_run()`.
+
+Пересчёт истории:
+
+```bash
+venv/bin/python3 bloom/send_digest.py --date 2026-09-01 --dry-run --json-diag
 ```
 
 Опционально снимок stat (если ещё нет):

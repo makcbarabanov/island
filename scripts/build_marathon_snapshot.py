@@ -24,6 +24,9 @@ from zoneinfo import ZoneInfo
 _project_root = Path(__file__).resolve().parent.parent
 if str(_project_root) not in sys.path:
     sys.path.insert(0, str(_project_root))
+_bloom_dir = _project_root / "bloom"
+if str(_bloom_dir) not in sys.path:
+    sys.path.insert(0, str(_bloom_dir))
 
 _env_file = _project_root / ".env"
 TZ = ZoneInfo(os.getenv("MARATHON_SNAPSHOT_TZ", "Europe/Moscow"))
@@ -408,7 +411,11 @@ def _build_digest(
 
 
 def build_snapshot(cur, report_date: date) -> dict:
-    marathon = _marathon_cycle(report_date)
+    """Снимок для stat; digest-часть — через bloom.digest_core.build_digest."""
+    from digest_core import build_digest as _build_digest  # noqa: WPS433
+
+    snapshot, _diag = _build_digest(cur, report_date)
+    marathon = snapshot["marathon"]
     cycle_start = date.fromisoformat(marathon["cycle_start"])
     cycle_end = date.fromisoformat(marathon["cycle_end"])
 
@@ -422,6 +429,10 @@ def build_snapshot(cur, report_date: date) -> dict:
 
     active_names = [users[uid]["name"] for uid in sorted(active_ids) if uid in users]
     missing_names = [users[uid]["name"] for uid in sorted(missing_ids) if uid in users]
+
+    group_done = sum(today_steps[uid]["done"] for uid in active_ids)
+    group_total = sum(today_steps[uid]["total"] for uid in active_ids)
+    group_pct = _pct(group_done, group_total)
 
     steps_pcts = [today_steps[uid]["pct"] for uid in active_ids if today_steps[uid]["total"] > 0]
     avg_steps_pct = round(sum(steps_pcts) / len(steps_pcts), 1) if steps_pcts else 0.0
@@ -439,29 +450,23 @@ def build_snapshot(cur, report_date: date) -> dict:
         if today_steps[uid]["total"] > 0 and today_steps[uid]["pct"] < 100.0
     ]
     if candidates:
-        uid, pct = min(candidates, key=lambda x: x[1])
+        uid, pct_val = min(candidates, key=lambda x: x[1])
         if uid in users:
             focus = {
                 "user_id": uid,
                 "name": users[uid]["name"],
-                "steps_pct": pct,
+                "steps_pct": pct_val,
                 "habits_today": _fetch_today_step_titles(cur, report_date, uid),
             }
 
     participants = []
-    for uid in sorted(participant_ids):
-        if uid not in users:
-            continue
-        u = users[uid]
+    for p in snapshot.get("participants") or []:
+        uid = p["id"]
         cycle_habits = _fetch_cycle_habits(cur, uid, cycle_start, cycle_end)
         cycle_reports = _fetch_cycle_reports(cur, uid, cycle_start, cycle_end, report_date)
-        ts = today_steps.get(uid, {"total": 0, "done": 0, "waived": 0, "pct": 0.0})
         participants.append(
             {
-                **u,
-                "active_today": uid in active_ids,
-                "reported_today": uid in reported_ids,
-                "steps_today": ts,
+                **p,
                 "cycle": {
                     **cycle_reports,
                     "habits": cycle_habits,
@@ -481,9 +486,13 @@ def build_snapshot(cur, report_date: date) -> dict:
     }
 
     today = {
+        **(snapshot.get("today") or {}),
         "active": len(active_ids),
         "reported": len(reported_ids),
         "missing": len(missing_ids),
+        "group_done": group_done,
+        "group_total": group_total,
+        "group_pct": group_pct,
         "avg_steps_pct": avg_steps_pct,
         "active_names": active_names,
         "missing_names": missing_names,
@@ -494,7 +503,7 @@ def build_snapshot(cur, report_date: date) -> dict:
             len(active_ids),
             len(reported_ids),
             missing_names,
-            avg_steps_pct,
+            group_pct,
             perfect_names,
             focus,
         ),
@@ -503,7 +512,7 @@ def build_snapshot(cur, report_date: date) -> dict:
     history = _fetch_history(cur)
 
     return {
-        "version": 1,
+        "version": 2,
         "generated_at": datetime.now(TZ).isoformat(timespec="seconds"),
         "timezone": str(TZ),
         "report_date": report_date.isoformat(),

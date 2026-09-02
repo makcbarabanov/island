@@ -2695,7 +2695,7 @@
                         </div>
                     </div>
                     <button type="button" class="app-footer-logout" id="app-footer-logout" title="Выйти" onclick="logout()">Выйти</button>
-                    <span class="app-version" aria-hidden="true">324</span>
+                    <span class="app-version" aria-hidden="true">328</span>
                 </div>
             </footer>
         </div>
@@ -4809,9 +4809,9 @@
             }).join('') + '</ul>';
         }
         async function notifyDailyReportSent(dayIso, sendMethod) {
-            if (!currentUser || !currentUser.id || !dayIso) return;
+            if (!currentUser || !currentUser.id || !dayIso) return false;
             try {
-                await fetch(API_BASE_URL + '/users/me/daily-report-sent', {
+                var resp = await fetch(API_BASE_URL + '/users/me/daily-report-sent', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -4820,7 +4820,12 @@
                         send_method: sendMethod === 'share' ? 'share' : 'copy'
                     })
                 });
-            } catch (e) {}
+                if (!resp.ok) return false;
+                var data = await resp.json().catch(function() { return null; });
+                return !!(data && data.ok);
+            } catch (e) {
+                return false;
+            }
         }
         function syncHeaderBellDot(data) {
             var dot = document.getElementById('header-bell-dot');
@@ -6600,17 +6605,6 @@
             if (btnSend) btnSend.addEventListener('click', function() {
                 if (!stepReportUnmarkedModal.dayIso || !currentUser) return;
                 var dayIso = stepReportUnmarkedModal.dayIso;
-                var daySteps = getAllPlannedStepsForCalendarDay(dayIso);
-                var unmarked = daySteps.filter(function(s) { normalizeStepForUi(s); return !s.completed && !s.waived; });
-                if (unmarked.length) {
-                    var hint2 = document.getElementById('step-report-unmarked-hint');
-                    if (hint2) {
-                        hint2.textContent = 'Сначала отметьте все шаги за этот день (выполнено или не выполнено).';
-                        hint2.style.color = '#c62828';
-                        hint2.classList.remove('hidden');
-                    }
-                    return;
-                }
                 performShareStepsDayReport(dayIso).then(function(ok) {
                     if (ok) closeStepReportUnmarkedModal();
                 });
@@ -8272,12 +8266,7 @@
                 btnCopy.setAttribute('data-day-iso', dayIso);
                 btnCopy.textContent = '📋';
                 btnCopy.setAttribute('aria-label', 'Скопировать отчёт в буфер');
-                if (!closed) {
-                    btnCopy.className = 'reports-day-icon-btn reports-day-action-copy reports-day-icon-btn--blocked';
-                    btnCopy.setAttribute('aria-disabled', 'true');
-                    btnCopy.tabIndex = reportsCenterFilter === 'dobit' ? 0 : -1;
-                    btnCopy.title = reportsCenterFilter === 'dobit' ? 'Сначала отметь шаги снизу' : 'День не закрыт — нажмите строку или разверните зачистку долгов';
-                } else if (sent) {
+                if (sent) {
                     btnCopy.className = 'reports-day-icon-btn reports-day-action-copy sent';
                     btnCopy.removeAttribute('aria-disabled');
                     btnCopy.tabIndex = 0;
@@ -8286,7 +8275,9 @@
                     btnCopy.className = 'reports-day-icon-btn reports-day-action-copy ready';
                     btnCopy.removeAttribute('aria-disabled');
                     btnCopy.tabIndex = 0;
-                    btnCopy.title = 'Скопировать отчёт в буфер';
+                    btnCopy.title = closed
+                        ? 'Скопировать отчёт в буфер'
+                        : 'Скопировать отчёт (день не полностью отмечен — в отчёте будут ⭕)';
                 }
                 tdC.appendChild(btnCopy);
                 var tdS = document.createElement('td');
@@ -8296,12 +8287,7 @@
                 btnShare.setAttribute('data-day-iso', dayIso);
                 btnShare.textContent = '✈️';
                 btnShare.setAttribute('aria-label', 'Отправить отчёт');
-                if (!closed) {
-                    btnShare.className = 'reports-day-icon-btn reports-day-action-share reports-day-icon-btn--blocked';
-                    btnShare.setAttribute('aria-disabled', 'true');
-                    btnShare.tabIndex = reportsCenterFilter === 'dobit' ? 0 : -1;
-                    btnShare.title = reportsCenterFilter === 'dobit' ? 'Сначала отметь шаги снизу' : 'День не закрыт — нажмите строку или эту кнопку, чтобы открыть зачистку';
-                } else if (sent) {
+                if (sent) {
                     btnShare.className = 'reports-day-icon-btn reports-day-action-share sent';
                     btnShare.removeAttribute('aria-disabled');
                     btnShare.tabIndex = 0;
@@ -8310,7 +8296,9 @@
                     btnShare.className = 'reports-day-icon-btn reports-day-action-share';
                     btnShare.removeAttribute('aria-disabled');
                     btnShare.tabIndex = 0;
-                    btnShare.title = 'Отправить отчёт: меню «Поделиться» (мессенджер) или копирование, если недоступно';
+                    btnShare.title = closed
+                        ? 'Отправить отчёт: меню «Поделиться» (мессенджер) или копирование, если недоступно'
+                        : 'Отправить отчёт с текущими отметками (⭕/❌/✅)';
                 }
                 tdS.appendChild(btnShare);
                 tr.appendChild(tdD);
@@ -8335,11 +8323,6 @@
             if (!currentUser || !dayIso) return;
             var daySteps = getAllPlannedStepsForCalendarDay(dayIso);
             if (!daySteps.length) return;
-            var unmarked = daySteps.filter(function(s) { normalizeStepForUi(s); return !s.completed && !s.waived; });
-            if (unmarked.length) {
-                showToast('Сначала отметьте все шаги за этот день');
-                return;
-            }
             await prefetchDiaryEventsForReportIfNeeded(true);
             var titleCounterMap = buildStepTitleCounterMapForAllSteps();
             var text = buildStepsDayReportText(dayIso, daySteps, titleCounterMap);
@@ -8353,8 +8336,12 @@
                 showToast('Не удалось скопировать');
                 return;
             }
+            var recorded = await notifyDailyReportSent(dayIso, 'copy');
+            if (!recorded) {
+                showToast('Отчёт скопирован, но факт сдачи не сохранился — нажмите 📋 ещё раз');
+                return;
+            }
             incrementStepReportSendCount(currentUser.id, dayIso);
-            void notifyDailyReportSent(dayIso, 'copy');
             showToast('Отчёт скопирован ✈️');
             refreshReportsListUI();
             syncReportsMenuIndicator();
@@ -8384,10 +8371,17 @@
                 showToast('Не удалось скопировать');
                 return;
             }
-            ready.forEach(function(dayIso) {
+            for (var i = 0; i < ready.length; i++) {
+                var dayIso = ready[i];
+                var recorded = await notifyDailyReportSent(dayIso, 'copy');
+                if (!recorded) {
+                    showToast('Не удалось сохранить факт сдачи — повторите для оставшихся дней');
+                    refreshReportsListUI();
+                    syncReportsMenuIndicator();
+                    return;
+                }
                 incrementStepReportSendCount(currentUser.id, dayIso);
-                void notifyDailyReportSent(dayIso, 'copy');
-            });
+            }
             showToast('Отчёты за ' + ready.length + ' ' + ruDaysWord(ready.length) + ' скопированы ✈️');
             refreshReportsListUI();
             syncReportsMenuIndicator();
@@ -8533,11 +8527,15 @@
                     hint.style.color = '#666';
                     hint.classList.remove('hidden');
                 }
-                if (sendBtn) sendBtn.disabled = false;
+            } else if (hint) {
+                hint.textContent = 'Можно отправить отчёт с текущими отметками — незакрытые шаги попадут как ⭕.';
+                hint.style.color = '#666';
+                hint.classList.remove('hidden');
+            }
+            if (sendBtn) sendBtn.disabled = false;
+            if (unmarked.length === 0) {
                 return;
             }
-            if (hint) hint.classList.add('hidden');
-            if (sendBtn) sendBtn.disabled = true;
             unmarked.forEach(function(s) {
                 var li = document.createElement('li');
                 li.className = 'step-item-plain step-unified-line' + (s.completed ? ' completed' : '') + (s.waived ? ' step-waived' : '');
@@ -8581,14 +8579,16 @@
             var titleCounterMap = buildStepTitleCounterMapForAllSteps();
             var daySteps = getAllPlannedStepsForCalendarDay(dayIso);
             if (!daySteps.length) return false;
-            var unmarked = daySteps.filter(function(s) { normalizeStepForUi(s); return !s.completed && !s.waived; });
-            if (unmarked.length) return false;
             await prefetchDiaryEventsForReportIfNeeded(true);
             var text = buildStepsDayReportText(dayIso, daySteps, titleCounterMap);
             var ok = await shareStepsDayReportText(text);
             if (!ok) return false;
+            var recorded = await notifyDailyReportSent(dayIso, 'share');
+            if (!recorded) {
+                showToast('Отчёт отправлен, но факт сдачи не сохранился — нажмите ✈️ ещё раз');
+                return false;
+            }
             var n = incrementStepReportSendCount(currentUser.id, dayIso);
-            void notifyDailyReportSent(dayIso, 'share');
             var btn = document.querySelector('#steps-list .step-day-share-btn[data-day-iso="' + dayIso + '"]');
             if (btn) {
                 btn.setAttribute('data-send-count', String(n));
@@ -8624,9 +8624,13 @@
             prefetchDiaryEventsForReportIfNeeded(true).then(function() {
             var text = buildStepsDayReportText(dayIso, daySteps, buildStepTitleCounterMapForAllSteps());
             return navigator.clipboard.writeText(text);
-            }).then(function() {
+            }).then(async function() {
+                var recorded = await notifyDailyReportSent(dayIso, 'copy');
+                if (!recorded) {
+                    showToast('Отчёт скопирован, но факт сдачи не сохранился — нажмите 📋 ещё раз');
+                    return;
+                }
                 incrementStepReportSendCount(currentUser.id, dayIso);
-                void notifyDailyReportSent(dayIso, 'copy');
                 showToast('Отчет скопирован в буфер обмена ✈️', {
                     actionLabel: navigator.share ? 'Поделиться' : '',
                     onAction: function() {

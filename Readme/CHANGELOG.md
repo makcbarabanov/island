@@ -2,6 +2,33 @@
 
 Старые пункты могут ссылаться на прежний монолитный `Readme/Readme.md`; актуальная структура — корневой [README.md](../README.md), [PROJECT.md](PROJECT.md), [RUNBOOK.md](RUNBOOK.md).
 
+## 2026-09-03 — Отчёт без блокировки по шагам + backfill SSOT (v328)
+
+- ЛК: отчёт можно сдать при любом результате дня (6/6 … 0/6); ❌/⭕ в тексте — не блокер SSOT
+- `bloom/manual_report.py --report-only` — аудируемый backfill без правки `dreams_steps`
+- `scripts/backfill_max_reports_sep_2026.py` — Макс 01–02.09.2026
+
+## 2026-09-03 — SSOT отчёта: инвариант + формат Bloom (v327)
+
+- **Root cause (02.09):** в prod нет строки `(user_id=1, report_date=2026-09-02)` — Bloom корректен; ЛК помечал «сдано» в localStorage до успешного `POST /users/me/daily-report-sent`
+- `index.html` — факт сдачи только после ответа API; тост при ошибке
+- `marathon_digest_format.py` — дата отчётного дня в теле переклички (`📋 Отчёт за 02.09.2026…`)
+- Тесты: поздняя сдача после полуночи, ночная перекличка
+
+## 2026-09-02 — Bloom: allowlist сентября, @username, manual_report (v326)
+
+- `bloom/cycle_allowlist.json` — 5 участников сентября (без Александр/София)
+- `bloom/manual_report.py` — CLI ручного отчёта `manual_admin`
+- Digest: `display_label` из `users.telegram`
+
+## 2026-09-02 — Bloom: postmortem digest, target_date, group_pct (v325)
+
+- `bloom/digest_core.py` — явный `target_date`, diagnostics, `group_done/total/pct`
+- `send_digest.py --date`, grace 00–06 MSK, `logs/bloom_digest_diag.jsonl`
+- `Readme/BLOOM_POSTMORTEM_2026-09-02.md` — root cause 02.09 vs 01.09
+- `_sql/mig_buddy_reports_manual_admin.sql`, `scripts/backfill_sep01_2026.py` (sandbox)
+- `tests/test_bloom_digest.py`
+
 ## 2026-09-01 — Bloom: прокси для Telegram на РФ VPS (v324)
 
 - `bloom/telegram_client.py` — отправка через `curl -x` и `TELEGRAM_PROXY_URL`

@@ -2,23 +2,15 @@
 """
 Bloom — вечерняя сводка марафона в Telegram.
 
-Читает PostgreSQL (SSOT: dreams_steps, buddy_step_daily_reports),
-форматирует текст и шлёт в групповой чат.
+  venv/bin/python3 bloom/send_digest.py --date 2026-09-01 --dry-run
+  venv/bin/python3 bloom/send_digest.py --date 2026-09-01 --send
 
-Запуск на проде (после bootstrap):
-  cd /home/makc/Apps/island
-  venv/bin/python3 bloom/send_digest.py --dry-run
-  venv/bin/python3 bloom/send_digest.py --send
-
-Переменные (island/.env и/или bloom/.env):
-  DB_* — подключение к PostgreSQL
-  TELEGRAM_BOT_TOKEN — токен @bloom26bot
-  MARATHON_CHAT_ID — id группы (например -1002782157458)
-  TELEGRAM_PROXY_URL — прокси до api.telegram.org (обязательно на РФ VPS)
+Без --date: resolve_target_date_for_evening_run() (MSK, grace до 06:00 = вчера).
 """
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import sys
 import urllib.error
@@ -31,11 +23,17 @@ for p in (ROOT, ROOT / "scripts", BLOOM_DIR):
     if str(p) not in sys.path:
         sys.path.insert(0, str(p))
 
-from build_marathon_snapshot import TZ, _connect, _load_env, build_snapshot  # noqa: E402
-from marathon_digest_format import format_telegram_evening_digest  # noqa: E402
+from build_marathon_snapshot import TZ, _connect, _load_env  # noqa: E402
+from digest_core import build_digest, resolve_target_date_for_evening_run  # noqa: E402
+from marathon_digest_format import (  # noqa: E402
+    format_telegram_evening_digest,
+    format_telegram_evening_rollcall,
+    format_telegram_night_rollcall,
+)
 from telegram_client import probe_telegram_api, send_telegram_message  # noqa: E402
 
 BLOOM_ENV = BLOOM_DIR / ".env"
+DIAG_LOG = ROOT / "logs" / "bloom_digest_diag.jsonl"
 
 
 def _load_bloom_env() -> None:
@@ -56,13 +54,31 @@ def _load_bloom_env() -> None:
                 os.environ[k.strip()] = v.strip().strip("\"'")
 
 
+def _log_diagnostics(diagnostics: dict, *, target_date: date, sent: bool) -> None:
+    DIAG_LOG.parent.mkdir(parents=True, exist_ok=True)
+    row = {
+        "logged_at": datetime.now(TZ).isoformat(timespec="seconds"),
+        "sent": sent,
+        **diagnostics,
+    }
+    with DIAG_LOG.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(row, ensure_ascii=False) + "\n")
+
+
 def main() -> int:
     _load_bloom_env()
     p = argparse.ArgumentParser(description="Bloom: вечерний digest марафона")
-    p.add_argument("--date", help="YYYY-MM-DD (по умолчанию сегодня MSK)")
-    p.add_argument("--dry-run", action="store_true", help="Только вывести текст")
+    p.add_argument("--date", help="Отчётный день YYYY-MM-DD (явный target_date)")
+    p.add_argument(
+        "--type",
+        choices=("evening", "night", "final"),
+        default="evening",
+        help="evening|night=перекличка; final=итог с %",
+    )
+    p.add_argument("--dry-run", action="store_true", help="Только вывести текст + diagnostics")
     p.add_argument("--send", action="store_true", help="Отправить в Telegram")
-    p.add_argument("--probe", action="store_true", help="Проверить доступ к api.telegram.org (с прокси из .env)")
+    p.add_argument("--probe", action="store_true", help="Проверить api.telegram.org")
+    p.add_argument("--json-diag", action="store_true", help="Вывести diagnostics JSON в stderr")
     args = p.parse_args()
 
     if args.probe:
@@ -71,24 +87,64 @@ def main() -> int:
         return 0 if ok else 4
 
     if args.date:
-        report_date = date.fromisoformat(args.date)
+        target_date = date.fromisoformat(args.date)
     else:
-        report_date = datetime.now(TZ).date()
+        print("Укажите --date YYYY-MM-DD (target_date обязателен)", file=sys.stderr)
+        return 2
 
     conn = None
     try:
         conn = _connect()
         with conn.cursor() as cur:
-            snapshot = build_snapshot(cur, report_date)
+            snapshot, diagnostics = build_digest(cur, target_date)
     finally:
         if conn:
             conn.close()
 
-    text = format_telegram_evening_digest(snapshot, report_date=report_date)
+    digest_type = args.type
+    diagnostics = {
+        **diagnostics,
+        "digest_type": digest_type,
+        "submitted_user_ids": [
+            int(u["user_id"])
+            for u in diagnostics.get("per_user", {}).values()
+            if u.get("report_submitted") and (u.get("active_today") or u.get("marathon_member"))
+        ],
+        "waiting_user_ids": [
+            int(u["user_id"])
+            for u in diagnostics.get("per_user", {}).values()
+            if (u.get("active_today") or u.get("marathon_member")) and not u.get("report_submitted")
+        ],
+        "newly_submitted_user_ids": [],
+    }
+    # Restrict submitted/waiting to allowlist
+    allow = set(diagnostics.get("allowlist_user_ids") or diagnostics.get("marathon_participant_user_ids") or [])
+    if allow:
+        diagnostics["submitted_user_ids"] = [i for i in diagnostics["submitted_user_ids"] if i in allow]
+        diagnostics["waiting_user_ids"] = [i for i in diagnostics["waiting_user_ids"] if i in allow]
+        diagnostics["participant_ids"] = sorted(allow)
+
+    if args.json_diag:
+        print(json.dumps(diagnostics, ensure_ascii=False, indent=2), file=sys.stderr)
+
+    if digest_type == "night":
+        text = format_telegram_night_rollcall(snapshot, report_date=target_date)
+    elif digest_type == "evening":
+        text = format_telegram_evening_rollcall(snapshot, report_date=target_date)
+    else:
+        text = format_telegram_evening_digest(snapshot, report_date=target_date)
     print(text)
     print("---")
+    print(
+        f"target_date={target_date} type={digest_type} marathon_day={diagnostics.get('marathon_day')} "
+        f"submitted={len(diagnostics.get('submitted_user_ids', []))}/"
+        f"{len(diagnostics.get('participant_ids') or diagnostics.get('allowlist_user_ids') or [])} "
+        f"group={diagnostics.get('group_done')}/{diagnostics.get('group_total')} "
+        f"({diagnostics.get('group_pct')}%)"
+    )
 
     if args.dry_run or not args.send:
+        _log_diagnostics(diagnostics, target_date=target_date, sent=False)
         if not args.send:
             print("(dry-run: добавь --send для отправки)")
         return 0
@@ -103,12 +159,14 @@ def main() -> int:
         result = send_telegram_message(token, chat_id, text)
     except urllib.error.URLError as e:
         print(f"Telegram: {e}", file=sys.stderr)
-        print("Подсказка: задайте TELEGRAM_PROXY_URL в bloom/.env (VPN/прокси для РФ VPS)", file=sys.stderr)
+        print("Подсказка: задайте TELEGRAM_PROXY_URL в bloom/.env", file=sys.stderr)
         return 3
 
     if not result.get("ok"):
         print(f"Telegram error: {result}", file=sys.stderr)
         return 3
+
+    _log_diagnostics(diagnostics, target_date=target_date, sent=True)
     print("OK: сообщение отправлено")
     return 0
 
