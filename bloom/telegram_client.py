@@ -1,7 +1,8 @@
 """
-Отправка в Telegram Bot API. На РФ VPS — через TELEGRAM_PROXY_URL (HTTP или SOCKS5).
+Отправка / чтение Telegram Bot API. На РФ VPS — через TELEGRAM_PROXY_URL (HTTP или SOCKS5).
 
-Использует curl (если есть) — стабильнее с прокси; иначе urllib + ProxyHandler.
+sendMessage: curl (короткий вызов).
+getUpdates: urllib (+ PySocks для SOCKS) — токен не светится в `ps`.
 """
 from __future__ import annotations
 
@@ -13,6 +14,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from typing import Any
+from urllib.parse import urlparse
 
 
 def telegram_proxy_url() -> str | None:
@@ -21,6 +23,30 @@ def telegram_proxy_url() -> str | None:
         if val:
             return val
     return None
+
+
+def _build_opener(proxy: str | None):
+    if not proxy:
+        return urllib.request.build_opener()
+    parsed = urlparse(proxy)
+    scheme = (parsed.scheme or "").lower()
+    if scheme.startswith("socks"):
+        try:
+            import socks
+            from sockshandler import SocksiPyHandler
+        except ImportError as e:
+            raise urllib.error.URLError(
+                "Для SOCKS-прокси нужен пакет PySocks (pip install PySocks)"
+            ) from e
+        host = parsed.hostname or "127.0.0.1"
+        port = int(parsed.port or 1080)
+        rdns = scheme in ("socks5h", "socks4a")
+        return urllib.request.build_opener(
+            SocksiPyHandler(socks.SOCKS5, host, port, rdns=rdns)
+        )
+    return urllib.request.build_opener(
+        urllib.request.ProxyHandler({"http": proxy, "https": proxy})
+    )
 
 
 def send_telegram_message(
@@ -50,13 +76,9 @@ def probe_telegram_api(*, proxy_url: str | None = None) -> tuple[bool, str]:
         except subprocess.CalledProcessError as e:
             return False, f"curl failed: {e.output} proxy={proxy or 'нет'}"
 
-    url = "https://api.telegram.org/"
     try:
-        handlers = []
-        if proxy:
-            handlers.append(urllib.request.ProxyHandler({"http": proxy, "https": proxy}))
-        opener = urllib.request.build_opener(*handlers)
-        with opener.open(url, timeout=20) as resp:
+        opener = _build_opener(proxy)
+        with opener.open("https://api.telegram.org/", timeout=20) as resp:
             return True, f"urllib HTTP {resp.status} proxy={proxy or 'нет'}"
     except Exception as e:
         return False, f"{e} proxy={proxy or 'нет'}"
@@ -89,10 +111,7 @@ def _send_urllib(token: str, chat_id: str, text: str, proxy: str | None) -> dict
         {"chat_id": chat_id, "text": text, "disable_web_page_preview": "true"}
     ).encode("utf-8")
     req = urllib.request.Request(url, data=body, method="POST")
-    handlers = []
-    if proxy:
-        handlers.append(urllib.request.ProxyHandler({"http": proxy, "https": proxy}))
-    opener = urllib.request.build_opener(*handlers)
+    opener = _build_opener(proxy)
     with opener.open(req, timeout=45) as resp:
         return json.loads(resp.read().decode("utf-8"))
 
@@ -105,28 +124,10 @@ def telegram_api_call(
     proxy_url: str | None = None,
     timeout: int = 60,
 ) -> dict[str, Any]:
-    """Низкоуровневый вызов Bot API (getUpdates / editMessageText / …)."""
+    """Bot API через urllib (токен не в argv процесса)."""
     proxy = proxy_url if proxy_url is not None else telegram_proxy_url()
     params = dict(params or {})
     url = f"https://api.telegram.org/bot{token}/{method}"
-    if shutil.which("curl"):
-        cmd = ["curl", "-sS", "-f", "--max-time", str(timeout), "-X", "POST", url]
-        for k, v in params.items():
-            if isinstance(v, (dict, list)):
-                cmd.extend(["--data-urlencode", f"{k}={json.dumps(v, ensure_ascii=False)}"])
-            else:
-                cmd.extend(["--data-urlencode", f"{k}={v}"])
-        if proxy:
-            cmd.extend(["-x", proxy])
-        try:
-            raw = subprocess.check_output(cmd, text=True, stderr=subprocess.STDOUT)
-        except subprocess.CalledProcessError as e:
-            raise urllib.error.URLError(f"curl Telegram {method}: {e.output}") from e
-        data = json.loads(raw)
-        if not data.get("ok"):
-            raise urllib.error.URLError(f"Telegram API {method}: {data}")
-        return data
-
     body = urllib.parse.urlencode(
         {
             k: (json.dumps(v, ensure_ascii=False) if isinstance(v, (dict, list)) else v)
@@ -134,10 +135,7 @@ def telegram_api_call(
         }
     ).encode("utf-8")
     req = urllib.request.Request(url, data=body, method="POST")
-    handlers = []
-    if proxy:
-        handlers.append(urllib.request.ProxyHandler({"http": proxy, "https": proxy}))
-    opener = urllib.request.build_opener(*handlers)
+    opener = _build_opener(proxy)
     with opener.open(req, timeout=timeout) as resp:
         data = json.loads(resp.read().decode("utf-8"))
     if not data.get("ok"):
@@ -167,7 +165,7 @@ def get_telegram_updates(
         "getUpdates",
         params,
         proxy_url=proxy_url,
-        timeout=int(timeout) + 15,
+        timeout=max(int(timeout) + 20, 45),
     )
     return list(data.get("result") or [])
 

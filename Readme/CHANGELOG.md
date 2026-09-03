@@ -2,6 +2,10 @@
 
 Старые пункты могут ссылаться на прежний монолитный `Readme/Readme.md`; актуальная структура — корневой [README.md](../README.md), [PROJECT.md](PROJECT.md), [RUNBOOK.md](RUNBOOK.md).
 
+## 2026-09-03 — Ingest: urllib+PySocks без токена в ps (v333)
+
+- getUpdates через urllib/PySocks; токен не в cmdline
+
 ## 2026-09-03 — Passive Telegram ingest journal (v332)
 
 - `telegram_chat_events` append-only; `bloom/ingest_telegram.py` long-poll
