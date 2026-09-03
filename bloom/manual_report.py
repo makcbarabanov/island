@@ -2,15 +2,21 @@
 """
 Ручной перенос отчёта из Telegram в SSOT (без парсера чата).
 
-  venv/bin/python3 bloom/manual_report.py --user Айгуль --date 2026-09-01 \\
-    --complete 7938 --admin-id 1 --note "Telegram: только щедрость" --dry-run
+  # Показать задания дня
+  venv/bin/python3 bloom/manual_report.py --user Айгуль --date 2026-09-02 --list
 
+  # Preview / запись (явные step id)
+  venv/bin/python3 bloom/manual_report.py --user Айгуль --date 2026-09-02 \\
+    --complete 7897,7918,7939,7960 --admin-id 1 --note "Telegram…" --dry-run
+  venv/bin/python3 bloom/manual_report.py --user Айгуль --date 2026-09-02 \\
+    --complete 7897,7918,7939,7960 --admin-id 1 --note "Telegram…" --apply
+
+Инструмент ничего не интерпретирует из текста Telegram — только явные --complete.
 Требует миграции _sql/mig_buddy_reports_manual_admin.sql на БД.
 """
 from __future__ import annotations
 
 import argparse
-import os
 import sys
 from datetime import date
 from pathlib import Path
@@ -50,7 +56,7 @@ def _resolve_user_id(cur, user_ref: str) -> tuple[int, str, str | None]:
         raise SystemExit(f"Пользователь не найден: {user_ref!r}")
     if len(rows) > 1 and not ref.isdigit():
         names = [f"id={r[0]} {r[1]} {r[2] or ''}".strip() for r in rows]
-        raise SystemExit(f"Неоднозначно {user_ref!r}: {names}. Укажи --user-id.")
+        raise SystemExit(f"Неоднозначно {user_ref!r}: {names}. Укажи numeric --user.")
     uid, name, surname, telegram = rows[0]
     full = f"{name} {surname or ''}".strip()
     return int(uid), full, telegram
@@ -111,6 +117,46 @@ def _existing_report(cur, user_id: int, target_date: date) -> dict | None:
     return {"send_method": row[0], "sent_at": row[1], "admin_note": None}
 
 
+def _state_label(step) -> str:
+    if getattr(step, "completed", False):
+        return "completed=true"
+    if getattr(step, "waived", False):
+        return "waived=true"
+    return "completed=false"
+
+
+def build_list_view(
+    *,
+    user_id: int,
+    full_name: str,
+    telegram: str | None,
+    target_date: date,
+    steps: list,
+    existing_report: dict | None,
+) -> str:
+    label = display_label(full_name, telegram)
+    lines = [
+        f"{label} (user_id={user_id}) — {target_date.strftime('%d.%m.%Y')}",
+        f"шагов: {len(steps)}",
+        "",
+        f"{'id':>6}  {'сейчас':<16}  title",
+        "-" * 60,
+    ]
+    for s in steps:
+        lines.append(f"{s.id:>6}  {_state_label(s):<16}  {s.title}")
+    lines.append("")
+    if existing_report:
+        lines.append(
+            f"buddy_step_daily_reports: есть ({existing_report['send_method']}, "
+            f"sent_at={existing_report.get('sent_at')})"
+        )
+    else:
+        lines.append("buddy_step_daily_reports: нет")
+    lines.append("")
+    lines.append("Дальше: --complete id1,id2 --dry-run  затем  --apply")
+    return "\n".join(lines)
+
+
 def build_preview(
     *,
     user_id: int,
@@ -122,34 +168,42 @@ def build_preview(
     admin_id: int | None,
     note: str,
     existing_report: dict | None,
+    report_only: bool = False,
 ) -> str:
     label = display_label(full_name, telegram)
-    lines = [f"{label} — {target_date.strftime('%d.%m.%Y')}", ""]
-    done = 0
+    lines = [
+        f"{label} (user_id={user_id}) — {target_date.strftime('%d.%m.%Y')}",
+        "",
+        f"{'id':>6}  {'сейчас':<16}  {'будет':<16}  title",
+        "-" * 72,
+    ]
+    done_after = 0
     for s in steps:
-        will_complete = s.id in complete_ids
-        if will_complete:
-            done += 1
-        mark = "✅" if will_complete else "⬜"
-        lines.append(f"{mark} {s.title} (id={s.id})")
+        now = _state_label(s)
+        will = s.id in complete_ids
+        if will or s.completed:
+            done_after += 1
+        if report_only:
+            after = now
+        elif will:
+            after = "completed=true"
+        else:
+            after = now
+        mark = "→" if (will and not s.completed and not report_only) else " "
+        lines.append(f"{s.id:>6}  {now:<16}  {after:<16} {mark} {s.title}")
     total = len(steps)
-    lines.extend(
-        [
-            "",
-            f"итог {done}/{total}",
-        ]
-    )
+    lines.extend(["", f"итог после: {done_after}/{total} completed"])
     if existing_report:
         lines.append(
-            f"report submitted = yes (уже: {existing_report['send_method']}, новый insert не нужен)"
+            f"report: уже есть ({existing_report['send_method']}) — INSERT skip"
         )
     else:
-        lines.append("report submitted = yes")
+        lines.append("report: INSERT buddy_step_daily_reports send_method=manual_admin")
     lines.extend(
         [
-            "source = manual_admin",
             f"recorded_by = {admin_id}",
             f"admin_note = {note!r}",
+            f"report_only = {report_only}",
         ]
     )
     return "\n".join(lines)
@@ -175,7 +229,7 @@ def apply_manual_report(
             if s.completed:
                 actions.append(f"SKIP step {s.id} already completed")
                 continue
-            actions.append(f"step {s.id} completed=true ({s.title[:40]})")
+            actions.append(f"UPDATE dreams_steps id={s.id} completed=true ({s.title[:40]})")
             if not dry_run:
                 cur.execute(
                     "UPDATE dreams_steps SET completed = true WHERE id = %s",
@@ -218,29 +272,37 @@ def main() -> int:
     p.add_argument("--user", "--user-id", dest="user", required=True, help="Имя или user id")
     p.add_argument("--date", required=True, help="YYYY-MM-DD")
     p.add_argument(
+        "--list",
+        action="store_true",
+        help="Только показать задания дня и текущий completed (без записи)",
+    )
+    p.add_argument(
         "--complete",
         default="",
-        help="ID выполненных шагов через запятую (не нужен с --report-only)",
+        help="Явные ID выполненных шагов через запятую",
     )
     p.add_argument(
         "--report-only",
         action="store_true",
         help="Только buddy_step_daily_reports (без изменения dreams_steps)",
     )
-    p.add_argument("--admin-id", type=int, required=True, help="user_id администратора (recorded_by)")
+    p.add_argument("--admin-id", type=int, default=1, help="recorded_by (default: 1 Макс)")
     p.add_argument("--note", default="", help="admin_note (источник, цитата из Telegram)")
-    p.add_argument("--dry-run", action="store_true", help="Только preview, без записи")
+    p.add_argument("--dry-run", action="store_true", help="Preview + откат, без записи")
     p.add_argument("--apply", action="store_true", help="Записать в БД")
     args = p.parse_args()
 
-    if not args.dry_run and not args.apply:
-        print("Укажи --dry-run или --apply", file=sys.stderr)
-        return 2
-
     target_date = date.fromisoformat(args.date)
     complete_ids = {int(x.strip()) for x in args.complete.split(",") if x.strip()}
-    if not args.report_only and not complete_ids:
-        raise SystemExit("--complete: укажи хотя бы один step id (или --report-only)")
+
+    if not args.list and not args.dry_run and not args.apply:
+        print("Укажи --list, --dry-run или --apply", file=sys.stderr)
+        return 2
+    if args.apply and args.dry_run:
+        print("Нельзя одновременно --apply и --dry-run", file=sys.stderr)
+        return 2
+    if not args.list and not args.report_only and not complete_ids:
+        raise SystemExit("--complete: укажи явные step id (или --list / --report-only)")
 
     conn = _connect()
     conn.autocommit = False
@@ -257,26 +319,41 @@ def main() -> int:
             if not steps:
                 raise SystemExit(f"Нет шагов на {target_date} для user_id={user_id}")
 
+            existing = _existing_report(cur, user_id, target_date)
+
+            if args.list:
+                print(build_list_view(
+                    user_id=user_id,
+                    full_name=full_name,
+                    telegram=telegram,
+                    target_date=target_date,
+                    steps=steps,
+                    existing_report=existing,
+                ))
+                conn.rollback()
+                return 0
+
             unknown = complete_ids - {s.id for s in steps}
             if unknown and not args.report_only:
                 raise SystemExit(
                     f"step id не принадлежат этому пользователю/дате: {sorted(unknown)}"
                 )
 
-            existing = _existing_report(cur, user_id, target_date)
-            preview = build_preview(
-                user_id=user_id,
-                full_name=full_name,
-                telegram=telegram,
-                target_date=target_date,
-                steps=steps,
-                complete_ids=complete_ids,
-                admin_id=args.admin_id,
-                note=args.note,
-                existing_report=existing,
-            )
             print("=== PREVIEW ===")
-            print(preview)
+            print(
+                build_preview(
+                    user_id=user_id,
+                    full_name=full_name,
+                    telegram=telegram,
+                    target_date=target_date,
+                    steps=steps,
+                    complete_ids=complete_ids,
+                    admin_id=args.admin_id,
+                    note=args.note,
+                    existing_report=existing,
+                    report_only=args.report_only,
+                )
+            )
             print("---")
 
             actions = apply_manual_report(
@@ -287,18 +364,18 @@ def main() -> int:
                 complete_ids=complete_ids,
                 admin_id=args.admin_id,
                 note=args.note,
-                dry_run=args.dry_run,
+                dry_run=not args.apply,
                 report_only=args.report_only,
             )
             for a in actions:
                 print(a)
 
-            if args.dry_run:
-                conn.rollback()
-                print("(dry-run: откат)")
-            else:
+            if args.apply:
                 conn.commit()
                 print("OK: применено")
+            else:
+                conn.rollback()
+                print("(dry-run: откат)")
     except Exception:
         conn.rollback()
         raise

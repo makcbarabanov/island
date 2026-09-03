@@ -103,9 +103,11 @@ class ManualReportPreviewTests(unittest.TestCase):
             note="Telegram",
             existing_report=None,
         )
-        self.assertIn("✅ Практика щедрости", preview)
-        self.assertIn("⬜ Сурья", preview)
-        self.assertIn("итог 1/2", preview)
+        self.assertIn("7938", preview)
+        self.assertIn("Практика щедрости", preview)
+        self.assertIn("completed=true", preview)
+        self.assertIn("Сурья Намаскар", preview)
+        self.assertIn("итог после: 1/2", preview)
         self.assertIn("manual_admin", preview)
 
 
