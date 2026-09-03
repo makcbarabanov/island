@@ -2,6 +2,12 @@
 
 Старые пункты могут ссылаться на прежний монолитный `Readme/Readme.md`; актуальная структура — корневой [README.md](../README.md), [PROJECT.md](PROJECT.md), [RUNBOOK.md](RUNBOOK.md).
 
+## 2026-09-03 — Passive Telegram ingest journal (v332)
+
+- `telegram_chat_events` append-only; `bloom/ingest_telegram.py` long-poll
+- Durable offset = max(update_id)+1; фильтр `MARATHON_CHAT_ID`; systemd user unit
+- RAW ≠ SSOT; без ответов/LLM/правок dreams_steps и reports
+
 ## 2026-09-03 — manual_report CLI: --list + явный preview (v331)
 
 - `bloom/manual_report.py --list` / `--dry-run` / `--apply` с явным `--complete`

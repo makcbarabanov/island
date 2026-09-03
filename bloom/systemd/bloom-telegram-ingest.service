@@ -1,0 +1,18 @@
+[Unit]
+Description=Bloom Telegram passive ingest (marathon chat journal)
+After=network-online.target xray-bloom.service
+Wants=xray-bloom.service
+
+[Service]
+Type=simple
+WorkingDirectory=/home/makc/Apps/island
+ExecStart=/home/makc/Apps/island/venv/bin/python3 /home/makc/Apps/island/bloom/ingest_telegram.py
+Restart=on-failure
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+# Логи в journald + файл
+StandardOutput=append:/home/makc/Apps/island/logs/bloom_ingest.log
+StandardError=append:/home/makc/Apps/island/logs/bloom_ingest.log
+
+[Install]
+WantedBy=default.target

@@ -156,6 +156,30 @@ venv/bin/python3 bloom/send_digest.py --type control --dry-run --json-diag
 
 ---
 
+
+## 7. Passive Telegram ingest (журнал чата)
+
+Таблица: `telegram_chat_events` (миграция `_sql/mig_telegram_chat_events.sql`).
+
+```bash
+# миграция (из app container или psql)
+docker exec -i island-app-1 python3 -c "..."  # см. RUNBOOK / Форж
+
+# one-shot backlog
+venv/bin/python3 bloom/ingest_telegram.py --once
+
+# systemd user
+mkdir -p ~/.config/systemd/user
+cp bloom/systemd/bloom-telegram-ingest.service ~/.config/systemd/user/
+systemctl --user daemon-reload
+systemctl --user enable --now bloom-telegram-ingest.service
+systemctl --user status bloom-telegram-ingest.service
+```
+
+Не ставит webhook. Не вызывает sendMessage. Digest/cron не меняет.
+Только `MARATHON_CHAT_ID`. Privacy Mode должен быть выключен (`can_read_all_group_messages`).
+
+
 ## 6. Откат
 
 - Cron: убрать строку bloom из `crontab -e`

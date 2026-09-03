@@ -95,3 +95,101 @@ def _send_urllib(token: str, chat_id: str, text: str, proxy: str | None) -> dict
     opener = urllib.request.build_opener(*handlers)
     with opener.open(req, timeout=45) as resp:
         return json.loads(resp.read().decode("utf-8"))
+
+
+def telegram_api_call(
+    token: str,
+    method: str,
+    params: dict[str, Any] | None = None,
+    *,
+    proxy_url: str | None = None,
+    timeout: int = 60,
+) -> dict[str, Any]:
+    """Низкоуровневый вызов Bot API (getUpdates / editMessageText / …)."""
+    proxy = proxy_url if proxy_url is not None else telegram_proxy_url()
+    params = dict(params or {})
+    url = f"https://api.telegram.org/bot{token}/{method}"
+    if shutil.which("curl"):
+        cmd = ["curl", "-sS", "-f", "--max-time", str(timeout), "-X", "POST", url]
+        for k, v in params.items():
+            if isinstance(v, (dict, list)):
+                cmd.extend(["--data-urlencode", f"{k}={json.dumps(v, ensure_ascii=False)}"])
+            else:
+                cmd.extend(["--data-urlencode", f"{k}={v}"])
+        if proxy:
+            cmd.extend(["-x", proxy])
+        try:
+            raw = subprocess.check_output(cmd, text=True, stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError as e:
+            raise urllib.error.URLError(f"curl Telegram {method}: {e.output}") from e
+        data = json.loads(raw)
+        if not data.get("ok"):
+            raise urllib.error.URLError(f"Telegram API {method}: {data}")
+        return data
+
+    body = urllib.parse.urlencode(
+        {
+            k: (json.dumps(v, ensure_ascii=False) if isinstance(v, (dict, list)) else v)
+            for k, v in params.items()
+        }
+    ).encode("utf-8")
+    req = urllib.request.Request(url, data=body, method="POST")
+    handlers = []
+    if proxy:
+        handlers.append(urllib.request.ProxyHandler({"http": proxy, "https": proxy}))
+    opener = urllib.request.build_opener(*handlers)
+    with opener.open(req, timeout=timeout) as resp:
+        data = json.loads(resp.read().decode("utf-8"))
+    if not data.get("ok"):
+        raise urllib.error.URLError(f"Telegram API {method}: {data}")
+    return data
+
+
+def get_telegram_updates(
+    token: str,
+    *,
+    offset: int | None = None,
+    timeout: int = 25,
+    limit: int = 100,
+    allowed_updates: list[str] | None = None,
+    proxy_url: str | None = None,
+) -> list[dict[str, Any]]:
+    params: dict[str, Any] = {
+        "timeout": int(timeout),
+        "limit": max(1, min(int(limit), 100)),
+    }
+    if offset is not None:
+        params["offset"] = int(offset)
+    if allowed_updates is not None:
+        params["allowed_updates"] = list(allowed_updates)
+    data = telegram_api_call(
+        token,
+        "getUpdates",
+        params,
+        proxy_url=proxy_url,
+        timeout=int(timeout) + 15,
+    )
+    return list(data.get("result") or [])
+
+
+def edit_telegram_message(
+    token: str,
+    chat_id: str | int,
+    message_id: int,
+    text: str,
+    *,
+    proxy_url: str | None = None,
+) -> dict[str, Any]:
+    """Только для операционного smoke; listener это не вызывает."""
+    return telegram_api_call(
+        token,
+        "editMessageText",
+        {
+            "chat_id": chat_id,
+            "message_id": int(message_id),
+            "text": text,
+            "disable_web_page_preview": "true",
+        },
+        proxy_url=proxy_url,
+        timeout=45,
+    )
