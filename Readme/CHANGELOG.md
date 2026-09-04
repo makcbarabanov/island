@@ -2,6 +2,12 @@
 
 Старые пункты могут ссылаться на прежний монолитный `Readme/Readme.md`; актуальная структура — корневой [README.md](../README.md), [PROJECT.md](PROJECT.md), [RUNBOOK.md](RUNBOOK.md).
 
+## 2026-09-04 — Ingest: reconnect / exit при мёртвом PG (v334)
+
+- `bloom/ingest_telegram.py`: при `connection already closed` — reconnect; после 3 неудач — `sys.exit(1)` → systemd restart
+- Диагностические логи: update получен / сохранён / db error / connection restored
+- `bloom/read_telegram_export.py` — локальный read-only reader `result.json` (без записи в prod/SSOT)
+
 ## 2026-09-03 — Ingest: urllib+PySocks без токена в ps (v333)
 
 - getUpdates через urllib/PySocks; токен не в cmdline

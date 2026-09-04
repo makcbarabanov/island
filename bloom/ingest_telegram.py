@@ -29,6 +29,8 @@ for p in (ROOT, ROOT / "scripts", BLOOM):
     if str(p) not in sys.path:
         sys.path.insert(0, str(p))
 
+import psycopg2  # noqa: E402
+
 from build_marathon_snapshot import _connect, _load_env  # noqa: E402
 from telegram_client import get_telegram_updates  # noqa: E402
 
@@ -36,6 +38,46 @@ BLOOM_ENV = BLOOM / ".env"
 LOG = logging.getLogger("bloom.ingest")
 ALLOWED_UPDATES = ["message", "edited_message"]
 _STOP = False
+# После N неудачных reconnect подряд — exit, systemd Restart=on-failure
+_MAX_RECONNECT_FAILS = 3
+
+
+def _open_conn():
+    conn = _connect()
+    conn.autocommit = False
+    return conn
+
+
+def _is_conn_dead(conn, exc: BaseException | None = None) -> bool:
+    if conn is None or getattr(conn, "closed", 1):
+        return True
+    if isinstance(exc, (psycopg2.InterfaceError, psycopg2.OperationalError)):
+        return True
+    return False
+
+
+def _safe_close(conn) -> None:
+    if conn is None:
+        return
+    try:
+        conn.close()
+    except Exception:
+        pass
+
+
+def _try_reconnect(old_conn, *, reason: str):
+    """Закрыть мёртвое соединение и открыть новое. None → не удалось."""
+    LOG.error("db connection dead (%s); reconnecting", reason)
+    _safe_close(old_conn)
+    try:
+        conn = _open_conn()
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1")
+        LOG.info("db connection restored")
+        return conn
+    except Exception:
+        LOG.exception("db reconnect failed")
+        return None
 
 
 def _load_bloom_env() -> None:
@@ -190,12 +232,28 @@ def process_batch(
             continue
         matched_rows.append(row)
 
+    for row in matched_rows:
+        LOG.info(
+            "update received update_id=%s event=%s msg_id=%s user=%s",
+            row["update_id"],
+            row["event_type"],
+            row["message_id"],
+            row.get("username") or row.get("display_name") or row.get("telegram_user_id"),
+        )
+
     inserted = 0
     conflicts = 0
     if matched_rows:
         with conn.cursor() as cur:
             inserted, conflicts = insert_events(cur, matched_rows)
         conn.commit()
+        LOG.info(
+            "saved matched=%s inserted=%s conflicts=%s max_update_id=%s",
+            len(matched_rows),
+            inserted,
+            conflicts,
+            max_uid,
+        )
 
     return {
         "received": len(updates),
@@ -224,8 +282,7 @@ def run_once(*, timeout: int = 0) -> dict[str, Any]:
         raise SystemExit("TELEGRAM_BOT_TOKEN не задан")
     target = marathon_chat_id()
 
-    conn = _connect()
-    conn.autocommit = False
+    conn = _open_conn()
     totals = {
         "received": 0,
         "matched": 0,
@@ -271,10 +328,13 @@ def run_once(*, timeout: int = 0) -> dict[str, Any]:
                 break
         return totals
     except Exception:
-        conn.rollback()
+        try:
+            conn.rollback()
+        except Exception:
+            pass
         raise
     finally:
-        conn.close()
+        _safe_close(conn)
 
 
 def run_loop(*, poll_timeout: int = 25) -> None:
@@ -293,15 +353,17 @@ def run_loop(*, poll_timeout: int = 25) -> None:
     signal.signal(signal.SIGTERM, _handle_sig)
     signal.signal(signal.SIGINT, _handle_sig)
 
-    conn = _connect()
-    conn.autocommit = False
+    conn = _open_conn()
     offset = resolve_start_offset(conn)
     LOG.info("listener start offset=%s target_chat=%s", offset, target)
 
     backoff = 1
+    reconnect_fails = 0
     try:
         while not _STOP:
             try:
+                if _is_conn_dead(conn):
+                    raise psycopg2.InterfaceError("connection already closed")
                 updates = get_telegram_updates(
                     token,
                     offset=offset,
@@ -309,6 +371,12 @@ def run_loop(*, poll_timeout: int = 25) -> None:
                     limit=100,
                     allowed_updates=ALLOWED_UPDATES,
                 )
+                if updates:
+                    LOG.info(
+                        "poll got %s update(s); offset_in=%s",
+                        len(updates),
+                        offset,
+                    )
                 stats = process_batch(conn, updates, target_chat_id=target)
                 if stats["received"]:
                     LOG.info("batch %s", stats)
@@ -316,6 +384,7 @@ def run_loop(*, poll_timeout: int = 25) -> None:
                     # Подтверждаем Telegram только после успешного COMMIT в process_batch
                     offset = int(stats["max_update_id"]) + 1
                 backoff = 1
+                reconnect_fails = 0
             except urllib.error.URLError as e:
                 LOG.warning("telegram error: %s; backoff=%ss", e, backoff)
                 try:
@@ -324,21 +393,48 @@ def run_loop(*, poll_timeout: int = 25) -> None:
                     pass
                 time.sleep(backoff)
                 backoff = min(backoff * 2, 60)
-            except Exception:
-                LOG.exception("ingest batch failed; offset not advanced")
+            except Exception as e:
+                LOG.exception("db/ingest error; offset not advanced")
                 try:
                     conn.rollback()
                 except Exception:
                     pass
+
+                if _is_conn_dead(conn, e):
+                    new_conn = _try_reconnect(conn, reason=type(e).__name__)
+                    if new_conn is None:
+                        reconnect_fails += 1
+                        if reconnect_fails >= _MAX_RECONNECT_FAILS:
+                            LOG.error(
+                                "reconnect failed %s times; exiting for systemd restart",
+                                reconnect_fails,
+                            )
+                            sys.exit(1)
+                        time.sleep(backoff)
+                        backoff = min(backoff * 2, 60)
+                        continue
+                    conn = new_conn
+                    reconnect_fails = 0
+                    try:
+                        offset = resolve_start_offset(conn)
+                        LOG.info("offset re-resolved after reconnect: %s", offset)
+                    except Exception:
+                        LOG.exception("failed to re-resolve offset after reconnect; exiting")
+                        sys.exit(1)
+                    backoff = 1
+                    continue
+
                 time.sleep(backoff)
                 backoff = min(backoff * 2, 60)
-                # Durable: перечитать offset из БД после сбоя
                 try:
                     offset = resolve_start_offset(conn)
-                except Exception:
+                except Exception as e2:
                     LOG.exception("failed to re-resolve offset")
+                    if _is_conn_dead(conn, e2):
+                        LOG.error("db dead while resolving offset; exiting for systemd restart")
+                        sys.exit(1)
     finally:
-        conn.close()
+        _safe_close(conn)
         LOG.info("listener stopped")
 
 
