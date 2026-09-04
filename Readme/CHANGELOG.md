@@ -2,6 +2,13 @@
 
 Старые пункты могут ссылаться на прежний монолитный `Readme/Readme.md`; актуальная структура — корневой [README.md](../README.md), [PROJECT.md](PROJECT.md), [RUNBOOK.md](RUNBOOK.md).
 
+## 2026-09-04 — copy/share ≠ сдача отчёта (v335)
+
+- ЛК: 📋 / Share / auto-copy больше не вызывают SSOT `report_submitted`
+- `POST /daily-report-sent` для copy/share — no-op (`created=false`)
+- Bloom digest и buddy `report_was_sent`: `copy`/`share` не считаются сдачей; `manual_admin` — да
+- Без миграции БД
+
 ## 2026-09-04 — Ingest: reconnect / exit при мёртвом PG (v334)
 
 - `bloom/ingest_telegram.py`: при `connection already closed` — reconnect; после 3 неудач — `sys.exit(1)` → systemd restart

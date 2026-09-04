@@ -249,14 +249,26 @@ def record_digest_run(cur, subject_id: int, report_date: date, digest_kind: str)
 
 
 def report_was_sent(cur, user_id: int, report_date: date) -> bool:
+    """Факт сдачи для алертов: copy/share не считаются (как в digest_core)."""
     cur.execute(
-        "SELECT 1 FROM buddy_step_daily_reports WHERE user_id = %s AND report_date = %s",
+        """
+        SELECT 1 FROM buddy_step_daily_reports
+        WHERE user_id = %s AND report_date = %s
+          AND lower(send_method) NOT IN ('copy', 'share')
+        """,
         (user_id, report_date.isoformat()),
     )
     return cur.fetchone() is not None
 
 
 def mark_daily_report_sent(cur, user_id: int, report_date: date, send_method: str) -> bool:
+    """
+    Больше не пишет copy/share в SSOT (ложное «сдано»).
+    Возвращает False — запись не создана. manual_admin / будущие методы — через CLI/мост.
+    """
+    method = (send_method or "").strip().lower()
+    if method in ("copy", "share"):
+        return False
     cur.execute(
         """
         INSERT INTO buddy_step_daily_reports (user_id, report_date, send_method)
@@ -264,7 +276,7 @@ def mark_daily_report_sent(cur, user_id: int, report_date: date, send_method: st
         ON CONFLICT (user_id, report_date) DO NOTHING
         RETURNING id
         """,
-        (user_id, report_date.isoformat(), send_method),
+        (user_id, report_date.isoformat(), method),
     )
     return cur.fetchone() is not None
 

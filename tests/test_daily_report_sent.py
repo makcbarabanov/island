@@ -26,6 +26,17 @@ class DailyReportSentTests(unittest.TestCase):
             steps_by_user={1: [DayStep(1, "a", True, SEP2)]},
             reports={1: {"send_method": "share", "sent_at": "2026-09-03T00:10:00+03:00"}},
         )
+        self.assertFalse(diag["per_user"]["1"]["report_submitted"])
+        self.assertEqual(snap["today"]["reported"], 0)
+
+    def test_manual_admin_counts_as_submitted(self):
+        snap, diag = build_digest_payload(
+            SEP2,
+            users={1: {"id": 1, "name": "Макс"}},
+            marathon_participant_ids={1},
+            steps_by_user={1: [DayStep(1, "a", True, SEP2)]},
+            reports={1: {"send_method": "manual_admin", "sent_at": "2026-09-03T00:10:00+03:00"}},
+        )
         self.assertTrue(diag["per_user"]["1"]["report_submitted"])
         self.assertEqual(snap["today"]["reported"], 1)
 

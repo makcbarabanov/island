@@ -1,8 +1,9 @@
 """
 Bloom digest — расчёт вечерней сводки по явному target_date.
 
-SSOT: dreams_steps (галочки), buddy_step_daily_reports (факт отчёта).
-Telegram-чат не парсится.
+SSOT: dreams_steps (галочки); факт отчёта — buddy_step_daily_reports
+кроме send_method copy/share (это UX ЛК, не доказательство сдачи).
+Telegram-чат пока не парсится.
 
 Участники (разные множества):
   marathon_participant_ids — есть шаги в цикле 1–21 текущего месяца target_date;
@@ -21,6 +22,20 @@ import os
 from cycle_allowlist import display_label, get_allowlist_user_ids
 
 TZ = ZoneInfo(os.getenv("MARATHON_SNAPSHOT_TZ", "Europe/Moscow"))
+
+# copy/share = clipboard / navigator.share — не proof of delivery в чат.
+NON_EVIDENCE_REPORT_METHODS = frozenset({"copy", "share"})
+
+
+def report_counts_as_submitted(rep: dict[str, Any] | None) -> bool:
+    """Строка buddy_step_daily_reports считается сдачей, если метод не UI-handoff."""
+    if not rep:
+        return False
+    method = (rep.get("send_method") or "").strip().lower()
+    if not method or method in NON_EVIDENCE_REPORT_METHODS:
+        return False
+    return True
+
 
 MONTH_NAMES = (
     "",
@@ -150,6 +165,7 @@ def build_digest_payload(
             continue
         steps = steps_by_user.get(uid, [])
         rep = reports.get(uid)
+        submitted = report_counts_as_submitted(rep)
         ud = UserDigest(
             user_id=uid,
             name=users[uid]["name"],
@@ -157,8 +173,8 @@ def build_digest_payload(
             done_step_ids=[s.id for s in steps if s.completed],
             total=len(steps),
             done=sum(1 for s in steps if s.completed),
-            report_submitted=rep is not None,
-            report_source=(rep or {}).get("send_method"),
+            report_submitted=submitted,
+            report_source=(rep or {}).get("send_method") if submitted else None,
             active_today=uid in digest_scheduled_ids,
             marathon_member=uid in marathon_participant_ids,
         )

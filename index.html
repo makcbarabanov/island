@@ -2695,7 +2695,7 @@
                         </div>
                     </div>
                     <button type="button" class="app-footer-logout" id="app-footer-logout" title="Выйти" onclick="logout()">Выйти</button>
-                    <span class="app-version" aria-hidden="true">334</span>
+                    <span class="app-version" aria-hidden="true">335</span>
                 </div>
             </footer>
         </div>
@@ -4809,23 +4809,8 @@
             }).join('') + '</ul>';
         }
         async function notifyDailyReportSent(dayIso, sendMethod) {
-            if (!currentUser || !currentUser.id || !dayIso) return false;
-            try {
-                var resp = await fetch(API_BASE_URL + '/users/me/daily-report-sent', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        user_id: currentUser.id,
-                        report_date: dayIso,
-                        send_method: sendMethod === 'share' ? 'share' : 'copy'
-                    })
-                });
-                if (!resp.ok) return false;
-                var data = await resp.json().catch(function() { return null; });
-                return !!(data && data.ok);
-            } catch (e) {
-                return false;
-            }
+            /* copy/share больше не пишут report_submitted в SSOT (см. POST /daily-report-sent). */
+            return false;
         }
         function syncHeaderBellDot(data) {
             var dot = document.getElementById('header-bell-dot');
@@ -8336,13 +8321,8 @@
                 showToast('Не удалось скопировать');
                 return;
             }
-            var recorded = await notifyDailyReportSent(dayIso, 'copy');
-            if (!recorded) {
-                showToast('Отчёт скопирован, но факт сдачи не сохранился — нажмите 📋 ещё раз');
-                return;
-            }
             incrementStepReportSendCount(currentUser.id, dayIso);
-            showToast('Отчёт скопирован ✈️');
+            showToast('Отчёт скопирован');
             refreshReportsListUI();
             syncReportsMenuIndicator();
         }
@@ -8372,17 +8352,9 @@
                 return;
             }
             for (var i = 0; i < ready.length; i++) {
-                var dayIso = ready[i];
-                var recorded = await notifyDailyReportSent(dayIso, 'copy');
-                if (!recorded) {
-                    showToast('Не удалось сохранить факт сдачи — повторите для оставшихся дней');
-                    refreshReportsListUI();
-                    syncReportsMenuIndicator();
-                    return;
-                }
-                incrementStepReportSendCount(currentUser.id, dayIso);
+                incrementStepReportSendCount(currentUser.id, ready[i]);
             }
-            showToast('Отчёты за ' + ready.length + ' ' + ruDaysWord(ready.length) + ' скопированы ✈️');
+            showToast('Отчёты за ' + ready.length + ' ' + ruDaysWord(ready.length) + ' скопированы');
             refreshReportsListUI();
             syncReportsMenuIndicator();
         }
@@ -8583,11 +8555,6 @@
             var text = buildStepsDayReportText(dayIso, daySteps, titleCounterMap);
             var ok = await shareStepsDayReportText(text);
             if (!ok) return false;
-            var recorded = await notifyDailyReportSent(dayIso, 'share');
-            if (!recorded) {
-                showToast('Отчёт отправлен, но факт сдачи не сохранился — нажмите ✈️ ещё раз');
-                return false;
-            }
             var n = incrementStepReportSendCount(currentUser.id, dayIso);
             var btn = document.querySelector('#steps-list .step-day-share-btn[data-day-iso="' + dayIso + '"]');
             if (btn) {
@@ -8595,6 +8562,7 @@
                 var badge = btn.querySelector('.step-day-share-badge');
                 if (badge) badge.textContent = String(n);
             }
+            showToast('Отчёт отправлен в меню «Поделиться»');
             syncReportsMenuIndicator();
             var repBlk = document.getElementById('reports-block');
             if (repBlk && !repBlk.classList.contains('hidden')) refreshReportsListUI();
@@ -8623,15 +8591,10 @@
             __maybeAutoCopyClipboardBusy = true;
             prefetchDiaryEventsForReportIfNeeded(true).then(function() {
             var text = buildStepsDayReportText(dayIso, daySteps, buildStepTitleCounterMapForAllSteps());
-            return navigator.clipboard.writeText(text);
-            }).then(async function() {
-                var recorded = await notifyDailyReportSent(dayIso, 'copy');
-                if (!recorded) {
-                    showToast('Отчёт скопирован, но факт сдачи не сохранился — нажмите 📋 ещё раз');
-                    return;
-                }
+            return navigator.clipboard.writeText(text).then(function() { return text; });
+            }).then(function(text) {
                 incrementStepReportSendCount(currentUser.id, dayIso);
-                showToast('Отчет скопирован в буфер обмена ✈️', {
+                showToast('Отчёт скопирован в буфер обмена', {
                     actionLabel: navigator.share ? 'Поделиться' : '',
                     onAction: function() {
                         if (!navigator.share) return;

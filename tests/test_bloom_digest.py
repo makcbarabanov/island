@@ -123,15 +123,15 @@ class BloomDigestTests(unittest.TestCase):
           steps_by_user=_steps(1, [(1, "a", True, self.TARGET)]),
           reports={1: {"send_method": "copy"}},
       )
-      self.assertTrue(diag2["per_user"]["1"]["report_submitted"])
-      self.assertEqual(snap2["today"]["reported"], 1)
+      self.assertFalse(diag2["per_user"]["1"]["report_submitted"])
+      self.assertEqual(snap2["today"]["reported"], 0)
 
   def test_idempotent_same_result(self):
       kwargs = dict(
           users=_users((1, "Макс")),
           marathon_participant_ids={1},
           steps_by_user=_steps(1, [(5, "z", True, self.TARGET)]),
-          reports={1: {"send_method": "share"}},
+          reports={1: {"send_method": "manual_admin"}},
       )
       _, d1 = build_digest_payload(self.TARGET, **kwargs)
       _, d2 = build_digest_payload(self.TARGET, **kwargs)
@@ -185,13 +185,27 @@ class BloomDigestTests(unittest.TestCase):
               ** _steps(29, [(2, "b", True, self.NEXT)]),
           },
           reports={
-              1: {"send_method": "share", "sent_at": "2026-09-03T00:10:00+03:00"},
-              29: {"send_method": "share", "sent_at": "2026-09-02T20:31:00+03:00"},
+              1: {"send_method": "manual_admin", "sent_at": "2026-09-03T00:10:00+03:00"},
+              29: {"send_method": "manual_admin", "sent_at": "2026-09-02T20:31:00+03:00"},
           },
       )
       self.assertTrue(diag["per_user"]["1"]["report_submitted"])
       self.assertTrue(diag["per_user"]["29"]["report_submitted"])
       self.assertEqual(snap["today"]["reported"], 2)
+
+  def test_copy_and_share_not_evidence(self):
+      for method in ("copy", "share"):
+          _, diag = build_digest_payload(
+              self.TARGET,
+              users=_users((1, "Макс")),
+              marathon_participant_ids={1},
+              steps_by_user=_steps(1, [(1, "a", True, self.TARGET)]),
+              reports={1: {"send_method": method}},
+          )
+          self.assertFalse(
+              diag["per_user"]["1"]["report_submitted"],
+              msg=f"{method} must not count as submitted",
+          )
 
 
 if __name__ == "__main__":

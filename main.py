@@ -37,7 +37,6 @@ from buddy_alerts_core import (
     fetch_buddy_notifications,
     get_buddy_alert_settings,
     patch_buddy_alert_settings,
-    mark_daily_report_sent,
     count_unread_buddy_alerts,
     mark_buddy_notification_read,
 )
@@ -1845,7 +1844,11 @@ def patch_buddy_alert_settings_route(body: BuddyAlertSettingsPatch, user_id: int
 
 @app.post("/users/me/daily-report-sent")
 def post_daily_report_sent(body: DailyReportSentBody):
-    """Зафиксировать отправку отчёта за день (copy или share)."""
+    """
+    Раньше: copy/share → buddy_step_daily_reports (= «сдано»).
+    Сейчас: copy/share — только UI-handoff, в SSOT не пишем (created=false).
+    Эндпоинт оставлен для совместимости старого клиента.
+    """
     method = (body.send_method or "").strip().lower()
     if method not in ("copy", "share"):
         raise HTTPException(status_code=400, detail="send_method должен быть copy или share")
@@ -1853,23 +1856,14 @@ def post_daily_report_sent(body: DailyReportSentBody):
         report_date = date.fromisoformat(body.report_date[:10])
     except ValueError:
         raise HTTPException(status_code=400, detail="report_date: формат YYYY-MM-DD")
-    conn = None
-    try:
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            ensure_buddy_alerts_schema(cur)
-            created = mark_daily_report_sent(cur, body.user_id, report_date, method)
-            _touch_user_last_seen(cur, body.user_id)
-            conn.commit()
-            return {"ok": True, "created": created, "report_date": report_date.isoformat()}
-    except HTTPException:
-        raise
-    except Exception as e:
-        if conn:
-            conn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        _return_conn(conn)
+    # Не создаём факт сдачи из clipboard / navigator.share.
+    return {
+        "ok": True,
+        "created": False,
+        "ignored": True,
+        "reason": "copy_share_not_evidence",
+        "report_date": report_date.isoformat(),
+    }
 
 
 @app.get("/users/me/buddy-alerts/unread-count")

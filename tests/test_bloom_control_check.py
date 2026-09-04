@@ -52,7 +52,7 @@ class ControlCheckTests(unittest.TestCase):
         self.assertEqual(resolve_target_date_for_control_run(run_at), SEP2)
 
     def test_control_lists_newly_submitted_and_waiting(self):
-        snap = self._snap(reports={1: {"send_method": "share"}, 29: {"send_method": "share"}})
+        snap = self._snap(reports={1: {"send_method": "manual_admin"}, 29: {"send_method": "manual_admin"}})
         newly = [snap["participants"][0]]  # Макс
         text = format_telegram_control_check(snap, report_date=SEP2, newly_submitted=newly)
         self.assertIn("☀️ Контрольная сверка за 2 сентября", text)
@@ -65,9 +65,9 @@ class ControlCheckTests(unittest.TestCase):
     def test_control_short_when_all_submitted(self):
         snap = self._snap(
             reports={
-                1: {"send_method": "share"},
-                29: {"send_method": "share"},
-                17: {"send_method": "copy"},
+                1: {"send_method": "manual_admin"},
+                29: {"send_method": "manual_admin"},
+                17: {"send_method": "manual_admin"},
             }
         )
         text = format_telegram_control_check(snap, report_date=SEP2, newly_submitted=[])

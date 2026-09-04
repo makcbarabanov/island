@@ -35,8 +35,8 @@ class NightRollcallTests(unittest.TestCase):
                 uid: [DayStep(uid * 10, "step", True, SEP2)] for uid in allow
             },
             reports={
-                1: {"send_method": "share", "sent_at": "2026-09-03T00:10:00+03:00"},
-                29: {"send_method": "share", "sent_at": "2026-09-02T20:31:00+03:00"},
+                1: {"send_method": "manual_admin", "sent_at": "2026-09-03T00:10:00+03:00"},
+                29: {"send_method": "manual_admin", "sent_at": "2026-09-02T20:31:00+03:00"},
             },
         )
         snap["today"]["allowlist_user_ids"] = sorted(allow)

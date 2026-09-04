@@ -40,7 +40,7 @@ class EveningRollcallTests(unittest.TestCase):
                 67: [DayStep(5, "e", False, SEP2)],
                 19: [DayStep(99, "x", True, SEP2)],
             },
-            reports={1: {"send_method": "share"}, 29: {"send_method": "copy"}},
+            reports={1: {"send_method": "manual_admin"}, 29: {"send_method": "manual_admin"}},
         )
         snap["today"]["allowlist_user_ids"] = sorted(allow)
         text = format_telegram_evening_rollcall(snap, report_date=SEP2)
