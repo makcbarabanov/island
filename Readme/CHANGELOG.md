@@ -2,6 +2,13 @@
 
 Старые пункты могут ссылаться на прежний монолитный `Readme/Readme.md`; актуальная структура — корневой [README.md](../README.md), [PROJECT.md](PROJECT.md), [RUNBOOK.md](RUNBOOK.md).
 
+## 2026-09-05 — Telegram → SSOT bridge v1 + школа Bloom (v336)
+
+- Review-first: scan журнала → preview в личку Макса с inline ✅/✏️/⏭
+- Hybrid parse: deterministic + LLM fallback; SSOT только после confirm
+- `send_method=telegram`, `bloom_report_reviews`, `bloom_parse_scenarios` (streak→trusted)
+- Ingest принимает `callback_query`; auto-SSOT выключен (`BLOOM_BRIDGE_AUTO=1` позже)
+
 ## 2026-09-04 — copy/share ≠ сдача отчёта (v335)
 
 - ЛК: 📋 / Share / auto-copy больше не вызывают SSOT `report_submitted`

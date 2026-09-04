@@ -36,7 +36,7 @@ from telegram_client import get_telegram_updates  # noqa: E402
 
 BLOOM_ENV = BLOOM / ".env"
 LOG = logging.getLogger("bloom.ingest")
-ALLOWED_UPDATES = ["message", "edited_message"]
+ALLOWED_UPDATES = ["message", "edited_message", "callback_query"]
 _STOP = False
 # После N неудачных reconnect подряд — exit, systemd Restart=on-failure
 _MAX_RECONNECT_FAILS = 3
@@ -221,8 +221,26 @@ def process_batch(
     matched_rows: list[dict[str, Any]] = []
     skipped_other = 0
     skipped_unhandled = 0
+    callbacks = 0
 
     for upd in updates:
+        if "callback_query" in upd:
+            try:
+                from bridge_review import handle_callback
+
+                if handle_callback(upd):
+                    callbacks += 1
+                    LOG.info(
+                        "callback handled update_id=%s data=%s",
+                        upd.get("update_id"),
+                        (upd.get("callback_query") or {}).get("data"),
+                    )
+                else:
+                    skipped_unhandled += 1
+            except Exception:
+                LOG.exception("callback handler failed update_id=%s", upd.get("update_id"))
+                skipped_unhandled += 1
+            continue
         row = row_from_update(upd)
         if row is None:
             skipped_unhandled += 1
@@ -248,12 +266,15 @@ def process_batch(
             inserted, conflicts = insert_events(cur, matched_rows)
         conn.commit()
         LOG.info(
-            "saved matched=%s inserted=%s conflicts=%s max_update_id=%s",
+            "saved matched=%s inserted=%s conflicts=%s callbacks=%s max_update_id=%s",
             len(matched_rows),
             inserted,
             conflicts,
+            callbacks,
             max_uid,
         )
+    elif callbacks:
+        LOG.info("callbacks=%s (no journal rows) max_update_id=%s", callbacks, max_uid)
 
     return {
         "received": len(updates),
@@ -262,6 +283,7 @@ def process_batch(
         "conflicts": conflicts,
         "skipped_other_chat": skipped_other,
         "skipped_unhandled": skipped_unhandled,
+        "callbacks": callbacks,
         "max_update_id": max_uid,
     }
 

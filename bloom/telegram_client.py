@@ -55,11 +55,71 @@ def send_telegram_message(
     text: str,
     *,
     proxy_url: str | None = None,
+    reply_markup: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     proxy = proxy_url if proxy_url is not None else telegram_proxy_url()
+    # reply_markup требует JSON — urllib path надёжнее curl urlencode
+    if reply_markup is not None:
+        return telegram_api_call(
+            token,
+            "sendMessage",
+            {
+                "chat_id": chat_id,
+                "text": text,
+                "disable_web_page_preview": "true",
+                "reply_markup": reply_markup,
+            },
+            proxy_url=proxy,
+            timeout=45,
+        )
     if shutil.which("curl"):
         return _send_curl(token, chat_id, text, proxy)
     return _send_urllib(token, chat_id, text, proxy)
+
+
+def answer_callback_query(
+    token: str,
+    callback_query_id: str,
+    *,
+    text: str | None = None,
+    show_alert: bool = False,
+    proxy_url: str | None = None,
+) -> dict[str, Any]:
+    params: dict[str, Any] = {
+        "callback_query_id": callback_query_id,
+        "show_alert": "true" if show_alert else "false",
+    }
+    if text:
+        params["text"] = text
+    return telegram_api_call(
+        token, "answerCallbackQuery", params, proxy_url=proxy_url, timeout=30
+    )
+
+
+def edit_telegram_message(
+    token: str,
+    chat_id: str | int,
+    message_id: int,
+    text: str,
+    *,
+    proxy_url: str | None = None,
+    reply_markup: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    params: dict[str, Any] = {
+        "chat_id": chat_id,
+        "message_id": int(message_id),
+        "text": text,
+        "disable_web_page_preview": "true",
+    }
+    if reply_markup is not None:
+        params["reply_markup"] = reply_markup
+    return telegram_api_call(
+        token,
+        "editMessageText",
+        params,
+        proxy_url=proxy_url,
+        timeout=45,
+    )
 
 
 def probe_telegram_api(*, proxy_url: str | None = None) -> tuple[bool, str]:
@@ -168,26 +228,3 @@ def get_telegram_updates(
         timeout=max(int(timeout) + 20, 45),
     )
     return list(data.get("result") or [])
-
-
-def edit_telegram_message(
-    token: str,
-    chat_id: str | int,
-    message_id: int,
-    text: str,
-    *,
-    proxy_url: str | None = None,
-) -> dict[str, Any]:
-    """Только для операционного smoke; listener это не вызывает."""
-    return telegram_api_call(
-        token,
-        "editMessageText",
-        {
-            "chat_id": chat_id,
-            "message_id": int(message_id),
-            "text": text,
-            "disable_web_page_preview": "true",
-        },
-        proxy_url=proxy_url,
-        timeout=45,
-    )
