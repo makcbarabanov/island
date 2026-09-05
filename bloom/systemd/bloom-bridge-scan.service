@@ -1,0 +1,12 @@
+[Unit]
+Description=Bloom bridge scan (Telegram journal → review preview)
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/makc/Apps/island
+ExecStart=/home/makc/Apps/island/venv/bin/python3 /home/makc/Apps/island/bloom/bridge_review.py --scan --since-days 3 --limit 120
+Environment=PYTHONUNBUFFERED=1
+# Не включаем BLOOM_BRIDGE_AUTO — только preview
+StandardOutput=append:/home/makc/Apps/island/logs/bloom_bridge_scan.log
+StandardError=append:/home/makc/Apps/island/logs/bloom_bridge_scan.log

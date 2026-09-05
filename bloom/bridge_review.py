@@ -27,6 +27,7 @@ for p in (str(ROOT), str(ROOT / "scripts"), str(BLOOM)):
 from build_marathon_snapshot import _connect, _load_env  # noqa: E402
 from bridge_apply import apply_review_to_ssot  # noqa: E402
 from bridge_db import (  # noqa: E402
+    already_has_telegram_report,
     bump_school_on_confirm,
     ensure_bridge_schema,
     fetch_planned_steps,
@@ -185,6 +186,22 @@ def process_event(
     if outcome.report_date is None:
         return None
 
+    # Уже есть подтверждённый evidence (telegram / manual_admin) — не спамим review
+    if already_has_telegram_report(cur, uid, outcome.report_date) and not force_resend:
+        LOG.info(
+            "skip msg=%s: SSOT evidence already exists for user=%s date=%s",
+            ev["message_id"],
+            uid,
+            outcome.report_date,
+        )
+        return {
+            "skipped": True,
+            "reason": "ssot_evidence_exists",
+            "user_id": uid,
+            "report_date": outcome.report_date.isoformat(),
+            "message_id": int(ev["message_id"]),
+        }
+
     sk = scenario_key(uid, outcome.format_family)
     label = USER_ID_TO_LABEL.get(uid, str(uid))
     preview = format_preview(
@@ -284,40 +301,52 @@ def process_event(
 
 def cmd_scan(args: argparse.Namespace) -> int:
     _load_bloom_env()
-    since = date.fromisoformat(args.since) if args.since else (date.today() - timedelta(days=7))
+    since = date.fromisoformat(args.since) if args.since else (date.today() - timedelta(days=3))
     conn = _connect()
     conn.autocommit = False
     results = []
+    errors = 0
     try:
         with conn.cursor() as cur:
             ensure_bridge_schema(cur)
+            conn.commit()
             events = list_candidate_events(cur, since_date=since, limit=args.limit)
-            for ev in events:
-                r = process_event(
-                    cur,
-                    ev,
-                    allow_llm=not args.no_llm,
-                    send_preview=not args.dry_run,
-                    preview_only=True,  # scan path never auto-writes SSOT
-                    force_message_id=args.message_id,
-                    force_resend=bool(args.force),
-                )
+        for ev in events:
+            try:
+                with conn.cursor() as cur:
+                    r = process_event(
+                        cur,
+                        ev,
+                        allow_llm=not args.no_llm,
+                        send_preview=not args.dry_run,
+                        preview_only=True,  # scan path never auto-writes SSOT
+                        force_message_id=args.message_id,
+                        force_resend=bool(args.force),
+                    )
+                    conn.commit()
                 if r:
                     results.append(r)
                     if args.message_id:
                         break
-            conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
+            except Exception:
+                errors += 1
+                conn.rollback()
+                LOG.exception(
+                    "scan event failed message_id=%s — continue",
+                    ev.get("message_id"),
+                )
+                if args.message_id:
+                    break
     finally:
         conn.close()
 
     for r in results:
+        if r.get("skipped") and r.get("reason") == "ssot_evidence_exists":
+            continue
         print(r.get("preview") or r)
         print("---")
-    print(f"processed={len(results)}")
-    return 0
+    print(f"processed={len(results)} errors={errors}")
+    return 0  # per-event errors logged; timer must not flap
 
 
 def cmd_confirm(review_id: int) -> int:
@@ -519,6 +548,12 @@ def main() -> int:
     p = argparse.ArgumentParser(description="Bloom bridge review")
     p.add_argument("--scan", action="store_true")
     p.add_argument("--since", help="YYYY-MM-DD")
+    p.add_argument(
+        "--since-days",
+        type=int,
+        default=None,
+        help="Сколько календарных дней назад от сегодня (MSK-ish date.today)",
+    )
     p.add_argument("--limit", type=int, default=80)
     p.add_argument("--message-id", type=int, dest="message_id")
     p.add_argument("--dry-run", action="store_true", help="Не слать preview в Telegram")
@@ -530,6 +565,9 @@ def main() -> int:
     p.add_argument("--edit", type=int, metavar="REVIEW_ID", help="С --edit-line")
     p.add_argument("--edit-line", help="123=done,456=not_done")
     args = p.parse_args()
+
+    if args.since_days is not None and not args.since:
+        args.since = (date.today() - timedelta(days=max(0, args.since_days))).isoformat()
 
     if args.confirm:
         return cmd_confirm(args.confirm)

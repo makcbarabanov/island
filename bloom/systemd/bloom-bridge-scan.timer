@@ -1,0 +1,11 @@
+[Unit]
+Description=Bloom bridge scan every 2 minutes
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=2min
+AccuracySec=15s
+Unit=bloom-bridge-scan.service
+
+[Install]
+WantedBy=timers.target

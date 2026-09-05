@@ -2,6 +2,12 @@
 
 Старые пункты могут ссылаться на прежний монолитный `Readme/Readme.md`; актуальная структура — корневой [README.md](../README.md), [PROJECT.md](PROJECT.md), [RUNBOOK.md](RUNBOOK.md).
 
+## 2026-09-05 — Bridge scan по таймеру (v337)
+
+- `bloom-bridge-scan.timer` каждые 2 мин: `--scan --since-days 3`
+- Ошибка одного сообщения не валит весь проход; SSOT до ✅ не трогаем
+- Skip review если уже есть evidence `telegram`/`manual_admin` за дату
+
 ## 2026-09-05 — Telegram → SSOT bridge v1 + школа Bloom (v336)
 
 - Review-first: scan журнала → preview в личку Макса с inline ✅/✏️/⏭
