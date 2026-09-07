@@ -2,6 +2,12 @@
 
 Старые пункты могут ссылаться на прежний монолитный `Readme/Readme.md`; актуальная структура — корневой [README.md](../README.md), [PROJECT.md](PROJECT.md), [RUNBOOK.md](RUNBOOK.md).
 
+## 2026-09-07 — Тестовый пульт Bloom в личке (v338)
+
+- Команды в `BLOOM_ADMIN_CHAT_ID`: `покажи активных`, `дай отчёт за …`, `дай статистику N за …`, `help`
+- `дай отчёт` = тот же control-расчёт, что 12:00 (`build_digest_message`); префикс «НЕ ОПУБЛИКОВАНО»; без марафона/approvals/SSOT
+- Номера участников = `sorted(allowlist)`; опционально `@username` в статистике
+
 ## 2026-09-05 — Bridge scan по таймеру (v337)
 
 - `bloom-bridge-scan.timer` каждые 2 мин: `--scan --since-days 3`

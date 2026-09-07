@@ -2,13 +2,13 @@
 """
 Пассивный ingest Telegram updates → telegram_chat_events.
 
-Только читает и пишет журнал. Не отвечает, не трогает SSOT марафона.
+Журнал: только MARATHON_CHAT_ID. Не трогает SSOT марафона.
+В личке BLOOM_ADMIN_CHAT_ID — read-only тестовый пульт (admin_console).
 
   venv/bin/python3 bloom/ingest_telegram.py --once   # backlog / один батч
   venv/bin/python3 bloom/ingest_telegram.py          # long-poll loop
 
 Durable offset: max(update_id)+1 из БД.
-Фильтр: только MARATHON_CHAT_ID (остальные updates подтверждаем offset'ом без INSERT).
 """
 from __future__ import annotations
 
@@ -103,6 +103,61 @@ def marathon_chat_id() -> int:
     if not raw:
         raise SystemExit("Задайте MARATHON_CHAT_ID в bloom/.env")
     return int(raw)
+
+
+def admin_chat_id() -> int | None:
+    raw = (os.getenv("BLOOM_ADMIN_CHAT_ID") or os.getenv("BLOOM_ADMIN_TELEGRAM_ID") or "").strip()
+    if not raw:
+        return None
+    try:
+        return int(raw)
+    except ValueError:
+        return None
+
+
+def _try_admin_console(conn, row: dict[str, Any]) -> bool:
+    """
+    Read-only пульт в личке админа. True = обработано (не писать в журнал марафона).
+    """
+    text = (row.get("text") or "").strip()
+    if not text:
+        return False
+    try:
+        from admin_console import handle_admin_command, reply_admin_text
+        from bridge_review import admin_chat_id as admin_chat_id_str
+    except Exception:
+        LOG.exception("admin_console import failed")
+        return False
+
+    token = (os.getenv("TELEGRAM_BOT_TOKEN") or "").strip()
+    if not token:
+        return False
+
+    try:
+        with conn.cursor() as cur:
+            reply = handle_admin_command(cur, text)
+        # SELECT-only — откатываем на всякий случай, без commit побочных эффектов
+        conn.rollback()
+    except Exception:
+        LOG.exception("admin_console handler failed")
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        return True  # всё равно не пишем в журнал марафона
+
+    if reply is None:
+        return False
+
+    try:
+        result = reply_admin_text(token, admin_chat_id_str(), reply)
+        if not result.get("ok"):
+            LOG.error("admin_console reply failed: %s", result)
+        else:
+            LOG.info("admin_console replied kind_chars=%s", len(reply))
+    except Exception:
+        LOG.exception("admin_console send failed")
+    return True
 
 
 def extract_message_payload(update: dict[str, Any]) -> tuple[str, dict[str, Any]] | None:
@@ -222,6 +277,8 @@ def process_batch(
     skipped_other = 0
     skipped_unhandled = 0
     callbacks = 0
+    admin_cmds = 0
+    admin_id = admin_chat_id()
 
     for upd in updates:
         if "callback_query" in upd:
@@ -245,6 +302,12 @@ def process_batch(
         if row is None:
             skipped_unhandled += 1
             continue
+        if admin_id is not None and row["chat_id"] == admin_id:
+            if _try_admin_console(conn, row):
+                admin_cmds += 1
+            else:
+                skipped_other += 1
+            continue
         if row["chat_id"] != target_chat_id:
             skipped_other += 1
             continue
@@ -266,15 +329,21 @@ def process_batch(
             inserted, conflicts = insert_events(cur, matched_rows)
         conn.commit()
         LOG.info(
-            "saved matched=%s inserted=%s conflicts=%s callbacks=%s max_update_id=%s",
+            "saved matched=%s inserted=%s conflicts=%s callbacks=%s admin_cmds=%s max_update_id=%s",
             len(matched_rows),
             inserted,
             conflicts,
             callbacks,
+            admin_cmds,
             max_uid,
         )
-    elif callbacks:
-        LOG.info("callbacks=%s (no journal rows) max_update_id=%s", callbacks, max_uid)
+    elif callbacks or admin_cmds:
+        LOG.info(
+            "callbacks=%s admin_cmds=%s (no journal rows) max_update_id=%s",
+            callbacks,
+            admin_cmds,
+            max_uid,
+        )
 
     return {
         "received": len(updates),
@@ -284,6 +353,7 @@ def process_batch(
         "skipped_other_chat": skipped_other,
         "skipped_unhandled": skipped_unhandled,
         "callbacks": callbacks,
+        "admin_cmds": admin_cmds,
         "max_update_id": max_uid,
     }
 

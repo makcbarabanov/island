@@ -174,9 +174,55 @@ def _enrich_diagnostics(
         "waiting_user_ids": waiting,
         "newly_submitted_user_ids": newly,
         "participant_ids": sorted(allow),
-        "previous_rollcall_submitted_user_ids": sorted(prev_submitted),
         "previous_rollcall_type": (prev_rollcall or {}).get("digest_type"),
+        "previous_rollcall_submitted_user_ids": sorted(prev_submitted),
     }
+
+
+def format_digest_text(
+    snapshot: dict,
+    diagnostics: dict,
+    *,
+    digest_type: str,
+    target_date: date,
+) -> str:
+    """Единый форматтер текста digest (тот же путь, что cron)."""
+    newly_participants = [
+        p
+        for uid in diagnostics.get("newly_submitted_user_ids") or []
+        if (p := _participant_by_id(snapshot, int(uid)))
+    ]
+    if digest_type == "night":
+        return format_telegram_night_rollcall(snapshot, report_date=target_date)
+    if digest_type == "evening":
+        return format_telegram_evening_rollcall(snapshot, report_date=target_date)
+    if digest_type == "control":
+        return format_telegram_control_check(
+            snapshot,
+            report_date=target_date,
+            newly_submitted=newly_participants,
+        )
+    return format_telegram_evening_digest(snapshot, report_date=target_date)
+
+
+def build_digest_message(
+    cur,
+    target_date: date,
+    *,
+    digest_type: str = "control",
+) -> tuple[str, dict, dict]:
+    """
+    Сборка текста digest из БД + enrich.
+    Без отправки и без записи diag-лога — для cron и тестового пульта.
+    """
+    snapshot, diagnostics = build_digest(cur, target_date)
+    diagnostics = _enrich_diagnostics(
+        snapshot, diagnostics, digest_type=digest_type, target_date=target_date
+    )
+    text = format_digest_text(
+        snapshot, diagnostics, digest_type=digest_type, target_date=target_date
+    )
+    return text, snapshot, diagnostics
 
 
 def main() -> int:
@@ -213,36 +259,15 @@ def main() -> int:
     try:
         conn = _connect()
         with conn.cursor() as cur:
-            snapshot, diagnostics = build_digest(cur, target_date)
+            text, _snapshot, diagnostics = build_digest_message(
+                cur, target_date, digest_type=digest_type
+            )
     finally:
         if conn:
             conn.close()
 
-    diagnostics = _enrich_diagnostics(
-        snapshot, diagnostics, digest_type=digest_type, target_date=target_date
-    )
-
     if args.json_diag:
         print(json.dumps(diagnostics, ensure_ascii=False, indent=2), file=sys.stderr)
-
-    newly_participants = [
-        p
-        for uid in diagnostics.get("newly_submitted_user_ids") or []
-        if (p := _participant_by_id(snapshot, int(uid)))
-    ]
-
-    if digest_type == "night":
-        text = format_telegram_night_rollcall(snapshot, report_date=target_date)
-    elif digest_type == "evening":
-        text = format_telegram_evening_rollcall(snapshot, report_date=target_date)
-    elif digest_type == "control":
-        text = format_telegram_control_check(
-            snapshot,
-            report_date=target_date,
-            newly_submitted=newly_participants,
-        )
-    else:
-        text = format_telegram_evening_digest(snapshot, report_date=target_date)
 
     print(text)
     print("---")
