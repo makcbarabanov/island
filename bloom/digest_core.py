@@ -1,9 +1,9 @@
 """
 Bloom digest — расчёт вечерней сводки по явному target_date.
 
-SSOT: dreams_steps (галочки); факт отчёта — buddy_step_daily_reports
-кроме send_method copy/share (это UX ЛК, не доказательство сдачи).
-Telegram-чат пока не парсится.
+Шаги (done/total): dreams_steps (приложение).
+Факт сдачи отчёта для Bloom: журнал чата марафона (telegram_chat_events),
+не галочки в приложении. См. chat_reports.py.
 
 Участники (разные множества):
   marathon_participant_ids — есть шаги в цикле 1–21 текущего месяца target_date;
@@ -377,8 +377,12 @@ def build_digest(cur, target_date: date) -> tuple[dict[str, Any], dict[str, Any]
     if allowlist is not None:
         steps_by_user = {uid: steps for uid, steps in steps_by_user.items() if uid in allowlist}
 
-    scheduled_ids = list(steps_by_user.keys())
-    reports = fetch_reports(cur, target_date, scheduled_ids)
+    # Явка: только отчёты в чате марафона (не buddy_step_daily_reports / не галочки ЛК)
+    from chat_reports import chat_submissions_for_digest
+
+    reports = chat_submissions_for_digest(
+        cur, target_date, participant_ids=marathon_ids
+    )
 
     return build_digest_payload(
         target_date,

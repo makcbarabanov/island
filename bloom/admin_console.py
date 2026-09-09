@@ -18,7 +18,7 @@ from bridge_participants import (
     active_user_ids,
 )
 from cycle_allowlist import normalize_telegram_handle
-from digest_core import TZ, fetch_day_steps, fetch_reports, fetch_users
+from digest_core import TZ, fetch_day_steps, fetch_users
 
 MSK = ZoneInfo("Europe/Moscow")
 
@@ -30,7 +30,7 @@ HELP_TEXT = """Bloom — тестовый пульт (только личка)
 — список активных участников текущего марафона
 
 дай отчёт за 06.09
-— тестовая общая сводка за дату (control / 12:00)
+— тестовая сводка за дату (явка = отчёты в чате марафона)
 
 дай статистику 1 за 06.09
 — подробности по участнику №1 за дату
@@ -38,6 +38,7 @@ HELP_TEXT = """Bloom — тестовый пульт (только личка)
 help / помощь / хелп
 — показать эту подсказку
 
+Явка считается по сообщениям-отчётам в марафоне, не по галочкам в приложении.
 Ничего из пульта не публикуется в марафон и не меняет БД."""
 
 
@@ -174,11 +175,12 @@ def format_user_stats(cur, user_id: int, target_date: date) -> str:
     full = (u.get("name") or f"Участник #{user_id}").strip()
     handle = normalize_telegram_handle(u.get("telegram")) or "—"
     steps = fetch_day_steps(cur, target_date).get(user_id, [])
-    reports = fetch_reports(cur, target_date, [user_id])
-    rep = reports.get(user_id)
-
+    from chat_reports import chat_submissions_for_digest
     from digest_core import report_counts_as_submitted
 
+    rep = chat_submissions_for_digest(cur, target_date, participant_ids={user_id}).get(
+        user_id
+    )
     submitted = report_counts_as_submitted(rep)
     total = len(steps)
     done = sum(1 for s in steps if s.completed)
@@ -200,13 +202,13 @@ def format_user_stats(cur, user_id: int, target_date: date) -> str:
             lines.append(f"{mark} {title}")
 
     if submitted:
-        method = (rep or {}).get("send_method") or "?"
-        lines.append(f"отчёт: сдан ({method})")
+        mid = (rep or {}).get("source_message_id")
+        lines.append(f"отчёт: сдан (чат марафона" + (f", msg {mid}" if mid else "") + ")")
         timing = _timeliness_label(target_date, (rep or {}).get("sent_at"))
         if timing:
             lines.append(timing)
     else:
-        lines.append("отчёт: не сдан")
+        lines.append("отчёт: не сдан (в чате марафона за эту дату не найден)")
 
     return "\n".join(lines)
 
