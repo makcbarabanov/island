@@ -97,9 +97,9 @@ def format_telegram_control_check(
     snapshot: dict,
     *,
     report_date: date | None = None,
-    newly_submitted: list[dict] | None = None,
+    newly_submitted: list[dict] | None = None,  # deprecated, ignored
 ) -> str:
-    """Контрольная сверка 12:00 MSK — досдавшие, ожидающие, итог команды."""
+    """Контрольная сверка 12:00 MSK — сдавшие / не сдавшие, итог команды."""
     if report_date is None:
         rd = snapshot.get("report_date") or ""
         report_date = date.fromisoformat(rd) if rd else date.today()
@@ -112,7 +112,6 @@ def format_telegram_control_check(
     n_sub = len(submitted)
     day_label = _report_day_label(report_date)
     month = MONTH_GENITIVE[report_date.month]
-    newly = newly_submitted or []
 
     group_done = today.get("group_done")
     group_total = today.get("group_total")
@@ -121,12 +120,26 @@ def format_telegram_control_check(
     if group_done is not None and group_total is not None:
         stats_line = f"📊 Команда выполнила {group_done} из {group_total} действий — {float(group_pct or 0):g}%."
 
-    if n_sub >= total and total > 0 and not waiting and not newly:
+    def _label_with_steps(p: dict) -> str:
+        base = _participant_label(p)
+        st = p.get("steps_today") or {}
+        total_s = int(st.get("total") or 0)
+        done_s = int(st.get("done") or 0)
+        if total_s > 0:
+            return f"{base} — {done_s}/{total_s}"
+        return base
+
+    if n_sub >= total and total > 0 and not waiting:
         lines = [
             f"☀️ Контрольная сверка за {report_date.day} {month}",
             "",
             f"📋 Отчёт за {day_label}: все {n_sub} из {total} сдали ✅",
         ]
+        if submitted:
+            lines.append("")
+            lines.append("✅ Сдавшие:")
+            for p in submitted:
+                lines.append(_label_with_steps(p))
         if stats_line:
             lines.extend(["", stats_line])
         return "\n".join(lines)
@@ -137,16 +150,10 @@ def format_telegram_control_check(
         f"📋 Отчёт за {day_label} сдали: {n_sub} из {total}",
         "",
     ]
-    if newly:
-        lines.append("🆕 Досдали с ночной сверки:")
-        lines.append("")
-        for p in newly:
-            lines.append(f"✅ {_participant_label(p)}")
-        lines.append("")
     if submitted:
         lines.append("✅ Сдавшие:")
         for p in submitted:
-            lines.append(_participant_label(p))
+            lines.append(_label_with_steps(p))
         lines.append("")
     if waiting:
         lines.append(f"⏳ Ещё не сдали отчёт за {day_label}:")

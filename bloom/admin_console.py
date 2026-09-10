@@ -177,11 +177,47 @@ def format_user_stats(cur, user_id: int, target_date: date) -> str:
     steps = fetch_day_steps(cur, target_date).get(user_id, [])
     from chat_reports import chat_submissions_for_digest
     from digest_core import report_counts_as_submitted
+    from freeform_content import FREEFORM_CONTENT_USER_IDS, parse_freeform_counts
 
     rep = chat_submissions_for_digest(cur, target_date, participant_ids={user_id}).get(
         user_id
     )
     submitted = report_counts_as_submitted(rep)
+
+    if submitted and user_id in FREEFORM_CONTENT_USER_IDS and rep:
+        from chat_reports import fetch_chat_report_hits
+
+        hit = next(
+            (
+                h
+                for h in fetch_chat_report_hits(
+                    cur, target_date, participant_ids={user_id}
+                )
+                if h.user_id == user_id
+            ),
+            None,
+        )
+        if hit:
+            done, total, meta = parse_freeform_counts(
+                cur, user_id, target_date, hit.text, message_date=hit.message_date
+            )
+            date_label = target_date.strftime("%d.%m.%Y")
+            lines = [
+                f"{full} / {handle}",
+                f"дата: {date_label}",
+                f"запланировано: {total}",
+                f"выполнено: {done}",
+                "действия (из текста отчёта):",
+            ]
+            for s in meta.get("steps") or []:
+                mark = "✅" if s.get("completed") else "❌"
+                lines.append(f"{mark} {s.get('title') or '?'}")
+            lines.append(f"отчёт: сдан (чат, msg {hit.message_id})")
+            timing = _timeliness_label(target_date, (rep or {}).get("sent_at"))
+            if timing:
+                lines.append(timing)
+            return "\n".join(lines)
+
     total = len(steps)
     done = sum(1 for s in steps if s.completed)
     date_label = target_date.strftime("%d.%m.%Y")

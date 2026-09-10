@@ -51,17 +51,19 @@ class ControlCheckTests(unittest.TestCase):
         run_at = datetime(2026, 9, 3, 12, 0, tzinfo=MSK)
         self.assertEqual(resolve_target_date_for_control_run(run_at), SEP2)
 
-    def test_control_lists_newly_submitted_and_waiting(self):
+    def test_control_lists_submitted_and_waiting_no_newly_block(self):
         snap = self._snap(reports={1: {"send_method": "manual_admin"}, 29: {"send_method": "manual_admin"}})
-        newly = [snap["participants"][0]]  # Макс
-        text = format_telegram_control_check(snap, report_date=SEP2, newly_submitted=newly)
+        text = format_telegram_control_check(snap, report_date=SEP2, newly_submitted=[snap["participants"][0]])
         self.assertIn("☀️ Контрольная сверка за 2 сентября", text)
-        self.assertIn("🆕 Досдали с ночной сверки", text)
+        self.assertNotIn("🆕", text)
+        self.assertNotIn("Досдали", text)
+        self.assertIn("✅ Сдавшие:", text)
         self.assertIn("@makc", text)
         self.assertIn("⏳ Ещё не сдали", text)
         self.assertIn("@sveta", text)
         self.assertIn("📊 Команда выполнила", text)
-
+        self.assertIn("@makc — 1/2", text)
+        self.assertIn("@timur — 1/1", text)
     def test_control_short_when_all_submitted(self):
         snap = self._snap(
             reports={

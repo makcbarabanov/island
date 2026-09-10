@@ -187,21 +187,12 @@ def format_digest_text(
     target_date: date,
 ) -> str:
     """Единый форматтер текста digest (тот же путь, что cron)."""
-    newly_participants = [
-        p
-        for uid in diagnostics.get("newly_submitted_user_ids") or []
-        if (p := _participant_by_id(snapshot, int(uid)))
-    ]
     if digest_type == "night":
         return format_telegram_night_rollcall(snapshot, report_date=target_date)
     if digest_type == "evening":
         return format_telegram_evening_rollcall(snapshot, report_date=target_date)
     if digest_type == "control":
-        return format_telegram_control_check(
-            snapshot,
-            report_date=target_date,
-            newly_submitted=newly_participants,
-        )
+        return format_telegram_control_check(snapshot, report_date=target_date)
     return format_telegram_evening_digest(snapshot, report_date=target_date)
 
 
@@ -216,6 +207,11 @@ def build_digest_message(
     Без отправки и без записи diag-лога — для cron и тестового пульта.
     """
     snapshot, diagnostics = build_digest(cur, target_date)
+    from freeform_content import apply_freeform_content_to_digest
+
+    snapshot, diagnostics = apply_freeform_content_to_digest(
+        cur, target_date, snapshot, diagnostics
+    )
     diagnostics = _enrich_diagnostics(
         snapshot, diagnostics, digest_type=digest_type, target_date=target_date
     )
