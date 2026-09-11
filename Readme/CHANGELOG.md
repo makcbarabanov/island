@@ -2,6 +2,11 @@
 
 Старые пункты могут ссылаться на прежний монолитный `Readme/Readme.md`; актуальная структура — корневой [README.md](../README.md), [PROJECT.md](PROJECT.md), [RUNBOOK.md](RUNBOOK.md).
 
+## 2026-09-11 — Tim экран 1: scene_01_welcome (v345)
+
+- Экран 1 `/tim/`: baked `assets/v2/scene_01_welcome.png` + HTML (имя/город/Познакомиться/Войти)
+- Экраны 2–9 без изменений; rollback-tag `tim-before-scene-assets-2026-09-11` → `6bc33cf`
+
 ## 2026-09-11 — Tim экран 1: baked scene v2 (песочница, v344)
 
 - Экран «Привет! Я Тим»: одна сцена `assets/v2/screen-01.png` (из Tim2), поверх только HTML (имя/город/кнопка/Войти)
