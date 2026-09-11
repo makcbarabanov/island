@@ -31,6 +31,7 @@ from breakfast_sveta import (
     breakfast_log_event,
     resolve_breakfast_dir,
 )
+from dream_interpret import DreamInterpretRequest, DreamInterpretResponse, interpret_dream
 from buddy_alerts_core import (
     ensure_buddy_alerts_schema,
     fan_out_steps_success_100,
@@ -169,6 +170,18 @@ def breakfast_root_redirect():
 
 if BREAKFAST_DIR.is_dir():
     app.mount("/breakfast", StaticFiles(directory=str(BREAKFAST_DIR), html=True), name="breakfast")
+
+TIM_DIR = BASE_DIR / "sites" / "tim"
+
+
+@app.get("/tim", include_in_schema=False)
+def tim_root_redirect():
+    """Без слэша → /tim/ (index.html через StaticFiles)."""
+    return RedirectResponse(url="/tim/", status_code=307)
+
+
+if TIM_DIR.is_dir():
+    app.mount("/tim", StaticFiles(directory=str(TIM_DIR), html=True), name="tim")
 
 STAT_DIR = BASE_DIR / "sites" / "stat"
 CHAT_DIR = BASE_DIR / "chat"
@@ -5085,6 +5098,12 @@ def funnel_breakfast_log(body: BreakfastLogRequest, request: Request):
     """JSONL-лог событий чата (кнопки, state, сообщения с фронта)."""
     breakfast_log_event(body, request)
     return {"ok": True}
+
+
+@app.post("/api/v1/dream-interpret", response_model=DreamInterpretResponse)
+def api_dream_interpret(body: DreamInterpretRequest):
+    """Tim AI-hook: понять текст мечты. В dreams не пишет — только JSON для confirm."""
+    return interpret_dream(body)
 
 
 @app.delete("/admin/users/{user_id}")

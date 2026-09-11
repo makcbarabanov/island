@@ -4,11 +4,12 @@
 
 ```
 ~/Apps/island/                    ← репозиторий island (git)
-├── main.py                       ← FastAPI, mount /breakfast/, /landing/, /stat/
+├── main.py                       ← FastAPI, mount /breakfast/, /landing/, /stat/, /tim/
 ├── sites/
 │   ├── breakfast/                ← islanddream.ru/breakfast/
 │   ├── landing/                  ← islanddream.ru/landing/
-│   └── stat/                     ← islanddream.ru/stat/
+│   ├── stat/                     ← islanddream.ru/stat/
+│   └── tim/                      ← islanddream.ru/tim/ (онбординг Тима)
 ```
 
 Папка **`sites/`** внутри репозитория = **внутренние подсайты проекта Остров**, не клиентские сайты.
@@ -28,6 +29,7 @@
 | `/breakfast/` | `sites/breakfast/` | FastAPI `StaticFiles` + volume в Docker |
 | `/landing/` | `sites/landing/` | FastAPI `StaticFiles` + volume в Docker |
 | `/stat/` | `sites/stat/` | FastAPI `StaticFiles` + volume в Docker |
+| `/tim/` | `sites/tim/` | FastAPI `StaticFiles` + volume в Docker |
 
 ## Статистика марафона (`/stat/`)
 

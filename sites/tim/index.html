@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="Тим — знакомство с Островом Мечты">
+  <title>IslandDream.ru — Тим</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/main.css?v=3">
+</head>
+<body>
+  <a class="skip-link" href="#tim-card">К форме</a>
+
+  <div class="tim-stage" id="tim-stage">
+    <div class="tim-canvas" id="tim-canvas">
+      <div class="tim-screen" id="tim-screen" data-screen="1">
+        <img class="tim-scene" id="tim-scene" src="assets/fin/1.png" alt="" width="941" height="1672" decoding="async">
+        <img class="tim-plaque" id="tim-plaque" src="assets/fin/22.png" alt="">
+        <img class="tim-tagline" id="tim-tagline" src="assets/fin/10.png" alt="">
+        <img class="tim-bubble-img" id="tim-bubble-img" src="assets/fin/4.png" alt="">
+        <div class="tim-bubble-html" id="tim-bubble-html" hidden></div>
+
+        <header class="tim-header">
+          <a class="tim-logo" href="/tim/" aria-label="IslandDream.ru">
+            <span class="island">IslandDream</span><span class="ru">.ru</span>
+          </a>
+          <button type="button" class="tim-login-link" id="btn-header-login">
+            Уже есть аккаунт? <strong>Войти</strong>
+          </button>
+        </header>
+
+        <div class="tim-card" id="tim-card">
+          <p class="tim-error" id="tim-error" role="alert"></p>
+          <div id="tim-card-body"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/assets.js?v=3"></script>
+  <script src="js/tim-fsm.js?v=3"></script>
+</body>
+</html>

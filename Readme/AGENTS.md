@@ -21,6 +21,7 @@
 | **CRONOS** | Google AI Studio | SRE, архитектура, деплой-стандарты | — |
 | **Морфеус** | Gemini | Продукт, промпты, академическая часть УИИ | — |
 | **Bloom** | `island/bloom/` (тот же git) | Telegram digest `@bloom26bot` | Код в `makcbarabanov/island` |
+| **ChatGPT** | внешний чат | Тройничок: критерий победы, сужение scope, картинки/roadmap — **не** замена прода | См. [CHATGPT.md](CHATGPT.md) |
 
 ## Два окна Cursor — как не перепутать
 
