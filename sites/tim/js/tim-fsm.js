@@ -43,16 +43,20 @@
     body: document.getElementById("tim-card-body"),
     error: document.getElementById("tim-error"),
     headerLogin: document.getElementById("btn-header-login"),
+    logo: document.getElementById("tim-logo"),
   };
 
-  /** Масштаб всего artboard 941×1672 только по ширине stage. */
+  let designW = (A && A.DESIGN_WIDTH) || 941;
+  let designH = (A && A.DESIGN_HEIGHT) || 1672;
+
+  /** Масштаб artboard только по ширине stage. */
   function fitTimCanvas() {
-    if (!els.stage || !els.canvas || !A) return;
-    const dw = A.DESIGN_WIDTH || 941;
-    const dh = A.DESIGN_HEIGHT || 1672;
-    const scale = els.stage.clientWidth / dw;
+    if (!els.stage || !els.canvas) return;
+    const scale = els.stage.clientWidth / designW;
+    els.canvas.style.width = designW + "px";
+    els.canvas.style.height = designH + "px";
     els.canvas.style.transform = "scale(" + scale + ")";
-    els.stage.style.height = dh * scale + "px";
+    els.stage.style.height = designH * scale + "px";
   }
 
   function apiBase() {
@@ -110,36 +114,52 @@
 
   function applyScene(screen) {
     const key = screen;
+    const baked = !!(A.BAKED_SCENE && A.BAKED_SCENE[key]);
+    const design = A.designFor ? A.designFor(key) : { w: A.DESIGN_WIDTH, h: A.DESIGN_HEIGHT };
+    designW = design.w || 941;
+    designH = design.h || 1672;
+
     els.screen.dataset.screen = String(screen === "login" ? "login" : screen);
+    els.screen.dataset.baked = baked ? "1" : "0";
     els.scene.src = A.SCENE[key] || A.SCENE[1];
+    els.scene.setAttribute("width", String(designW));
+    els.scene.setAttribute("height", String(designH));
 
     const layout = (A.CARD_LAYOUT && A.CARD_LAYOUT[key]) || { left: 61, top: 850, width: 819 };
     els.card.style.left = layout.left + "px";
     els.card.style.top = layout.top + "px";
     els.card.style.width = layout.width + "px";
 
-    const bubble = A.BUBBLE[key];
-    if (key === 2) {
+    if (baked) {
       els.bubbleImg.hidden = true;
-      els.bubbleHtml.hidden = false;
-      const n = state.name || "друг";
-      els.bubbleHtml.innerHTML =
-        "Очень приятно,<br><strong>" +
-        escapeHtml(n) +
-        "!</strong><br><br>Я Тим и живу на Острове<br>исполнения желаний.<br><br>Хочешь, покажу тебе<br>мой Остров?";
-    } else if (bubble) {
       els.bubbleHtml.hidden = true;
-      els.bubbleImg.hidden = false;
-      els.bubbleImg.src = bubble;
+      els.plaque.hidden = true;
+      els.tagline.hidden = true;
+      if (els.logo) els.logo.hidden = true;
     } else {
-      els.bubbleImg.hidden = true;
-      els.bubbleHtml.hidden = true;
+      if (els.logo) els.logo.hidden = false;
+      const bubble = A.BUBBLE[key];
+      if (key === 2) {
+        els.bubbleImg.hidden = true;
+        els.bubbleHtml.hidden = false;
+        const n = state.name || "друг";
+        els.bubbleHtml.innerHTML =
+          "Очень приятно,<br><strong>" +
+          escapeHtml(n) +
+          "!</strong><br><br>Я Тим и живу на Острове<br>исполнения желаний.<br><br>Хочешь, покажу тебе<br>мой Остров?";
+      } else if (bubble) {
+        els.bubbleHtml.hidden = true;
+        els.bubbleImg.hidden = false;
+        els.bubbleImg.src = bubble;
+      } else {
+        els.bubbleImg.hidden = true;
+        els.bubbleHtml.hidden = true;
+      }
+      els.plaque.hidden = false;
+      els.plaque.src = A.DECOR.plaque;
+      els.tagline.hidden = false;
+      els.tagline.src = A.DECOR.tagline;
     }
-
-    els.plaque.hidden = false;
-    els.plaque.src = A.DECOR.plaque;
-    els.tagline.hidden = false;
-    els.tagline.src = A.DECOR.tagline;
     fitTimCanvas();
   }
 

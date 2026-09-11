@@ -62,21 +62,21 @@ body {
   width: 941px;
   height: 1672px;
   transform-origin: top left;
-  /* scale задаёт JS */
+  /* width/height и scale задаёт JS под текущий artboard */
 }
 
 .tim-screen {
   position: absolute;
   inset: 0;
-  width: 941px;
-  height: 1672px;
+  width: 100%;
+  height: 100%;
 }
 
 .tim-scene {
   position: absolute;
   left: 0;
   top: 0;
-  width: 941px;
+  width: 100%;
   height: auto;
   z-index: 0;
   display: block;
@@ -164,11 +164,26 @@ body {
   pointer-events: auto;
 }
 
+.tim-logo-spacer {
+  flex: 1;
+}
+
 .tim-logo {
   font-weight: 800;
   font-size: 60px;
   line-height: 1;
   text-decoration: none;
+}
+
+.tim-screen[data-baked="1"] .tim-logo {
+  display: none !important;
+}
+
+.tim-screen[data-baked="1"] .tim-login-link {
+  margin-left: auto;
+  font-size: 32px;
+  color: #5a7a9a;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 .tim-logo .island {
   color: var(--blue);
