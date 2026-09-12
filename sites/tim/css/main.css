@@ -23,7 +23,8 @@ html,
 body {
   margin: 0;
   min-height: 100%;
-  background: #f6d59d;
+  /* песок сцены — без «полосы» другого тона под stage на высоком экране */
+  background: #f3e2b8;
 }
 
 body {
@@ -46,15 +47,16 @@ body {
 
 /*
   Stage = ширина устройства (max 430).
-  Canvas = фиксированный artboard 941×1672, scale только по ширине.
-  Критичные координаты — только в px artboard, не vh/dvh/%.
+  Canvas = artboard (legacy 941×1672 или scene 1080×2400).
+  Масштаб ТОЛЬКО по ширине; высота stage = высота scene × scale.
+  Без background-size:cover, без 100vh/100dvh на сцене.
 */
 .tim-stage {
   position: relative;
   width: min(100vw, 430px);
   margin: 0 auto;
   overflow: hidden;
-  background: linear-gradient(#8fd8ff 0%, #f7ddb1 70%, #f6d59d 100%);
+  background: transparent;
 }
 
 .tim-canvas {
@@ -62,7 +64,7 @@ body {
   width: 941px;
   height: 1672px;
   transform-origin: top left;
-  /* width/height и scale задаёт JS под текущий artboard */
+  /* width/height и scale задаёт JS */
 }
 
 .tim-screen {
@@ -179,12 +181,61 @@ body {
   display: none !important;
 }
 
+/* Header экрана 1: «Уже есть аккаунт?» белый, «Войти» акцентный */
 .tim-screen[data-baked="1"] .tim-login-link {
   margin-left: auto;
-  font-size: 32px;
-  color: #5a7a9a;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+  font-size: calc(36px * 1080 / 941);
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
 }
+
+.tim-screen[data-baked="1"] .tim-login-link strong {
+  color: var(--cyan-light);
+  font-weight: 800;
+}
+
+/* UI-размеры экрана 1 в пространстве 1080 (визуал как у 941 после scale) */
+.tim-screen[data-baked="1"] .tim-header {
+  left: calc(42px * 1080 / 941);
+  right: calc(42px * 1080 / 941);
+  top: calc(58px * 1080 / 941);
+}
+
+.tim-screen[data-baked="1"] .tim-card {
+  border-radius: calc(68px * 1080 / 941);
+  padding: calc(48px * 1080 / 941) calc(53px * 1080 / 941) calc(43px * 1080 / 941);
+}
+
+.tim-screen[data-baked="1"] .tim-field {
+  margin-bottom: calc(24px * 1080 / 941);
+}
+
+.tim-screen[data-baked="1"] .tim-field label {
+  font-size: calc(31px * 1080 / 941);
+  margin-bottom: calc(10px * 1080 / 941);
+}
+
+.tim-screen[data-baked="1"] .tim-field input,
+.tim-screen[data-baked="1"] .tim-field textarea {
+  height: calc(140px * 1080 / 941);
+  border-radius: calc(43px * 1080 / 941);
+  padding: 0 calc(34px * 1080 / 941);
+  font-size: calc(43px * 1080 / 941);
+}
+
+.tim-screen[data-baked="1"] .tim-phone-code {
+  height: calc(140px * 1080 / 941);
+  border-radius: calc(43px * 1080 / 941);
+  font-size: calc(43px * 1080 / 941);
+}
+
+.tim-screen[data-baked="1"] .tim-btn {
+  height: calc(150px * 1080 / 941);
+  border-radius: calc(75px * 1080 / 941);
+  font-size: calc(48px * 1080 / 941);
+  margin-top: calc(19px * 1080 / 941);
+}
+
 .tim-logo .island {
   color: var(--blue);
 }
@@ -525,7 +576,7 @@ body {
 
 @media (min-width: 481px) {
   body {
-    background: #d7ebf7;
+    background: #e8d9a8;
   }
   .tim-stage {
     box-shadow: 0 24px 60px rgba(20, 60, 90, 0.18);

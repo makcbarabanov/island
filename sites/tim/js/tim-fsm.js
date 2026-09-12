@@ -49,14 +49,16 @@
   let designW = (A && A.DESIGN_WIDTH) || 941;
   let designH = (A && A.DESIGN_HEIGHT) || 1672;
 
-  /** Масштаб artboard только по ширине stage. */
+  /** Масштаб artboard только по ширине stage. Высота stage = scene×scale. */
   function fitTimCanvas() {
     if (!els.stage || !els.canvas) return;
-    const scale = els.stage.clientWidth / designW;
+    const stageW = els.stage.clientWidth || 1;
+    const scale = stageW / designW;
     els.canvas.style.width = designW + "px";
     els.canvas.style.height = designH + "px";
     els.canvas.style.transform = "scale(" + scale + ")";
-    els.stage.style.height = designH * scale + "px";
+    els.stage.style.height = Math.round(designH * scale) + "px";
+    els.stage.style.minHeight = "";
   }
 
   function apiBase() {

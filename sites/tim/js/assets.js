@@ -1,18 +1,22 @@
 /**
  * Tim assets.
- * Экран 1: baked scene_01_welcome.png + HTML (имя/город/кнопка/Войти).
- * Экраны 2–9: пакет fin/ без изменений.
+ * Экран 1: baked scene_01_welcome_1080x2400.png + HTML (имя/город/кнопка/Войти).
+ * Экраны 2–9: пакет fin/ без изменений (941×1672).
  */
 (function (global) {
   const FIN = "assets/fin/";
   const V2 = "assets/v2/";
 
-  /** Artboard fin/ и scene_01_welcome — 941×1672 */
+  /** Старый пакет fin/ */
   const DESIGN_LEGACY = { w: 941, h: 1672 };
-  const DESIGN_SCREEN_1 = { w: 941, h: 1672 };
+  /** Канон production-сцен: 1080×2400 (верх — композиция, низ — beach bleed) */
+  const DESIGN_SCREEN_1 = { w: 1080, h: 2400 };
+
+  /** Перенос координат с artboard 941 → 1080 (ширина), композиция сверху без деформации */
+  const S1 = DESIGN_SCREEN_1.w / DESIGN_LEGACY.w;
 
   const SCENE = {
-    1: V2 + "scene_01_welcome.png",
+    1: V2 + "scene_01_welcome_1080x2400.png",
     2: FIN + "2.png",
     3: FIN + "3.png",
     4: FIN + "13.png",
@@ -24,7 +28,6 @@
     login: FIN + "13.png",
   };
 
-  /** Художественные слои уже в scene — не дублируем PNG-overlays */
   const BAKED_SCENE = {
     1: true,
   };
@@ -48,8 +51,12 @@
   };
 
   const CARD_LAYOUT = {
-    // экран 1: форма на песке над «Мечты реальнее вместе!»
-    1: { left: 61, top: 980, width: 819 },
+    // форма на песке; Y от 941-макета × S1 (верх композиции не растягиваем)
+    1: {
+      left: Math.round(61 * S1),
+      top: Math.round(980 * S1),
+      width: Math.round(819 * S1),
+    },
     2: { left: 66, top: 1087, width: 809 },
     3: { left: 66, top: 836, width: 809 },
     4: { left: 61, top: 719, width: 819 },
@@ -76,6 +83,7 @@
     DESIGN_HEIGHT: DESIGN_LEGACY.h,
     DESIGN_LEGACY: DESIGN_LEGACY,
     DESIGN_SCREEN_1: DESIGN_SCREEN_1,
+    S1: S1,
     designFor: designFor,
     FIN: FIN,
     V2: V2,
