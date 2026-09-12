@@ -189,7 +189,7 @@
       '" data-act="' +
       escapeHtml(o.act || "") +
       '"' +
-      (o.disabled || o.locked ? " disabled" : "") +
+      (o.disabled ? " disabled" : "") +
       ">" +
       escapeHtml(label) +
       "</button>"
@@ -533,10 +533,7 @@
       return;
     }
     if (act === "invite-next") {
-      if (!state.videoWatched) {
-        setError("Сначала посмотри видео (пока можно нажать на заглушку).");
-        return;
-      }
+      // кнопка всегда кликабельна (серая и цветная); цвет — после тапа по заглушке
       go(3);
       return;
     }
