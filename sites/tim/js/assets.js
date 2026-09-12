@@ -1,7 +1,7 @@
 /**
  * Tim assets.
- * Экран 1: baked scene_01_welcome_1080x2400.png + HTML (имя/город/кнопка/Войти).
- * Экраны 2–9: пакет fin/ без изменений (941×1672).
+ * Экран 1–2: baked 1080×2400 + HTML-controls.
+ * Экраны 3–9: пакет fin/ (941×1672) пока без изменений.
  */
 (function (global) {
   const FIN = "assets/fin/";
@@ -9,15 +9,14 @@
 
   /** Старый пакет fin/ */
   const DESIGN_LEGACY = { w: 941, h: 1672 };
-  /** Канон production-сцен: 1080×2400 (верх — композиция, низ — beach bleed) */
-  const DESIGN_SCREEN_1 = { w: 1080, h: 2400 };
+  /** Канон production-сцен: 1080×2400 */
+  const DESIGN_CANON = { w: 1080, h: 2400 };
 
-  /** Перенос координат с artboard 941 → 1080 (ширина), композиция сверху без деформации */
-  const S1 = DESIGN_SCREEN_1.w / DESIGN_LEGACY.w;
+  const S1 = DESIGN_CANON.w / DESIGN_LEGACY.w;
 
   const SCENE = {
     1: V2 + "scene_01_welcome_1080x2400.png",
-    2: FIN + "2.png",
+    2: V2 + "scene_02_video_1080x2400.png",
     3: FIN + "3.png",
     4: FIN + "13.png",
     5: FIN + "14.png",
@@ -30,6 +29,7 @@
 
   const BAKED_SCENE = {
     1: true,
+    2: true,
   };
 
   const BUBBLE = {
@@ -51,14 +51,17 @@
   };
 
   const CARD_LAYOUT = {
-    // форма на песке; Y в пространстве 1080×2400
-    // экран 1: между низом таблички «БОЛЬШИЕ МЕЧТЫ…» и слоганом «Мечты реальнее вместе»
     1: {
       left: Math.round(61 * S1),
       top: 1160,
       width: Math.round(819 * S1),
     },
-    2: { left: 66, top: 1087, width: 809 },
+    // видео + «к Мечтам!» между водой/жестом и слоганом на песке
+    2: {
+      left: 90,
+      top: 1080,
+      width: 900,
+    },
     3: { left: 66, top: 836, width: 809 },
     4: { left: 61, top: 719, width: 819 },
     5: { left: 71, top: 640, width: 800 },
@@ -72,18 +75,21 @@
   const ABOUT_VIDEO = {
     src: "",
     poster: "",
-    placeholderLabel: "Видео скоро появится",
+    placeholderLabel: "Видео скоро появится\nНажми, чтобы продолжить",
   };
 
   function designFor(screen) {
-    return screen === 1 || screen === "1" ? DESIGN_SCREEN_1 : DESIGN_LEGACY;
+    const s = String(screen);
+    if (s === "1" || s === "2") return DESIGN_CANON;
+    return DESIGN_LEGACY;
   }
 
   global.TIM_ASSETS = {
     DESIGN_WIDTH: DESIGN_LEGACY.w,
     DESIGN_HEIGHT: DESIGN_LEGACY.h,
     DESIGN_LEGACY: DESIGN_LEGACY,
-    DESIGN_SCREEN_1: DESIGN_SCREEN_1,
+    DESIGN_SCREEN_1: DESIGN_CANON,
+    DESIGN_CANON: DESIGN_CANON,
     S1: S1,
     designFor: designFor,
     FIN: FIN,

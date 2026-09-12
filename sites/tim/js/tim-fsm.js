@@ -28,6 +28,7 @@
     interpreted: null, // { dreams: [{title}], understood, ambiguous }
     busy: false,
     deferredInstall: null,
+    videoWatched: false,
   };
 
   const els = {
@@ -141,15 +142,7 @@
     } else {
       if (els.logo) els.logo.hidden = false;
       const bubble = A.BUBBLE[key];
-      if (key === 2) {
-        els.bubbleImg.hidden = true;
-        els.bubbleHtml.hidden = false;
-        const n = state.name || "друг";
-        els.bubbleHtml.innerHTML =
-          "Очень приятно,<br><strong>" +
-          escapeHtml(n) +
-          "!</strong><br><br>Я Тим и живу на Острове<br>исполнения желаний.<br><br>Хочешь, покажу тебе<br>мой Остров?";
-      } else if (bubble) {
+      if (bubble) {
         els.bubbleHtml.hidden = true;
         els.bubbleImg.hidden = false;
         els.bubbleImg.src = bubble;
@@ -161,6 +154,9 @@
       els.plaque.src = A.DECOR.plaque;
       els.tagline.hidden = false;
       els.tagline.src = A.DECOR.tagline;
+    }
+    if (els.headerLogin) {
+      els.headerLogin.hidden = !(key === 1 || key === "1");
     }
     fitTimCanvas();
   }
@@ -174,7 +170,13 @@
 
   function btn(label, opts) {
     const o = opts || {};
-    const cls = ["tim-btn", o.ghost ? "tim-btn--ghost" : "", o.soft ? "tim-btn--soft" : "", o.noarrow ? "tim-btn--noarrow" : ""]
+    const cls = [
+      "tim-btn",
+      o.ghost ? "tim-btn--ghost" : "",
+      o.soft ? "tim-btn--soft" : "",
+      o.noarrow ? "tim-btn--noarrow" : "",
+      o.locked ? "tim-btn--locked" : "",
+    ]
       .filter(Boolean)
       .join(" ");
     if (o.href) {
@@ -186,7 +188,7 @@
       '" data-act="' +
       escapeHtml(o.act || "") +
       '"' +
-      (o.disabled ? " disabled" : "") +
+      (o.disabled || o.locked ? " disabled" : "") +
       ">" +
       escapeHtml(label) +
       "</button>"
@@ -250,7 +252,26 @@
         fieldPh("f-city", "Город", state.city, { citySuggest: true }) +
         btn("Познакомиться", { act: "hello-next" });
     } else if (s === 2) {
-      html = btn("Да, покажи", { act: "invite-next" });
+      const cfg = A.ABOUT_VIDEO || {};
+      const hasVideo = !!(cfg.src && cfg.src.trim());
+      const watched = !!state.videoWatched;
+      html =
+        '<div class="tim-video" id="tim-video-wrap">' +
+        (hasVideo
+          ? '<video id="about-video" controls playsinline preload="metadata" src="' +
+            escapeHtml(cfg.src) +
+            '"' +
+            (cfg.poster ? ' poster="' + escapeHtml(cfg.poster) + '"' : "") +
+            "></video>"
+          : '<button type="button" class="tim-video__ph" id="btn-video-stub" data-act="video-stub">' +
+            escapeHtml(cfg.placeholderLabel || "Видео скоро появится") +
+            "</button>") +
+        "</div>" +
+        btn("к Мечтам!", {
+          act: "invite-next",
+          noarrow: true,
+          locked: !watched,
+        });
     } else if (s === 3) {
       const cfg = A.ABOUT_VIDEO || {};
       const hasVideo = !!(cfg.src && cfg.src.trim());
@@ -413,6 +434,20 @@
       });
     });
     if (state.screen === 1) bindCitySuggest();
+    if (state.screen === 2) bindVideoScreen();
+  }
+
+  function markVideoWatched() {
+    if (state.videoWatched) return;
+    state.videoWatched = true;
+    renderCard();
+  }
+
+  function bindVideoScreen() {
+    const video = document.getElementById("about-video");
+    if (video) {
+      video.addEventListener("ended", markVideoWatched);
+    }
   }
 
   function bindCitySuggest() {
@@ -497,7 +532,16 @@
       return;
     }
     if (act === "invite-next") {
-      go(3);
+      if (!state.videoWatched) {
+        setError("Сначала посмотри видео (пока можно нажать на заглушку).");
+        return;
+      }
+      // этап 2 = видео; старый экран 3 пропускаем → регистрация (пока каркас 1–9)
+      go(4);
+      return;
+    }
+    if (act === "video-stub") {
+      markVideoWatched();
       return;
     }
     if (act === "about-next" || act === "about-skip") {

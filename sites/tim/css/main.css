@@ -451,6 +451,14 @@ body {
   opacity: 0.55;
   cursor: wait;
 }
+.tim-btn--locked,
+.tim-btn--locked:disabled {
+  background: #9aa7b8;
+  box-shadow: none;
+  opacity: 1;
+  cursor: not-allowed;
+  color: #f3f5f7;
+}
 .tim-btn--ghost {
   background: transparent;
   color: var(--blue);
@@ -529,6 +537,29 @@ body {
   color: var(--blue-dark);
   font-weight: 700;
   font-size: 36px;
+  white-space: pre-line;
+  line-height: 1.35;
+  width: 100%;
+  border: 0;
+  background: rgba(207, 232, 242, 0.92);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* Экран 2: заглушка видео + кнопка на baked-сцене */
+.tim-screen[data-screen="2"] .tim-card {
+  padding: 0;
+}
+.tim-screen[data-screen="2"] .tim-video {
+  aspect-ratio: 16 / 9;
+  margin-bottom: 28px;
+  border-radius: 36px;
+  border: 3px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 18px 48px rgba(20, 60, 90, 0.22);
+  background: rgba(180, 220, 235, 0.85);
+}
+.tim-screen[data-screen="2"] .tim-btn {
+  margin-top: 0;
 }
 .tim-video video[hidden],
 .tim-video__ph[hidden] {
