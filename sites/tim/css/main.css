@@ -210,6 +210,12 @@ body {
 .tim-screen[data-baked="1"] .tim-card {
   border-radius: calc(68px * 1080 / 941);
   padding: calc(48px * 1080 / 941) calc(53px * 1080 / 941) calc(43px * 1080 / 941);
+  /* проба: без стеклянной подложки — только поля/кнопка на песке сцены */
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .tim-screen[data-baked="1"] .tim-field {
