@@ -2,11 +2,16 @@
 
 Старые пункты могут ссылаться на прежний монолитный `Readme/Readme.md`; актуальная структура — корневой [README.md](../README.md), [PROJECT.md](PROJECT.md), [RUNBOOK.md](RUNBOOK.md).
 
+## 2026-09-12 — Tim экран 1: header «Есть аккаунт?» (v348)
+
+- Текст: «Есть аккаунт?»; «Войти» снова тёмно-синий (`--blue`)
+- Header выровнен по линии с IslandDream.ru в сцене (top ≈ 119px artboard)
+
 ## 2026-09-12 — Tim экран 1: scene_01_welcome_1080x2400 (v347)
 
 - Подключён канон `assets/v2/scene_01_welcome_1080x2400.png` (1080×2400)
 - Renderer: scale только по ширине; stage height = scene×scale; без cover/100vh
-- HTML: Имя, Город, Познакомиться, «Уже есть аккаунт?» (белый) + «Войти» (акцент)
+- HTML: Имя, Город, Познакомиться, вход в header
 - Экраны 2–9 без изменений; rollback `tim-before-scene-assets-2026-09-11` → `6bc33cf`
 
 ## 2026-09-11 — Tim экран 1: scene_01_welcome (v345)

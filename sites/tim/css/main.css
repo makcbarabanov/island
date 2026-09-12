@@ -181,24 +181,30 @@ body {
   display: none !important;
 }
 
-/* Header экрана 1: «Уже есть аккаунт?» белый, «Войти» акцентный */
-.tim-screen[data-baked="1"] .tim-login-link {
-  margin-left: auto;
-  font-size: calc(36px * 1080 / 941);
-  color: #ffffff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
-}
-
-.tim-screen[data-baked="1"] .tim-login-link strong {
-  color: var(--cyan-light);
-  font-weight: 800;
-}
-
-/* UI-размеры экрана 1 в пространстве 1080 (визуал как у 941 после scale) */
+/* Header экрана 1: в одной линии с IslandDream.ru в сцене (y≈119–162) */
 .tim-screen[data-baked="1"] .tim-header {
   left: calc(42px * 1080 / 941);
   right: calc(42px * 1080 / 941);
-  top: calc(58px * 1080 / 941);
+  top: 119px;
+  height: 48px;
+  align-items: center;
+}
+
+/* «Есть аккаунт?» белый; «Войти» — прежний тёмно-синий */
+.tim-screen[data-baked="1"] .tim-login-link {
+  margin-left: auto;
+  padding: 0;
+  max-width: none;
+  font-size: calc(34px * 1080 / 941);
+  line-height: 1.15;
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  white-space: nowrap;
+}
+
+.tim-screen[data-baked="1"] .tim-login-link strong {
+  color: var(--blue);
+  font-weight: 800;
 }
 
 .tim-screen[data-baked="1"] .tim-card {
