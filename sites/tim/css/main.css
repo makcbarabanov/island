@@ -559,8 +559,30 @@ body {
   background: rgba(180, 220, 235, 0.85);
 }
 /* слоган «Большие мечты начинаются…» между видео и кнопкой */
-.tim-screen[data-screen="2"] .tim-btn {
-  margin-top: 300px;
+/* Экран 3: поле мечты на baked-сцене */
+.tim-screen[data-screen="3"] .tim-card {
+  padding: 0;
+}
+.tim-screen[data-screen="3"] .tim-field--dream {
+  margin-bottom: 28px;
+}
+.tim-screen[data-screen="3"] .tim-field--dream textarea {
+  height: 420px;
+  min-height: 420px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid rgba(77, 128, 183, 0.4);
+  border-radius: 48px;
+  padding: 36px 40px;
+  font-size: 40px;
+  line-height: 1.35;
+  resize: none;
+}
+.tim-screen[data-screen="3"] .tim-field--dream textarea::placeholder {
+  color: rgba(18, 58, 119, 0.5);
+  white-space: pre-wrap;
+}
+.tim-screen[data-screen="3"] .tim-btn {
+  margin-top: 0;
 }
 .tim-video video[hidden],
 .tim-video__ph[hidden] {

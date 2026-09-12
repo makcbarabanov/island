@@ -29,6 +29,7 @@
     busy: false,
     deferredInstall: null,
     videoWatched: false,
+    pendingDreamSave: false,
   };
 
   const els = {
@@ -273,20 +274,20 @@
           locked: !watched,
         });
     } else if (s === 3) {
-      const cfg = A.ABOUT_VIDEO || {};
-      const hasVideo = !!(cfg.src && cfg.src.trim());
+      const ph = (A.DREAM_PLACEHOLDER || "Напиши о чём ты мечтаешь своими словами.").replace(/\n/g, " ");
       html =
-        '<div class="tim-video">' +
-        (hasVideo
-          ? '<video id="about-video" controls playsinline preload="metadata" src="' +
-            escapeHtml(cfg.src) +
-            '"' +
-            (cfg.poster ? ' poster="' + escapeHtml(cfg.poster) + '"' : "") +
-            "></video>"
-          : '<div class="tim-video__ph">' + escapeHtml(cfg.placeholderLabel || "Видео скоро появится") + "</div>") +
-        "</div>" +
-        btn("Продолжить", { act: "about-next" }) +
-        '<button type="button" class="tim-link" data-act="about-skip">Пропустить и перейти дальше</button>';
+        '<div class="tim-field tim-field--dream">' +
+        '<label class="tim-sr-only" for="f-dream">Мечта</label>' +
+        '<textarea id="f-dream" rows="6" placeholder="' +
+        escapeHtml(ph) +
+        '">' +
+        escapeHtml(state.dreamText) +
+        "</textarea></div>" +
+        btn(state.busy ? "Думаю…" : "Передай Тиму", {
+          act: "dream-next",
+          noarrow: true,
+          disabled: state.busy,
+        });
     } else if (s === 4) {
       html =
         field("f-name", "Имя", state.name) +
@@ -536,8 +537,7 @@
         setError("Сначала посмотри видео (пока можно нажать на заглушку).");
         return;
       }
-      // этап 2 = видео; старый экран 3 пропускаем → регистрация (пока каркас 1–9)
-      go(4);
+      go(3);
       return;
     }
     if (act === "video-stub") {
@@ -589,7 +589,7 @@
       return;
     }
     if (act === "dream-fix") {
-      go(7);
+      go(3);
       return;
     }
     if (act === "dream-save") {
@@ -599,7 +599,7 @@
     if (act === "again-dream") {
       state.dreamText = "";
       state.interpreted = null;
-      go(7);
+      go(3);
       return;
     }
     if (act === "video-soon") {
@@ -743,6 +743,10 @@
       if (!loginRes.ok) throw new Error(user.detail || "Аккаунт создан, войди вручную");
       saveUser(user);
       state.busy = false;
+      if (state.pendingDreamSave) {
+        await saveDreams();
+        return;
+      }
       go(5);
     } catch (e) {
       state.busy = false;
@@ -833,10 +837,16 @@
   async function saveDreams() {
     const user = state.user || readSavedUser();
     if (!user || !user.id) {
-      setError("Нет сессии. Войди снова.");
+      state.pendingDreamSave = true;
+      state.pendingDreams = collectEditedDreams();
+      setError("");
+      go(4);
       return;
     }
-    const dreams = collectEditedDreams();
+    const dreams =
+      state.pendingDreams && state.pendingDreams.length
+        ? state.pendingDreams
+        : collectEditedDreams();
     state.busy = true;
     renderCard();
     try {
@@ -854,6 +864,8 @@
         }
       }
       state.busy = false;
+      state.pendingDreamSave = false;
+      state.pendingDreams = null;
       go(9);
     } catch (e) {
       state.busy = false;
