@@ -381,6 +381,61 @@
         onAct(el.getAttribute("data-act"));
       });
     });
+    if (state.screen === 1) bindCitySuggest();
+  }
+
+  function bindCitySuggest() {
+    const input = document.getElementById("f-city");
+    const list = document.getElementById("f-city-suggest");
+    const api = window.TIM_CITIES;
+    if (!input || !list || !api || typeof api.suggest !== "function") return;
+
+    function hide() {
+      list.hidden = true;
+      list.innerHTML = "";
+    }
+
+    function pick(city) {
+      input.value = city;
+      state.city = city;
+      hide();
+      input.focus();
+    }
+
+    function renderSuggest() {
+      const items = api.suggest(input.value, 6);
+      if (!items.length) {
+        hide();
+        return;
+      }
+      list.innerHTML = items
+        .map(function (city) {
+          return (
+            '<li role="option"><button type="button" class="tim-city-suggest__item" data-city="' +
+            escapeHtml(city) +
+            '">' +
+            escapeHtml(city) +
+            "</button></li>"
+          );
+        })
+        .join("");
+      list.hidden = false;
+      list.querySelectorAll("[data-city]").forEach(function (btn) {
+        btn.addEventListener("mousedown", function (e) {
+          e.preventDefault();
+          pick(btn.getAttribute("data-city"));
+        });
+      });
+    }
+
+    input.addEventListener("input", renderSuggest);
+    input.addEventListener("focus", renderSuggest);
+    input.addEventListener("blur", function () {
+      setTimeout(hide, 120);
+    });
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") hide();
+    });
   }
 
   function readHelloFields() {

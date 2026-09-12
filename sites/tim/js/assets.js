@@ -52,9 +52,10 @@
 
   const CARD_LAYOUT = {
     // форма на песке; Y от 941-макета × S1 (верх композиции не растягиваем)
+    // экран 1: подняли на высоту бывшего label «Имя» (~41px legacy), чтобы открыть слоган на песке
     1: {
       left: Math.round(61 * S1),
-      top: Math.round(980 * S1),
+      top: Math.round(920 * S1),
       width: Math.round(819 * S1),
     },
     2: { left: 66, top: 1087, width: 809 },
