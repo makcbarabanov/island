@@ -209,14 +209,45 @@
     );
   }
 
+  /** Экран 1: подпись в placeholder; для города — список подсказок */
+  function fieldPh(id, placeholder, value, opts) {
+    opts = opts || {};
+    const wrapClass = opts.citySuggest ? "tim-field tim-field--city" : "tim-field";
+    let html =
+      '<div class="' +
+      wrapClass +
+      '"><label class="tim-sr-only" for="' +
+      id +
+      '">' +
+      escapeHtml(placeholder) +
+      '</label><input id="' +
+      id +
+      '" type="text" placeholder="' +
+      escapeHtml(placeholder) +
+      '" value="' +
+      escapeHtml(value || "") +
+      '" autocomplete="' +
+      (opts.citySuggest ? "off" : "given-name") +
+      '"';
+    if (opts.citySuggest) {
+      html += ' aria-autocomplete="list" aria-controls="f-city-suggest"';
+    }
+    html += ">";
+    if (opts.citySuggest) {
+      html += '<ul class="tim-city-suggest" id="f-city-suggest" role="listbox" hidden></ul>';
+    }
+    html += "</div>";
+    return html;
+  }
+
   function renderCard() {
     const s = state.screen;
     let html = "";
 
     if (s === 1) {
       html =
-        field("f-name", "Имя", state.name) +
-        field("f-city", "Город", state.city) +
+        fieldPh("f-name", "Имя", state.name) +
+        fieldPh("f-city", "Город", state.city, { citySuggest: true }) +
         btn("Познакомиться", { act: "hello-next" });
     } else if (s === 2) {
       html = btn("Да, покажи", { act: "invite-next" });

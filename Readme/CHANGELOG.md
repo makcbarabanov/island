@@ -2,6 +2,10 @@
 
 Старые пункты могут ссылаться на прежний монолитный `Readme/Readme.md`; актуальная структура — корневой [README.md](../README.md), [PROJECT.md](PROJECT.md), [RUNBOOK.md](RUNBOOK.md).
 
+## 2026-09-12 — Tim экран 1: fix placeholders + city suggest HTML (v351)
+
+- Дособран `fieldPh` / `#f-city-suggest` (в v350 были CSS/cities, но экран 1 всё ещё рендерил старые label)
+
 ## 2026-09-12 — Tim экран 1: placeholders, город-подсказки, форма выше (v350)
 
 - Имя/Город в placeholder; поля плотнее (`rgba 0.88`); форма поднята, чтобы открыть слоган на песке
