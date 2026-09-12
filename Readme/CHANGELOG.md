@@ -2,6 +2,10 @@
 
 Старые пункты могут ссылаться на прежний монолитный `Readme/Readme.md`; актуальная структура — корневой [README.md](../README.md), [PROJECT.md](PROJECT.md), [RUNBOOK.md](RUNBOOK.md).
 
+## 2026-09-12 — Tim экран 1: форма между табличкой и слоганом (v352)
+
+- CARD_LAYOUT top = 1160 (1080-space): поля по центру между «БОЛЬШИЕ МЕЧТЫ…» и «Мечты реальнее вместе»
+
 ## 2026-09-12 — Tim экран 1: fix placeholders + city suggest HTML (v351)
 
 - Дособран `fieldPh` / `#f-city-suggest` (в v350 были CSS/cities, но экран 1 всё ещё рендерил старые label)
