@@ -1329,16 +1329,11 @@
         setError("Сначала напиши хотя бы одну мечту.");
         return;
       }
-      // Не в ЛК с витрины: мечты копятся, дальше онбординг 4→5, сохранение после соцсетей
+      // Happy-path: 3 → 4 → 5 (не прыгать на соцсети, даже если есть savedUser)
       state.pendingDreamSave = true;
       state.pendingDreams = state.dreamBasket.slice();
       resetPageScroll();
-      const user = state.user || readSavedUser();
-      if (user && user.id) {
-        go(5);
-      } else {
-        go(4);
-      }
+      go(4);
       return;
     }
     if (act === "again-dream") {
