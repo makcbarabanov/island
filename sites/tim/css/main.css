@@ -493,25 +493,18 @@ body {
 }
 .tim-input-check-row input {
   width: 100%;
-  padding-left: 88px;
+  padding-left: calc(34px * 1080 / 941);
   padding-right: 90px;
 }
 .tim-input-check-row--phone input {
   padding-left: calc(34px * 1080 / 941);
+  padding-right: calc(34px * 1080 / 941);
 }
 .tim-field-row .tim-input-check-row input {
   padding-right: calc(34px * 1080 / 941);
 }
 .tim-field-ico {
-  position: absolute;
-  left: 28px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 40px;
-  height: 40px;
-  color: rgba(18, 58, 119, 0.45);
-  pointer-events: none;
-  z-index: 1;
+  display: none;
 }
 .tim-field-check {
   position: absolute;
@@ -1057,7 +1050,48 @@ body {
 }
 .tim-screen[data-screen="4"] .tim-reg,
 .tim-screen[data-screen="fio"] .tim-reg {
-  padding-bottom: 28px;
+  padding-bottom: 8px;
+}
+/* Экран 4: всё в один viewport — выше + плотнее поля */
+.tim-screen[data-screen="4"] .tim-field {
+  margin-bottom: 14px;
+}
+.tim-screen[data-screen="4"] .tim-field-row .tim-field {
+  margin-bottom: 14px;
+}
+.tim-screen[data-screen="4"] .tim-field input,
+.tim-screen[data-screen="4"] .tim-phone-code {
+  height: 96px;
+  border-radius: 32px;
+  font-size: 36px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.tim-screen[data-screen="4"] .tim-input-check-row input {
+  padding-left: 28px;
+}
+.tim-screen[data-screen="4"] .tim-field--check .tim-input-check-row input {
+  padding-right: 72px;
+}
+.tim-screen[data-screen="4"] .tim-field-check {
+  right: 16px;
+  width: 40px;
+  height: 40px;
+  font-size: 26px;
+}
+.tim-screen[data-screen="4"] .tim-phone-row {
+  grid-template-columns: 110px 1fr;
+  gap: 12px;
+}
+.tim-screen[data-screen="4"] .tim-btn {
+  height: 112px;
+  border-radius: 56px;
+  font-size: 40px;
+  margin-top: 10px;
+}
+.tim-screen[data-screen="4"] .tim-reg-legal {
+  margin: 10px 0 0;
+  font-size: 22px;
 }
 .tim-ch {
   appearance: none;

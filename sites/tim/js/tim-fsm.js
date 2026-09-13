@@ -424,12 +424,6 @@
   function renderAccountScreen() {
     const nameOk = !!String(state.name || "").trim();
     const cityOk = !!String(state.city || "").trim();
-    const icoUser =
-      '<svg class="tim-field-ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 12a4.5 4.5 0 1 0-4.5-4.5A4.5 4.5 0 0 0 12 12zm0 2.25c-3.6 0-7.5 1.8-7.5 4.5V21h15v-2.25c0-2.7-3.9-4.5-7.5-4.5z"/></svg>';
-    const icoPin =
-      '<svg class="tim-field-ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 14.5 9 2.5 2.5 0 0 1 12 11.5z"/></svg>';
-    const icoLock =
-      '<svg class="tim-field-ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M17 9h-1V7a4 4 0 0 0-8 0v2H7a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2zm-6 0V7a2 2 0 0 1 4 0v2z"/></svg>';
     const cta = state.busy
       ? state.pendingDreamSave
         ? "Отправляю…"
@@ -443,7 +437,6 @@
       '">' +
       '<label class="tim-sr-only" for="f-name">Имя</label>' +
       '<div class="tim-input-check-row">' +
-      icoUser +
       '<input id="f-name" type="text" placeholder="Имя" value="' +
       escapeHtml(state.name || "") +
       '" autocomplete="given-name">' +
@@ -454,7 +447,6 @@
       '">' +
       '<label class="tim-sr-only" for="f-city">Город</label>' +
       '<div class="tim-input-check-row">' +
-      icoPin +
       '<input id="f-city" type="text" placeholder="Город" value="' +
       escapeHtml(state.city || "") +
       '" autocomplete="address-level2">' +
@@ -464,7 +456,6 @@
       '<div class="tim-field">' +
       '<label class="tim-sr-only" for="f-surname">Фамилия</label>' +
       '<div class="tim-input-check-row">' +
-      icoUser +
       '<input id="f-surname" type="text" placeholder="Фамилия" value="' +
       escapeHtml(state.surname || "") +
       '" autocomplete="family-name">' +
@@ -492,7 +483,6 @@
       '<div class="tim-field">' +
       '<label class="tim-sr-only" for="f-password">Пароль</label>' +
       '<div class="tim-input-check-row">' +
-      icoLock +
       '<input id="f-password" type="password" placeholder="Пароль *" value="' +
       escapeHtml(state.password || "") +
       '" autocomplete="new-password">' +

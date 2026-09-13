@@ -90,7 +90,7 @@
     confirmCheck: "",
   };
 
-  const ACCOUNT_LAYOUT = { left: 70, top: 980, width: 940 };
+  const ACCOUNT_LAYOUT = { left: 70, top: 780, width: 940 };
   /** Соцсети: выше и компактнее — «Далее» в первом экране без скролла */
   const SOCIALS_LAYOUT = { left: 70, top: 860, width: 940 };
 
