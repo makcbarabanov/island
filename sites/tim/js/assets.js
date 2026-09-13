@@ -104,7 +104,9 @@
   }
 
   function confirmSceneForCount(n) {
-    return n <= 1 ? SCENE.confirmOne : SCENE.confirmMany;
+    // Табличка «Витрина мечт» пока вшита в many; one_vitrine ждём от Компаса
+    // Поэтому при ≥1 мечте всегда many (пузырь «какие мечты»).
+    return SCENE.confirmMany;
   }
 
   global.TIM_ASSETS = {
