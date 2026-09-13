@@ -157,6 +157,9 @@ if EXAMPLES_DIR.is_dir():
 ASSETS_UI_DIR = BASE_DIR / "assets" / "ui"
 if ASSETS_UI_DIR.is_dir():
     app.mount("/assets/ui", StaticFiles(directory=str(ASSETS_UI_DIR)), name="assets_ui")
+ASSETS_ICONS_DIR = BASE_DIR / "assets" / "icons"
+if ASSETS_ICONS_DIR.is_dir():
+    app.mount("/assets/icons", StaticFiles(directory=str(ASSETS_ICONS_DIR)), name="assets_icons")
 LANDING_DIR = BASE_DIR / "sites" / "landing"
 if LANDING_DIR.is_dir():
     app.mount("/landing", StaticFiles(directory=str(LANDING_DIR), html=True), name="landing")
@@ -1110,6 +1113,25 @@ def admin_page_html():
 def index_page():
     """Личный кабинет (вход и регистрация)"""
     return FileResponse(Path(__file__).parent / "index.html", headers=_HTML_NO_CACHE)
+
+
+@app.get("/manifest.webmanifest", response_class=FileResponse)
+def pwa_manifest():
+    return FileResponse(
+        Path(__file__).parent / "manifest.webmanifest",
+        media_type="application/manifest+json",
+        headers={"Cache-Control": "no-cache"},
+    )
+
+
+@app.get("/sw.js", response_class=FileResponse)
+def pwa_service_worker():
+    return FileResponse(
+        Path(__file__).parent / "sw.js",
+        media_type="application/javascript; charset=utf-8",
+        headers={"Cache-Control": "no-cache", "Service-Worker-Allowed": "/"},
+    )
+
 
 @app.get("/roadmap.html", response_class=FileResponse)
 def roadmap_page():
