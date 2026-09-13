@@ -4,11 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="description" content="Тим — знакомство с Островом Мечты">
+  <meta name="theme-color" content="#08afc2">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
   <title>IslandDream.ru — Тим</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/main.css?v=49">
+  <link rel="stylesheet" href="css/main.css?v=50">
   <link rel="preload" as="image" href="assets/v2/scene_01_welcome_1080x2400_lite.jpg" fetchpriority="high">
 </head>
 <body>
@@ -40,11 +43,16 @@
       </div>
     </div>
     <!-- Пасхалка Макса: номер сборки = .app-version; если старый — это кэш HTML -->
-    <span class="tim-build" id="tim-build" aria-hidden="true">389</span>
+    <span class="tim-build" id="tim-build" aria-hidden="true">390</span>
   </div>
 
-  <script src="js/assets.js?v=49"></script>
-  <script src="js/cities.js?v=49"></script>
-  <script src="js/tim-fsm.js?v=49"></script>
+  <script src="js/assets.js?v=50"></script>
+  <script src="js/cities.js?v=50"></script>
+  <script src="js/tim-fsm.js?v=50"></script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch(function () {});
+    }
+  </script>
 </body>
 </html>

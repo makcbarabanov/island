@@ -218,6 +218,15 @@
       els.plaque.hidden = true;
       els.tagline.hidden = true;
       if (els.logo) els.logo.hidden = true;
+    } else if (key === 6 || key === "6" || key === "pwa") {
+      // Резюме: только сцена с телефоном + HTML-кнопки (без «привет»-пузыря и табличек)
+      els.bubbleImg.hidden = true;
+      els.bubbleHtml.hidden = true;
+      els.plaque.hidden = true;
+      els.tagline.hidden = true;
+      if (els.logo) els.logo.hidden = true;
+      // жёстко сцена 15 — не оставлять обои аккаунта
+      els.scene.src = (A.SCENE && (A.SCENE[6] || A.SCENE.pwa)) || "assets/fin/15.png";
     } else {
       if (els.logo) els.logo.hidden = false;
       const bubble = A.BUBBLE[key];
@@ -664,7 +673,7 @@
       '<p class="tim-resume-lead">Добро пожаловать на Остров.<br>Мечты сохранены — выбери, как продолжить.</p>' +
       btn("Установить приложение", { act: "pwa-install", noarrow: true }) +
       '<a class="tim-btn tim-btn--soft tim-btn--noarrow" href="https://vk.ru/islanddreams" target="_blank" rel="noopener noreferrer">Группа ВКонтакте</a>' +
-      btn("Остаться в браузере", { act: "pwa-browser", soft: true, noarrow: true }) +
+      btn("Перейти в личный кабинет", { act: "pwa-browser", soft: true, noarrow: true }) +
       "</div>"
     );
   }
@@ -1471,9 +1480,20 @@
       window.location.href = lkUrl();
       return;
     }
-    setError(
-      "На iPhone: «Поделиться» → «На экран Домой». Или нажми «Остаться в браузере»."
-    );
+    // Нет beforeinstallprompt: Chrome ещё не готов / iOS / уже установлено
+    if (pwaAlreadyStandalone()) {
+      setError("Приложение уже открыто. Можно перейти в кабинет.");
+      renderCard();
+      return;
+    }
+    const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent || "");
+    if (isIos) {
+      setError("iPhone: «Поделиться» → «На экран „Домой“».");
+    } else {
+      setError(
+        "Если кнопки установки нет в браузере: меню ⋮ → «Установить приложение» / «Добавить на главный экран». Или зайди в кабинет."
+      );
+    }
     renderCard();
   }
 
