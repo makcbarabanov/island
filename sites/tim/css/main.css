@@ -333,26 +333,18 @@ body {
   font-weight: 700;
 }
 
-/* карточка: left/top/width пишет JS из CARD_LAYOUT (px artboard) */
+/* карточка: left/top/width пишет JS из CARD_LAYOUT (px artboard).
+   Закон Тима: без белой/стеклянной подложки — только поля на песке. */
 .tim-card {
   position: absolute;
   z-index: 20;
-  background: var(--glass-soft);
-  border: 2px solid rgba(255, 255, 255, 0.65);
+  background: transparent;
+  border: 0;
   border-radius: 68px;
-  box-shadow: 0 34px 92px rgba(35, 76, 110, 0.16);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   padding: 48px 53px 43px;
-}
-
-.tim-screen[data-screen="5"] .tim-card {
-  background: var(--glass-contacts);
-}
-.tim-screen[data-screen="7"] .tim-card {
-  background: var(--glass-dream);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
 }
 
 .tim-card h2 {
