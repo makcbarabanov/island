@@ -15,7 +15,8 @@ SYSTEM = """Ты помощник Острова Мечты. Пользоват�
 Верни ТОЛЬКО валидный JSON без markdown:
 {"understood":"кратко как ты понял","dreams":["формулировка 1","..."],"ambiguous":false,"question":null}
 Правила:
-- dreams: 1–5 коротких формулировок мечт, готовых к сохранению;
+- dreams: от 1 до 20 коротких формулировок мечт, готовых к сохранению;
+- если в тексте несколько мечт — разбей на отдельные пункты;
 - не выдумывай мечты, которых нет в тексте;
 - если неясно — ambiguous=true и короткий question;
 - не пиши в базу данных; не управляй онбордингом."""
@@ -91,7 +92,7 @@ def _normalize(payload: Dict[str, Any], original: str) -> DreamInterpretResponse
         question = str(question).strip() or None
     return DreamInterpretResponse(
         understood=understood,
-        dreams=dreams[:5],
+        dreams=dreams[:20],
         ambiguous=bool(payload.get("ambiguous")),
         question=question,
         fallback=False,
@@ -116,7 +117,7 @@ def _call_openrouter(text: str) -> str:
                     {"role": "user", "content": text},
                 ],
                 temperature=0.3,
-                max_tokens=600,
+                max_tokens=1200,
             )
             content = (resp.choices[0].message.content or "").strip()
             if not content:
@@ -126,6 +127,21 @@ def _call_openrouter(text: str) -> str:
             last_err = e
             continue
     raise HTTPException(status_code=502, detail=f"OpenRouter недоступен: {last_err}")
+
+
+def _fallback_split(text: str) -> List[str]:
+    """Грубый разбор без модели — чтобы сверка всё равно открылась."""
+    raw = (text or "").strip()
+    if not raw:
+        return []
+    parts = re.split(r"[\n;]+|(?<=[.!?…])\s+", raw)
+    dreams = [p.strip(" \t-–—*•") for p in parts if p and p.strip(" \t-–—*•")]
+    if not dreams:
+        dreams = [raw]
+    # слишком мелкая нарезка — склей обратно
+    if len(dreams) > 20:
+        dreams = dreams[:20]
+    return dreams
 
 
 def interpret_dream(body: DreamInterpretRequest) -> DreamInterpretResponse:
@@ -139,10 +155,10 @@ def interpret_dream(body: DreamInterpretRequest) -> DreamInterpretResponse:
     except HTTPException:
         raise
     except Exception:
-        # Клиент Tim всегда может подтвердить исходный текст
+        dreams = _fallback_split(text)
         return DreamInterpretResponse(
-            understood="Не удалось уточнить формулировку — можно сохранить как есть или поправить.",
-            dreams=[text],
+            understood="Тим пока не достучался до облака — вот записи из твоих слов. Проверь.",
+            dreams=dreams,
             ambiguous=True,
             question=None,
             fallback=True,

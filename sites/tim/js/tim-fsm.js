@@ -30,6 +30,13 @@
     deferredInstall: null,
     videoWatched: false,
     pendingDreamSave: false,
+    pendingDreams: null,
+    /** Сверка (экран 8): очередь + принятые */
+    confirmQueue: [],
+    confirmAccepted: [],
+    confirmDone: 0,
+    confirmTotal: 0,
+    confirmFallback: false,
   };
 
   const els = {
@@ -125,7 +132,12 @@
 
     els.screen.dataset.screen = String(screen === "login" ? "login" : screen);
     els.screen.dataset.baked = baked ? "1" : "0";
-    els.scene.src = A.SCENE[key] || A.SCENE[1];
+
+    if ((key === 8 || key === "8") && A.confirmSceneForCount) {
+      els.scene.src = A.confirmSceneForCount(state.confirmTotal || 1);
+    } else {
+      els.scene.src = A.SCENE[key] || A.SCENE[1];
+    }
     els.scene.setAttribute("width", String(designW));
     els.scene.setAttribute("height", String(designH));
 
@@ -405,27 +417,148 @@
   }
 
   function renderInterpret() {
-    const data = state.interpreted || { dreams: [{ title: state.dreamText }], understood: state.dreamText };
-    const list = (data.dreams || []).map(function (d, i) {
-      const title = typeof d === "string" ? d : d.title || "";
+    const total = state.confirmTotal || state.confirmQueue.length || 1;
+    const done = state.confirmDone || 0;
+    const cur = state.confirmQueue[0] || "";
+    const num = Math.min(done + 1, Math.max(total, 1));
+    const left = state.confirmQueue.length;
+
+    if (!left) {
       return (
-        '<div class="dream-item"><input data-dream-i="' +
-        i +
-        '" value="' +
-        escapeHtml(title) +
-        '"><div class="meta">✏ можно поправить</div></div>'
+        '<p class="tim-confirm-tech">Проверь записи</p>' +
+        '<p class="tim-confirm-count">Готово: ' +
+        escapeHtml(String(state.confirmAccepted.length)) +
+        " из " +
+        escapeHtml(String(total)) +
+        "</p>" +
+        btn(state.busy ? "Сохраняю…" : "Сохранить на Остров", {
+          act: "dream-save",
+          disabled: state.busy || !state.confirmAccepted.length,
+          noarrow: true,
+        }) +
+        '<button type="button" class="tim-link" data-act="dream-fix">Написать заново</button>'
       );
-    });
+    }
+
     return (
-      (data.understood
-        ? '<p class="lead">' + escapeHtml(data.understood) + "</p>"
-        : "") +
-      '<div class="dream-list">' +
-      list.join("") +
+      '<p class="tim-confirm-tech">Проверь записи</p>' +
+      '<p class="tim-confirm-count">Мечта ' +
+      escapeHtml(String(num)) +
+      " из " +
+      escapeHtml(String(total)) +
+      (state.confirmFallback ? " · без облака — из твоих слов" : "") +
+      "</p>" +
+      '<div class="tim-field tim-field--confirm">' +
+      '<label class="tim-sr-only" for="f-confirm-dream">Текст мечты</label>' +
+      '<textarea id="f-confirm-dream" rows="5">' +
+      escapeHtml(cur) +
+      "</textarea></div>" +
+      '<div class="tim-confirm-actions">' +
+      btn("Принять", { act: "confirm-accept", noarrow: true }) +
+      btn("Удалить", { act: "confirm-delete", soft: true, noarrow: true }) +
       "</div>" +
-      btn("Исправить", { act: "dream-fix", soft: true, noarrow: true }) +
-      btn(state.busy ? "Сохраняю…" : "Да, сохранить", { act: "dream-save", disabled: state.busy })
+      (left > 1
+        ? btn("Принять все оставшиеся", {
+            act: "confirm-accept-all",
+            soft: true,
+            noarrow: true,
+          })
+        : "") +
+      '<button type="button" class="tim-link" data-act="confirm-add">+ Добавить мечту</button>' +
+      '<button type="button" class="tim-link" data-act="dream-fix">Написать заново</button>'
     );
+  }
+
+  function readConfirmText() {
+    const ta = document.getElementById("f-confirm-dream");
+    return ta ? ta.value.trim() : state.confirmQueue[0] || "";
+  }
+
+  function finishConfirmIfEmpty() {
+    if (state.confirmQueue.length) {
+      renderCard();
+      // обновить сцену one/many если осталась 1
+      if (els.scene && A.confirmSceneForCount) {
+        /* сцену one/many фиксируем по confirmTotal с старта — не дёргаем */
+      }
+      return;
+    }
+    if (!state.confirmAccepted.length) {
+      setError("Нет мечт для сохранения. Добавь или напиши заново.");
+      renderCard();
+      return;
+    }
+    state.pendingDreams = state.confirmAccepted.slice();
+    saveDreams();
+  }
+
+  function confirmAcceptCurrent() {
+    const text = readConfirmText();
+    if (!text) {
+      setError("Пустую мечту нельзя принять — поправь или удали.");
+      return;
+    }
+    state.confirmAccepted.push(text);
+    state.confirmQueue.shift();
+    state.confirmDone += 1;
+    setError("");
+    finishConfirmIfEmpty();
+  }
+
+  function confirmDeleteCurrent() {
+    state.confirmQueue.shift();
+    state.confirmDone += 1;
+    setError("");
+    finishConfirmIfEmpty();
+  }
+
+  function confirmAcceptAll() {
+    const first = readConfirmText();
+    if (state.confirmQueue.length) {
+      state.confirmQueue[0] = first || state.confirmQueue[0];
+    }
+    while (state.confirmQueue.length) {
+      const t = String(state.confirmQueue.shift() || "").trim();
+      if (t) state.confirmAccepted.push(t);
+      state.confirmDone += 1;
+    }
+    setError("");
+    finishConfirmIfEmpty();
+  }
+
+  function confirmAdd() {
+    const cur = readConfirmText();
+    if (state.confirmQueue.length) state.confirmQueue[0] = cur;
+    state.confirmQueue.push("");
+    state.confirmTotal += 1;
+    // показать новую пустую: сдвинем текущую в конец? лучше вставить после текущей
+    // сейчас: сохранили текущий текст в [0], добавили пустую в конец — юзер сначала добьёт текущую
+    setError("");
+    renderCard();
+  }
+
+  function startConfirm(dreams, fallback) {
+    const list = (dreams || [])
+      .map(function (d) {
+        return typeof d === "string" ? d.trim() : String((d && d.title) || "").trim();
+      })
+      .filter(Boolean);
+    if (!list.length && state.dreamText) list.push(state.dreamText.trim());
+    state.confirmQueue = list.slice();
+    state.confirmAccepted = [];
+    state.confirmDone = 0;
+    state.confirmTotal = list.length || 1;
+    state.confirmFallback = !!fallback;
+    state.interpreted = {
+      understood: fallback
+        ? "Тим пока не достучался до облака — проверь записи."
+        : "Проверь записи",
+      dreams: list.map(function (t) {
+        return { title: t };
+      }),
+      ambiguous: !!fallback,
+    };
+    go(8);
   }
 
   function bindCard() {
@@ -589,13 +722,38 @@
       go(3);
       return;
     }
+    if (act === "confirm-accept") {
+      confirmAcceptCurrent();
+      return;
+    }
+    if (act === "confirm-delete") {
+      confirmDeleteCurrent();
+      return;
+    }
+    if (act === "confirm-accept-all") {
+      confirmAcceptAll();
+      return;
+    }
+    if (act === "confirm-add") {
+      confirmAdd();
+      return;
+    }
     if (act === "dream-save") {
+      if (!state.pendingDreams || !state.pendingDreams.length) {
+        if (state.confirmAccepted && state.confirmAccepted.length) {
+          state.pendingDreams = state.confirmAccepted.slice();
+        }
+      }
       await saveDreams();
       return;
     }
     if (act === "again-dream") {
       state.dreamText = "";
       state.interpreted = null;
+      state.confirmQueue = [];
+      state.confirmAccepted = [];
+      state.confirmDone = 0;
+      state.confirmTotal = 0;
       go(3);
       return;
     }
@@ -800,28 +958,28 @@
       });
       if (!res.ok) throw new Error("ai");
       const dreams = Array.isArray(data.dreams) && data.dreams.length ? data.dreams : [state.dreamText];
-      state.interpreted = {
-        understood: data.understood || "Я так понял твою мечту:",
-        dreams: dreams.map(function (d) {
-          return typeof d === "string" ? { title: d } : { title: d.title || String(d) };
-        }),
-        ambiguous: !!data.ambiguous,
-      };
       state.busy = false;
-      go(8);
+      startConfirm(dreams, !!data.fallback);
     } catch (_) {
-      // fallback: исходный текст
-      state.interpreted = {
-        understood: "Пока не удалось уточнить у модели — сохрани, как написала/написал, или поправь.",
-        dreams: [{ title: state.dreamText }],
-        ambiguous: true,
-      };
       state.busy = false;
-      go(8);
+      // клиентский fallback: по строкам
+      const parts = String(state.dreamText || "")
+        .split(/[\n;]+/)
+        .map(function (s) {
+          return s.trim();
+        })
+        .filter(Boolean);
+      startConfirm(parts.length ? parts : [state.dreamText], true);
     }
   }
 
   function collectEditedDreams() {
+    if (state.pendingDreams && state.pendingDreams.length) {
+      return state.pendingDreams.slice();
+    }
+    if (state.confirmAccepted && state.confirmAccepted.length) {
+      return state.confirmAccepted.slice();
+    }
     const inputs = els.body.querySelectorAll("input[data-dream-i]");
     const out = [];
     inputs.forEach(function (inp) {
