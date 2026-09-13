@@ -19,15 +19,25 @@
     password: "",
     user: null,
     contacts: {
-      max: "",
-      telegram: "",
-      vk: "",
-      whatsapp: "",
-      email: "",
-      ok: "",
-      facebook: "",
+      max: { user: "", phone: "" },
+      telegram: { user: "", phone: "" },
+      vk: { value: "" },
+      whatsapp: { value: "" },
+      email: { value: "" },
+      ok: { value: "" },
+      facebook: { value: "" },
       other: [],
     },
+    /** Канал подтверждён галочкой → иконка цветная */
+    channelConfirmed: {
+      max: false,
+      telegram: false,
+      vk: false,
+      whatsapp: false,
+      email: false,
+    },
+    /** Поля, подтверждённые галочкой (ключ: max_user, telegram_phone, vk_value…) */
+    fieldConfirmed: {},
     activeChannel: null, // null = ни одна соцсеть не раскрыта
     dreamText: "",
     /** Витрина мечт: строго по одной, без парсера */
@@ -492,6 +502,78 @@
     );
   }
 
+  function channelIsFilled(id) {
+    return !!(state.channelConfirmed && state.channelConfirmed[id]);
+  }
+
+  function fieldIsConfirmed(key) {
+    return !!(state.fieldConfirmed && state.fieldConfirmed[key]);
+  }
+
+  function normalizeContactEntry(raw, dual) {
+    if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+      if (dual) {
+        return { user: String(raw.user || "").trim(), phone: String(raw.phone || "").trim() };
+      }
+      return { value: String(raw.value || raw.user || raw.phone || "").trim() };
+    }
+    const s = String(raw || "").trim();
+    if (dual) {
+      if (s.charAt(0) === "@" || (s && !/^\+?\d[\d\s()-]{5,}$/.test(s))) {
+        return { user: s, phone: "" };
+      }
+      return { user: "", phone: s };
+    }
+    return { value: s };
+  }
+
+  function contactValueForApi(id) {
+    const c = state.contacts[id];
+    if (!c) return "";
+    if (typeof c === "string") return c.trim();
+    if (id === "max" || id === "telegram") {
+      return String(c.user || c.phone || "").trim();
+    }
+    return String(c.value || "").trim();
+  }
+
+  function iconConfirmBtn(fieldKey, on) {
+    const src = A.ICONS && A.ICONS.confirmCheck;
+    const inner = src
+      ? '<img src="' + src + '" alt="" width="44" height="44" decoding="async">'
+      : '<span class="tim-confirm-check__mark" aria-hidden="true">✓</span>';
+    return (
+      '<button type="button" class="tim-confirm-check' +
+      (on ? " is-on" : "") +
+      '" data-act="social-confirm" data-field="' +
+      escapeHtml(fieldKey) +
+      '" aria-label="Подтвердить" title="Подтвердить">' +
+      inner +
+      "</button>"
+    );
+  }
+
+  function renderSocialFieldRow(inputId, placeholder, value, fieldKey) {
+    const on = fieldIsConfirmed(fieldKey);
+    return (
+      '<div class="tim-field tim-field--social tim-field--check' +
+      (on ? " is-ok" : "") +
+      '">' +
+      '<div class="tim-input-check-row">' +
+      '<input id="' +
+      escapeHtml(inputId) +
+      '" type="text" placeholder="' +
+      escapeHtml(placeholder) +
+      '" value="' +
+      escapeHtml(value || "") +
+      '" autocomplete="off" data-social-field="' +
+      escapeHtml(fieldKey) +
+      '">' +
+      iconConfirmBtn(fieldKey, on) +
+      "</div></div>"
+    );
+  }
+
   function renderSocialsScreen() {
     const socials = [
       ["max", "MAX"],
@@ -500,10 +582,12 @@
       ["whatsapp", "WA"],
       ["email", "Mail"],
     ];
-    let icons = '<p class="tim-reg-optional">По желанию — ещё один канал</p><div class="tim-channels tim-channels--reg">';
+    let icons =
+      '<p class="tim-reg-optional">По желанию — ещё один канал</p>' +
+      '<div class="tim-channels tim-channels--reg">';
     socials.forEach(function (c) {
       const id = c[0];
-      const filled = !!(state.contacts[id] && String(state.contacts[id]).trim());
+      const filled = channelIsFilled(id);
       const cls =
         "tim-ch" +
         (state.activeChannel === id ? " is-active" : "") +
@@ -521,42 +605,48 @@
     });
     icons += "</div>";
 
-    let socialField = "";
+    let panelInner = "";
     const active = state.activeChannel;
-    if (active) {
-      const meta = {
-        max: { label: "MAX — ник или номер", ph: "@nick или +7…" },
-        telegram: { label: "Telegram — @username или номер", ph: "@username или +7…" },
-        vk: { label: "ВКонтакте — ссылка на профиль", ph: "https://vk.com/…" },
-        whatsapp: { label: "WhatsApp — номер", ph: "9001234567" },
-        email: { label: "Почта", ph: "you@example.com" },
-      };
-      const m = meta[active] || { label: "Контакт", ph: "" };
-      const val = state.contacts[active] || "";
-      const ok = !!String(val).trim();
-      socialField =
-        '<div class="tim-field tim-field--social tim-field--check' +
-        (ok ? " is-ok" : "") +
-        '">' +
-        '<label for="f-contact-value">' +
-        escapeHtml(m.label) +
-        "</label>" +
-        '<div class="tim-input-check-row">' +
-        '<input id="f-contact-value" type="text" placeholder="' +
-        escapeHtml(m.ph) +
-        '" value="' +
-        escapeHtml(val) +
-        '" autocomplete="off">' +
-        '<span class="tim-field-check" title="Заполнено" aria-hidden="true">✓</span>' +
-        "</div></div>";
+    if (active === "max" || active === "telegram") {
+      const entry = normalizeContactEntry(state.contacts[active], true);
+      state.contacts[active] = entry;
+      const label = active === "max" ? "MAX" : "Telegram";
+      panelInner =
+        '<p class="tim-socials__hint">' +
+        escapeHtml(label) +
+        ": юзернейм и телефон — отдельно</p>" +
+        renderSocialFieldRow("f-social-user", "Юзернейм (@nick)", entry.user, active + "_user") +
+        renderSocialFieldRow("f-social-phone", "Телефон", entry.phone, active + "_phone");
+    } else if (active === "vk") {
+      const entry = normalizeContactEntry(state.contacts.vk, false);
+      state.contacts.vk = entry;
+      panelInner = renderSocialFieldRow(
+        "f-social-value",
+        "ВКонтакте — ссылка на профиль",
+        entry.value,
+        "vk_value"
+      );
+    } else if (active === "whatsapp") {
+      const entry = normalizeContactEntry(state.contacts.whatsapp, false);
+      state.contacts.whatsapp = entry;
+      panelInner = renderSocialFieldRow("f-social-value", "WhatsApp — номер", entry.value, "whatsapp_value");
+    } else if (active === "email") {
+      const entry = normalizeContactEntry(state.contacts.email, false);
+      state.contacts.email = entry;
+      panelInner = renderSocialFieldRow("f-social-value", "Почта", entry.value, "email_value");
+    } else {
+      panelInner = '<p class="tim-socials__placeholder">Выбери канал — поля появятся здесь</p>';
     }
 
     return (
       '<div class="tim-reg tim-reg--socials">' +
       icons +
-      socialField +
+      '<div class="tim-socials__panel" id="tim-socials-panel">' +
+      panelInner +
+      "</div>" +
+      '<div class="tim-socials__dock">' +
       btn("Далее", { act: "socials-next", noarrow: true }) +
-      "</div>"
+      "</div></div>"
     );
   }
 
@@ -836,6 +926,10 @@
           renderCard();
           return;
         }
+        if (act === "social-confirm") {
+          onSocialConfirm(el.getAttribute("data-field") || "");
+          return;
+        }
         const iAttr = el.getAttribute("data-i");
         onAct(act, iAttr != null ? Number(iAttr) : null);
       });
@@ -844,7 +938,7 @@
     if (state.screen === 2) bindVideoScreen();
     if (state.screen === 3 || state.screen === 7) bindVitrine();
     if (state.screen === 4 || state.screen === "login") bindAccountChecks();
-    if (state.screen === 5) bindSocialCheck();
+    if (state.screen === 5) bindSocialInputs();
   }
 
   function bindAccountChecks() {
@@ -863,21 +957,69 @@
       const act = btn.getAttribute("data-act") || "";
       if (act.indexOf("ch-") !== 0) return;
       const id = act.slice(3);
-      const filled = !!(state.contacts[id] && String(state.contacts[id]).trim());
-      btn.classList.toggle("is-filled", filled);
+      btn.classList.toggle("is-filled", channelIsFilled(id));
       btn.classList.toggle("is-active", state.activeChannel === id);
     });
   }
 
-  function bindSocialCheck() {
-    const input = document.getElementById("f-contact-value");
-    if (!input || !state.activeChannel) return;
-    const wrap = input.closest(".tim-field--check");
-    input.addEventListener("input", function () {
-      const v = input.value.trim();
-      state.contacts[state.activeChannel] = v;
-      if (wrap) wrap.classList.toggle("is-ok", !!v);
-      syncSocialChips();
+  function readSocialPanelIntoState() {
+    const active = state.activeChannel;
+    if (!active || active === "other") return;
+    if (active === "max" || active === "telegram") {
+      const u = document.getElementById("f-social-user");
+      const p = document.getElementById("f-social-phone");
+      state.contacts[active] = {
+        user: u ? u.value.trim() : "",
+        phone: p ? p.value.trim() : "",
+      };
+      return;
+    }
+    const v = document.getElementById("f-social-value");
+    state.contacts[active] = { value: v ? v.value.trim() : "" };
+  }
+
+  function onSocialConfirm(fieldKey) {
+    if (!fieldKey) return;
+    readSocialPanelIntoState();
+    const parts = fieldKey.split("_");
+    const channel = parts[0];
+    const kind = parts.slice(1).join("_") || "value";
+    let val = "";
+    if (channel === "max" || channel === "telegram") {
+      const entry = normalizeContactEntry(state.contacts[channel], true);
+      state.contacts[channel] = entry;
+      val = kind === "phone" ? entry.phone : entry.user;
+    } else {
+      const entry = normalizeContactEntry(state.contacts[channel], false);
+      state.contacts[channel] = entry;
+      val = entry.value;
+    }
+    if (!val) {
+      setError("Сначала заполни поле, потом галочку.");
+      return;
+    }
+    setError("");
+    if (!state.fieldConfirmed) state.fieldConfirmed = {};
+    state.fieldConfirmed[fieldKey] = true;
+    if (!state.channelConfirmed) state.channelConfirmed = {};
+    state.channelConfirmed[channel] = true;
+    saveContactsDraft();
+    renderCard();
+  }
+
+  function bindSocialInputs() {
+    els.body.querySelectorAll("[data-social-field]").forEach(function (input) {
+      input.addEventListener("input", function () {
+        readSocialPanelIntoState();
+        const key = input.getAttribute("data-social-field");
+        if (key && state.fieldConfirmed && state.fieldConfirmed[key]) {
+          state.fieldConfirmed[key] = false;
+          const wrap = input.closest(".tim-field--check");
+          if (wrap) wrap.classList.remove("is-ok");
+          const btn = wrap && wrap.querySelector(".tim-confirm-check");
+          if (btn) btn.classList.remove("is-on");
+        }
+      });
     });
   }
 
@@ -1002,7 +1144,7 @@
       return;
     }
     if (act === "socials-next") {
-      persistContactField();
+      readSocialPanelIntoState();
       saveContactsDraft();
       state.activeChannel = null;
       state.busy = true;
@@ -1023,7 +1165,7 @@
       return;
     }
     if (act.indexOf("ch-") === 0) {
-      persistContactField();
+      readSocialPanelIntoState();
       const next = act.slice(3);
       state.activeChannel = state.activeChannel === next ? null : next;
       renderCard();
@@ -1132,13 +1274,38 @@
       }
       return;
     }
-    const el = document.getElementById("f-contact-value");
-    if (el) state.contacts[active] = el.value.trim();
+    readSocialPanelIntoState();
   }
 
   function saveContactsDraft() {
     try {
-      localStorage.setItem(CONTACTS_DRAFT_KEY, JSON.stringify(state.contacts));
+      localStorage.setItem(
+        CONTACTS_DRAFT_KEY,
+        JSON.stringify({
+          contacts: state.contacts,
+          channelConfirmed: state.channelConfirmed,
+          fieldConfirmed: state.fieldConfirmed,
+        })
+      );
+    } catch (_) {}
+  }
+
+  function loadContactsDraft() {
+    try {
+      const raw = localStorage.getItem(CONTACTS_DRAFT_KEY);
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      const src = data && data.contacts ? data.contacts : data;
+      if (!src || typeof src !== "object") return;
+      ["max", "telegram"].forEach(function (id) {
+        if (src[id] != null) state.contacts[id] = normalizeContactEntry(src[id], true);
+      });
+      ["vk", "whatsapp", "email", "ok", "facebook"].forEach(function (id) {
+        if (src[id] != null) state.contacts[id] = normalizeContactEntry(src[id], false);
+      });
+      if (Array.isArray(src.other)) state.contacts.other = src.other;
+      if (data.channelConfirmed) state.channelConfirmed = data.channelConfirmed;
+      if (data.fieldConfirmed) state.fieldConfirmed = data.fieldConfirmed;
     } catch (_) {}
   }
 
@@ -1147,8 +1314,10 @@
     const user = state.user || readSavedUser();
     if (!user || !user.id) return;
     const body = { user_id: user.id };
-    if (state.contacts.telegram) body.telegram = state.contacts.telegram;
-    if (state.contacts.vk) body.vk = state.contacts.vk;
+    const tg = contactValueForApi("telegram");
+    const vk = contactValueForApi("vk");
+    if (tg) body.telegram = tg;
+    if (vk) body.vk = vk;
     if (!body.telegram && !body.vk) return;
     try {
       await fetch(apiBase() + "/users/me?user_id=" + encodeURIComponent(user.id), {
@@ -1241,8 +1410,8 @@
           phone: state.phone,
           city: state.city,
           password: state.password,
-          telegram: state.contacts.telegram || null,
-          vk: state.contacts.vk || null,
+          telegram: contactValueForApi("telegram") || null,
+          vk: contactValueForApi("vk") || null,
         }),
       });
       const data = await res.json().catch(function () {
@@ -1382,6 +1551,7 @@
       state.name = saved.name || "";
       state.city = saved.city || "";
     }
+    loadContactsDraft();
     fitTimCanvas();
     const screenParam = (location.search || "").match(/[?&]screen=(\d+|login|fio|pwa)/);
     if (screenParam) {

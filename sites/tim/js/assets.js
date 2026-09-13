@@ -86,6 +86,8 @@
     deleteDream: V2 + "icon_delete_dream_128.png",
     sendDream: V2 + "icon_send_dream_128.png",
     vitrinePlaque: V2 + "plaque_vitrine_dreams.png",
+    /** Пока CSS-заглушка; после Компаса: icon_confirm_check_on_128.png */
+    confirmCheck: "",
   };
 
   const ACCOUNT_LAYOUT = { left: 70, top: 980, width: 940 };

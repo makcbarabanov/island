@@ -898,7 +898,8 @@ body {
 }
 .tim-channels--reg {
   grid-template-columns: repeat(5, 1fr);
-  margin-top: 8px;
+  margin-top: 12px;
+  margin-bottom: 20px;
 }
 .tim-reg-lead {
   margin: 0 0 28px;
@@ -909,14 +910,19 @@ body {
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.45);
 }
 .tim-reg-optional {
-  margin: 28px 0 12px;
-  font-size: 28px;
-  font-weight: 700;
-  color: rgba(18, 58, 119, 0.7);
+  margin: 0 0 16px;
+  padding: 18px 28px;
+  font-size: 30px;
+  font-weight: 800;
+  color: var(--blue-dark);
+  text-align: center;
+  background: #fff;
+  border-radius: 28px;
+  box-shadow: 0 8px 22px rgba(35, 76, 110, 0.12);
 }
 .tim-field--social {
   margin-top: 8px;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 .tim-screen[data-screen="4"] .tim-btn,
 .tim-screen[data-screen="5"] .tim-btn,
@@ -925,9 +931,89 @@ body {
   margin-top: 12px;
 }
 
+.tim-reg--socials {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 1180px;
+  padding-bottom: 200px;
+  box-sizing: border-box;
+}
+.tim-socials__panel {
+  flex: 0 0 auto;
+  height: 420px;
+  min-height: 420px;
+  max-height: 420px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 8px 4px 12px;
+  box-sizing: border-box;
+}
+.tim-socials__hint {
+  margin: 0 0 16px;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--blue-dark);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+.tim-socials__placeholder {
+  margin: 48px 12px 0;
+  text-align: center;
+  font-size: 30px;
+  font-weight: 700;
+  color: rgba(18, 58, 119, 0.55);
+}
+.tim-socials__dock {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 8px;
+}
+
+.tim-confirm-check {
+  appearance: none;
+  position: absolute;
+  right: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 64px;
+  height: 64px;
+  border: 0;
+  border-radius: 50%;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  background: rgba(180, 200, 190, 0.85);
+  box-shadow: 0 4px 12px rgba(20, 60, 40, 0.18);
+  z-index: 2;
+}
+.tim-confirm-check.is-on {
+  background: #1fad5a;
+  box-shadow: 0 6px 16px rgba(31, 173, 90, 0.4);
+}
+.tim-confirm-check__mark {
+  font-size: 34px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1;
+}
+.tim-confirm-check img {
+  width: 44px;
+  height: 44px;
+  display: block;
+  object-fit: contain;
+}
+.tim-field--social .tim-input-check-row input {
+  padding-right: 100px;
+}
+.tim-field--social .tim-field-check {
+  display: none;
+}
+
 /* Аккаунт / соцсети / ФИО: скролл внутри карточки на коротком экране */
 .tim-screen[data-screen="4"] .tim-card,
-.tim-screen[data-screen="5"] .tim-card,
 .tim-screen[data-screen="fio"] .tim-card,
 .tim-screen[data-screen="login"] .tim-card {
   bottom: 36px;
@@ -937,23 +1023,26 @@ body {
   overscroll-behavior: contain;
   touch-action: pan-y;
 }
+.tim-screen[data-screen="5"] .tim-card {
+  bottom: 36px;
+  overflow: hidden;
+}
 .tim-screen[data-screen="4"] .tim-reg,
-.tim-screen[data-screen="5"] .tim-reg,
 .tim-screen[data-screen="fio"] .tim-reg {
   padding-bottom: 28px;
 }
 .tim-ch {
   appearance: none;
-  border: 2px solid transparent;
-  background: rgba(255, 255, 255, 0.55);
+  border: 2px solid rgba(77, 128, 183, 0.35);
+  background: rgba(255, 255, 255, 0.92);
   border-radius: 34px;
   height: 116px;
   cursor: pointer;
-  font-size: 26px;
-  font-weight: 700;
-  color: var(--muted);
-  filter: grayscale(1);
-  opacity: 0.75;
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--blue-dark);
+  filter: grayscale(0.35);
+  opacity: 1;
   padding: 0 4px;
 }
 .tim-ch.is-active {
@@ -966,8 +1055,10 @@ body {
 .tim-ch.is-filled {
   filter: none;
   opacity: 1;
-  color: var(--blue-dark);
-  background: rgba(8, 191, 203, 0.15);
+  color: #fff;
+  background: linear-gradient(135deg, #0789ae 0%, #08bfcb 100%);
+  border-color: transparent;
+  box-shadow: 0 10px 24px rgba(0, 145, 180, 0.28);
 }
 .contact-fields {
   min-height: 362px;
