@@ -760,29 +760,30 @@ body {
   padding-top: 4px;
 }
 .tim-ico-btn {
-  width: 64px;
-  height: 64px;
+  width: 72px;
+  height: 72px;
   border: 0;
-  border-radius: 20px;
+  border-radius: 22px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  padding: 0;
+  padding: 8px;
   flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 4px 12px rgba(20, 60, 90, 0.12);
 }
 .tim-ico-btn--edit {
-  background: rgba(77, 128, 183, 0.14);
   color: var(--blue-dark);
 }
 .tim-ico-btn--del {
-  background: rgba(200, 48, 48, 0.12);
   color: #c62828;
 }
 .tim-ico {
-  width: 36px;
-  height: 36px;
+  width: 52px;
+  height: 52px;
   display: block;
+  object-fit: contain;
 }
 .tim-screen[data-screen="8"] .tim-link--confirm {
   display: block;

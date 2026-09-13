@@ -51,6 +51,11 @@
     plaque: FIN + "22.png",
   };
 
+  const ICONS = {
+    editDream: V2 + "icon_edit_dream_128.png",
+    deleteDream: V2 + "icon_delete_dream_128.png",
+  };
+
   const CARD_LAYOUT = {
     1: {
       left: Math.round(61 * S1),
@@ -115,6 +120,7 @@
     BAKED_SCENE: BAKED_SCENE,
     BUBBLE: BUBBLE,
     DECOR: DECOR,
+    ICONS: ICONS,
     CARD_LAYOUT: CARD_LAYOUT,
     ABOUT_VIDEO: ABOUT_VIDEO,
     DREAM_PLACEHOLDER: DREAM_PLACEHOLDER,

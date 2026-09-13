@@ -418,19 +418,13 @@
   }
 
   function iconEdit() {
-    return (
-      '<svg class="tim-ico" viewBox="0 0 24 24" aria-hidden="true">' +
-      '<path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm2.92 2.33H5v-.92l9.06-9.06.92.92L5.92 19.58zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>' +
-      "</svg>"
-    );
+    const src = (A.ICONS && A.ICONS.editDream) || "assets/v2/icon_edit_dream_128.png";
+    return '<img class="tim-ico" src="' + src + '" alt="" width="36" height="36" decoding="async">';
   }
 
   function iconDelete() {
-    return (
-      '<svg class="tim-ico" viewBox="0 0 24 24" aria-hidden="true">' +
-      '<path fill="currentColor" d="M18.3 5.71a1 1 0 0 0-1.41 0L12 10.59 7.11 5.7A1 1 0 0 0 5.7 7.11L10.59 12 5.7 16.89a1 1 0 1 0 1.41 1.41L12 13.41l4.89 4.89a1 1 0 0 0 1.41-1.41L13.41 12l4.89-4.89a1 1 0 0 0 0-1.4z"/>' +
-      "</svg>"
-    );
+    const src = (A.ICONS && A.ICONS.deleteDream) || "assets/v2/icon_delete_dream_128.png";
+    return '<img class="tim-ico" src="' + src + '" alt="" width="36" height="36" decoding="async">';
   }
 
   function renderBasketBadge() {
