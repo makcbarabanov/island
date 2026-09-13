@@ -51,6 +51,26 @@
     logo: document.getElementById("tim-logo"),
   };
 
+  /**
+   * Режим корзины:
+   * - combined (по умолчанию): ввод + список на экране 3, без прыжка
+   * - split: старый 3 ↔ 8; URL ?basket_ui=split или localStorage tim_basket_ui=split
+   */
+  function basketUiMode() {
+    try {
+      const q = new URLSearchParams(location.search || "");
+      const fromUrl = (q.get("basket_ui") || "").trim().toLowerCase();
+      if (fromUrl === "split" || fromUrl === "combined") return fromUrl;
+      const fromLs = (localStorage.getItem("tim_basket_ui") || "").trim().toLowerCase();
+      if (fromLs === "split" || fromLs === "combined") return fromLs;
+    } catch (_) {}
+    return "combined";
+  }
+
+  function isBasketCombined() {
+    return basketUiMode() !== "split";
+  }
+
   let designW = (A && A.DESIGN_WIDTH) || 941;
   let designH = (A && A.DESIGN_HEIGHT) || 1672;
 
@@ -138,8 +158,18 @@
     els.scene.setAttribute("height", String(designH));
 
     const layout = (A.CARD_LAYOUT && A.CARD_LAYOUT[key]) || { left: 61, top: 850, width: 819 };
+    let top = layout.top;
+    // combined: при непустой корзине поднимаем карточку, чтобы влезли поле + список
+    if (
+      isBasketCombined() &&
+      (key === 3 || key === "3") &&
+      state.dreamBasket &&
+      state.dreamBasket.length
+    ) {
+      top = Math.min(top, 980);
+    }
     els.card.style.left = layout.left + "px";
-    els.card.style.top = layout.top + "px";
+    els.card.style.top = top + "px";
     els.card.style.width = layout.width + "px";
 
     if (baked) {
@@ -304,7 +334,15 @@
     } else if (s === 7) {
       html = renderDreamCompose();
     } else if (s === 8) {
-      html = renderBasketList();
+      if (isBasketCombined()) {
+        // combined: экран 8 не используем — сразу поле+список
+        html = renderDreamCompose();
+        // синхронизируем data-screen визуально через go на следующем тике нельзя — подменим
+        state.screen = 3;
+        applyScene(3);
+      } else {
+        html = renderBasketList();
+      }
     } else if (s === 9) {
       html =
         '<div class="success-actions">' +
@@ -441,17 +479,56 @@
     );
   }
 
+  function renderBasketItemsOnly() {
+    const list = state.dreamBasket;
+    if (!list.length) return "";
+    let rows = "";
+    list.forEach(function (text, i) {
+      rows +=
+        '<li class="tim-basket-item">' +
+        '<span class="tim-basket-item__num">' +
+        escapeHtml(String(i + 1)) +
+        "</span>" +
+        '<p class="tim-basket-item__text">' +
+        escapeHtml(text) +
+        "</p>" +
+        '<div class="tim-basket-item__acts">' +
+        '<button type="button" class="tim-ico-btn tim-ico-btn--edit" data-act="basket-edit" data-i="' +
+        i +
+        '" aria-label="Изменить мечту ' +
+        (i + 1) +
+        '">' +
+        iconEdit() +
+        "</button>" +
+        '<button type="button" class="tim-ico-btn tim-ico-btn--del" data-act="basket-del" data-i="' +
+        i +
+        '" aria-label="Удалить мечту ' +
+        (i + 1) +
+        '">' +
+        iconDelete() +
+        "</button>" +
+        "</div></li>";
+    });
+    return '<ul class="tim-basket-list">' + rows + "</ul>";
+  }
+
   function renderDreamCompose() {
     const editing = state.editingIndex != null;
+    const combined = isBasketCombined();
     const ph = editing
       ? "Поправь текст этой мечты"
       : A.DREAM_PLACEHOLDER || "Одна мечта — своими словами.";
     const n = editing ? 1 : basketCount() + 1;
     const primary = editing ? "Сохранить мечту" : addDreamsLabel(n);
     const count = basketCount();
+    const listHtml = combined && count ? renderBasketItemsOnly() : "";
+
     return (
-      '<div class="tim-dream-compose">' +
-      (count
+      '<div class="tim-dream-compose' +
+      (combined ? " tim-dream-compose--combined" : "") +
+      (count ? " has-basket" : "") +
+      '">' +
+      (!combined && count
         ? '<div class="tim-dream-compose__top">' + renderBasketBadge() + "</div>"
         : "") +
       (editing
@@ -470,6 +547,21 @@
       (editing
         ? '<button type="button" class="tim-link tim-link--confirm" data-act="dream-edit-cancel">Отмена</button>'
         : "") +
+      (listHtml
+        ? '<div class="tim-basket-inline">' +
+          '<p class="tim-basket-inline__title">В корзине · ' +
+          escapeHtml(String(count)) +
+          " " +
+          dreamWordNominative(count) +
+          "</p>" +
+          listHtml +
+          btn(state.busy ? "Сохраняю…" : "Сохранить на Остров", {
+            act: "dream-save",
+            noarrow: true,
+            disabled: state.busy,
+          }) +
+          "</div>"
+        : "") +
       "</div>"
     );
   }
@@ -481,33 +573,7 @@
       rows =
         '<p class="tim-basket-empty">Корзина пуста. Добавь хотя бы одну мечту.</p>';
     } else {
-      list.forEach(function (text, i) {
-        rows +=
-          '<li class="tim-basket-item">' +
-          '<span class="tim-basket-item__num">' +
-          escapeHtml(String(i + 1)) +
-          "</span>" +
-          '<p class="tim-basket-item__text">' +
-          escapeHtml(text) +
-          "</p>" +
-          '<div class="tim-basket-item__acts">' +
-          '<button type="button" class="tim-ico-btn tim-ico-btn--edit" data-act="basket-edit" data-i="' +
-          i +
-          '" aria-label="Изменить мечту ' +
-          (i + 1) +
-          '">' +
-          iconEdit() +
-          "</button>" +
-          '<button type="button" class="tim-ico-btn tim-ico-btn--del" data-act="basket-del" data-i="' +
-          i +
-          '" aria-label="Удалить мечту ' +
-          (i + 1) +
-          '">' +
-          iconDelete() +
-          "</button>" +
-          "</div></li>";
-      });
-      rows = '<ul class="tim-basket-list">' + rows + "</ul>";
+      rows = renderBasketItemsOnly();
     }
 
     return (
@@ -528,6 +594,25 @@
       '<button type="button" class="tim-link tim-link--confirm" data-act="basket-back">К полю ввода</button>' +
       "</div>"
     );
+  }
+
+  function refreshDreamScreen() {
+    if (state.screen === 3 || state.screen === "3") {
+      applyScene(3);
+      renderCard();
+      return;
+    }
+    renderCard();
+  }
+
+  function focusDreamField() {
+    const ta = document.getElementById("f-dream");
+    if (!ta) return;
+    try {
+      ta.focus();
+      const len = ta.value.length;
+      ta.setSelectionRange(len, len);
+    } catch (_) {}
   }
 
   function bindCard() {
@@ -698,6 +783,10 @@
       }
       state.dreamText = "";
       setError("");
+      if (isBasketCombined()) {
+        refreshDreamScreen();
+        return;
+      }
       go(8);
       return;
     }
@@ -705,10 +794,14 @@
       state.editingIndex = null;
       state.dreamText = "";
       setError("");
-      renderCard();
+      refreshDreamScreen();
       return;
     }
     if (act === "basket-open") {
+      if (isBasketCombined()) {
+        refreshDreamScreen();
+        return;
+      }
       go(8);
       return;
     }
@@ -729,6 +822,12 @@
       if (i == null || !state.dreamBasket[i]) return;
       state.editingIndex = i;
       state.dreamText = state.dreamBasket[i];
+      if (isBasketCombined()) {
+        if (state.screen !== 3 && state.screen !== "3") go(3);
+        else refreshDreamScreen();
+        setTimeout(focusDreamField, 0);
+        return;
+      }
       go(3);
       return;
     }
@@ -745,6 +844,11 @@
         }
       }
       setError("");
+      if (isBasketCombined()) {
+        if (state.screen !== 3 && state.screen !== "3") go(3);
+        else refreshDreamScreen();
+        return;
+      }
       if (!state.dreamBasket.length) {
         go(3);
         return;

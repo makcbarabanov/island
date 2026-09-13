@@ -568,9 +568,38 @@ body {
 /* Экран 3: одна мечта + корзина */
 .tim-screen[data-screen="3"] .tim-card {
   padding: 0;
+  max-height: 1280px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 .tim-dream-compose {
   position: relative;
+}
+.tim-dream-compose--combined.has-basket .tim-field--dream textarea {
+  height: 220px;
+  min-height: 180px;
+}
+.tim-basket-inline {
+  margin-top: 28px;
+  padding: 24px 22px 8px;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 40px;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 12px 36px rgba(20, 60, 90, 0.14);
+}
+.tim-basket-inline__title {
+  margin: 0 0 16px;
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--blue-dark);
+}
+.tim-basket-inline .tim-basket-list {
+  max-height: 480px;
+  margin-bottom: 12px;
+}
+.tim-basket-inline .tim-btn {
+  margin-top: 8px;
+  width: 100%;
 }
 .tim-dream-compose__top {
   display: flex;

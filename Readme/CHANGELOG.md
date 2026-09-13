@@ -2,6 +2,11 @@
 
 Старые пункты могут ссылаться на прежний монолитный `Readme/Readme.md`; актуальная структура — корневой [README.md](../README.md), [PROJECT.md](PROJECT.md), [RUNBOOK.md](RUNBOOK.md).
 
+## 2026-09-13 — Tim: ввод + корзина на одном экране (v363)
+
+- По умолчанию combined: поле и список без прыжка 3↔8
+- Откат к старому: `?basket_ui=split` или `localStorage.tim_basket_ui=split`
+
 ## 2026-09-13 — Tim: тематические иконки карандаш/крестик (v362)
 
 - `icon_edit_dream` / `icon_delete_dream` в корзине вместо SVG
