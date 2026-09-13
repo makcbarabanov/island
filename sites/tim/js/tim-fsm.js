@@ -147,7 +147,7 @@
     let top = layout.top;
     // витрина с мечтами: ниже на песок, не под табличку на скале
     if ((key === 3 || key === "3") && state.dreamBasket && state.dreamBasket.length) {
-      top = Math.max(top, 1120);
+      top = Math.max(top, 1040); // ближе к вывеске «Витрина мечт»
     }
     els.card.style.left = layout.left + "px";
     els.card.style.top = top + "px";
@@ -455,17 +455,47 @@
     );
   }
 
+  function renderDoneCta() {
+    return btn("Готово!", { act: "dream-done", noarrow: true });
+  }
+
+  function isComposeFocused() {
+    const el = document.getElementById("f-dream-new");
+    return !!(el && document.activeElement === el);
+  }
+
   function readDraftDream() {
     const el = document.getElementById("f-dream-new");
     return el ? el.value.trim() : String(state.dreamText || "").trim();
   }
 
-  function shouldShowSend() {
-    if (basketCount() < 1) return false;
-    if (hasWholeWord(readDraftDream())) return false;
-    const el = document.getElementById("f-dream-new");
-    if (el && document.activeElement === el) return false;
-    return true;
+  function updateVitrineCta() {
+    const n = basketCount();
+    const dock = els.body.querySelector(".tim-vitrine__dock");
+    let ctaWrap = document.getElementById("tim-vitrine-cta");
+    let html = "";
+    if (isComposeFocused()) {
+      html = renderDoneCta();
+    } else if (n >= 1 && !hasWholeWord(readDraftDream())) {
+      html = renderSendCta(n);
+    }
+    if (!html) {
+      if (ctaWrap) ctaWrap.remove();
+      return;
+    }
+    if (!ctaWrap && dock) {
+      ctaWrap = document.createElement("div");
+      ctaWrap.className = "tim-vitrine__cta";
+      ctaWrap.id = "tim-vitrine-cta";
+      dock.appendChild(ctaWrap);
+    }
+    if (!ctaWrap) return;
+    ctaWrap.innerHTML = html;
+    ctaWrap.querySelectorAll("[data-act]").forEach(function (el) {
+      el.addEventListener("click", function () {
+        onAct(el.getAttribute("data-act"), null);
+      });
+    });
   }
 
   function renderDreamVitrine() {
@@ -473,7 +503,6 @@
     const draft = state.dreamText || "";
     const canPlus = hasWholeWord(draft);
     const n = list.length;
-    const showSend = n >= 1 && !hasWholeWord(draft);
 
     let rows = "";
     if (list.length) {
@@ -503,14 +532,9 @@
       rows = '<p class="tim-vitrine-empty" aria-hidden="true"></p>';
     }
 
-    // Send только когда поле пустое (не во время набора следующей) — иначе путают с «+»
-    const cta = showSend ? renderSendCta(n) : "";
-    const hint =
-      n >= 1
-        ? '<p class="tim-vitrine__hint" id="tim-vitrine-hint">В витрине ' +
-          escapeHtml(String(n)) +
-          " · выше ↑ · «+» добавит ещё</p>"
-        : "";
+    // При фокусе — «Готово!»; без клавы и пустом поле — «Отправить»
+    const cta =
+      n >= 1 && !hasWholeWord(draft) ? renderSendCta(n) : "";
 
     const ph =
       n >= 1
@@ -525,7 +549,6 @@
       rows +
       "</div>" +
       '<div class="tim-vitrine__dock">' +
-      hint +
       '<div class="tim-vitrine__compose">' +
       '<label class="tim-sr-only" for="f-dream-new">Новая мечта</label>' +
       '<input id="f-dream-new" class="tim-vitrine__input" type="text" autocomplete="off" placeholder="' +
@@ -573,36 +596,11 @@
     state.dreamText = draft;
     const plus = els.body.querySelector(".tim-vitrine__plus");
     const canPlus = hasWholeWord(draft);
-    const n = basketCount();
-    const hint = document.getElementById("tim-vitrine-hint");
     if (plus) {
       plus.disabled = !canPlus;
       plus.classList.toggle("is-disabled", !canPlus);
     }
-    if (hint && n >= 1) {
-      hint.textContent =
-        "В витрине " + n + " · выше ↑ · «+» добавит ещё";
-    }
-    let ctaWrap = document.getElementById("tim-vitrine-cta");
-    const dock = els.body.querySelector(".tim-vitrine__dock");
-    const show = shouldShowSend();
-    if (!show) {
-      if (ctaWrap) ctaWrap.remove();
-      return;
-    }
-    if (!ctaWrap && dock) {
-      ctaWrap = document.createElement("div");
-      ctaWrap.className = "tim-vitrine__cta";
-      ctaWrap.id = "tim-vitrine-cta";
-      dock.appendChild(ctaWrap);
-    }
-    if (!ctaWrap) return;
-    ctaWrap.innerHTML = renderSendCta(n);
-    ctaWrap.querySelectorAll("[data-act]").forEach(function (el) {
-      el.addEventListener("click", function () {
-        onAct(el.getAttribute("data-act"), null);
-      });
-    });
+    updateVitrineCta();
   }
 
   function commitDreamEditsFromDom() {
@@ -805,6 +803,13 @@
       setError("Напиши мечту в поле внизу, потом нажми «+».");
       const el = document.getElementById("f-dream-new");
       if (el) el.focus();
+      return;
+    }
+    if (act === "dream-done") {
+      const el = document.getElementById("f-dream-new");
+      if (el) el.blur();
+      setError("");
+      setTimeout(syncVitrineDock, 80);
       return;
     }
     if (act === "dream-plus") {

@@ -588,9 +588,9 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 .tim-vitrine.has-items .tim-vitrine__stage {
-  /* список на песке, ниже таблички на скале */
-  padding-top: 48px;
-  max-height: 560px;
+  /* список ближе к вывеске */
+  padding-top: 0;
+  max-height: 600px;
 }
 .tim-vitrine__hint {
   margin: 0 0 4px;
