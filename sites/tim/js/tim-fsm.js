@@ -751,7 +751,7 @@
     const dock = els.body.querySelector(".tim-vitrine__dock");
     let ctaWrap = document.getElementById("tim-vitrine-cta");
     let html = "";
-    // Клавиатура открыта → только «Готово!» (снять фокус, не путать с + / отправкой)
+    // Клавиатура открыта → «Готово!» (= «+» для черновика + снять фокус)
     if (isComposeFocused()) {
       html = renderDoneCta();
     } else {
@@ -1273,6 +1273,24 @@
       return;
     }
     if (act === "dream-done") {
+      // Как «+»: недописанный черновик → в витрину; затем обычный экран (отправка)
+      commitDreamEditsFromDom();
+      const text = readDraftDream();
+      if (hasWholeWord(text)) {
+        if (state.dreamBasket.length >= 20) {
+          setError("Пока максимум 20 мечт за раз.");
+          return;
+        }
+        state.dreamBasket.push(text);
+        setError("");
+        refreshDreamScreen({ clearDraft: true });
+        resetPageScroll();
+        setTimeout(function () {
+          syncVitrineDock();
+          syncVitrineKeyboardLayout();
+        }, 80);
+        return;
+      }
       const el = document.getElementById("f-dream-new");
       if (el) el.blur();
       setError("");
