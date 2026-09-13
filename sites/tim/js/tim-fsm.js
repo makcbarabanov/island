@@ -123,6 +123,13 @@
       .replace(/"/g, "&quot;");
   }
 
+  function trimDreamPhrase(s) {
+    return String(s || "")
+      .trim()
+      .replace(/[.!?…]+$/g, "")
+      .trim();
+  }
+
   /** Разбор списка мечт без модели: точки, переносы, запятые между фразами */
   function splitDreamText(text) {
     const raw = String(text || "").trim();
@@ -140,12 +147,14 @@
             return s.length >= 3;
           })) {
             sub.forEach(function (s) {
-              out.push(s.trim());
+              const t = trimDreamPhrase(s);
+              if (t) out.push(t);
             });
             return;
           }
         }
-        out.push(part);
+        const cleaned = trimDreamPhrase(part);
+        if (cleaned) out.push(cleaned);
       });
     });
     if (!out.length) return [raw];

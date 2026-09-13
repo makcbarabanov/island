@@ -130,6 +130,10 @@ def _call_openrouter(text: str) -> str:
     raise HTTPException(status_code=502, detail=f"OpenRouter недоступен: {last_err}")
 
 
+def _trim_dream_phrase(s: str) -> str:
+    return re.sub(r"[.!?…]+$", "", (s or "").strip()).strip()
+
+
 def _fallback_split(text: str) -> List[str]:
     """Грубый разбор без модели: переносы, точки, запятые между фразами."""
     raw = (text or "").strip()
@@ -147,9 +151,11 @@ def _fallback_split(text: str) -> List[str]:
             if "," in part:
                 sub = [s.strip() for s in re.split(r"\s*,\s*", part) if s.strip()]
                 if len(sub) > 1 and all(len(s) >= 3 for s in sub):
-                    out.extend(sub)
+                    out.extend(_trim_dream_phrase(x) for x in sub if _trim_dream_phrase(x))
                     continue
-            out.append(part)
+            trimmed = _trim_dream_phrase(part)
+            if trimmed:
+                out.append(trimmed)
     if not out:
         out = [raw]
     return out[:20]
