@@ -95,6 +95,7 @@
   };
 
   const DREAM_PLACEHOLDER = "Напиши мечту своими словами";
+  const DREAM_PLACEHOLDER_MORE = "Добавь ещё одну мечту";
 
   function designFor(screen) {
     const s = String(screen);
@@ -125,5 +126,6 @@
     CARD_LAYOUT: CARD_LAYOUT,
     ABOUT_VIDEO: ABOUT_VIDEO,
     DREAM_PLACEHOLDER: DREAM_PLACEHOLDER,
+    DREAM_PLACEHOLDER_MORE: DREAM_PLACEHOLDER_MORE,
   };
 })(window);

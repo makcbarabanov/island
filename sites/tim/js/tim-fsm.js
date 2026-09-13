@@ -505,6 +505,11 @@
         : '<p class="tim-vitrine__label">Витрина мечт · ' + escapeHtml(String(n)) + "</p>"
       : "";
 
+    const ph =
+      n >= 1
+        ? A.DREAM_PLACEHOLDER_MORE || "Добавь ещё одну мечту"
+        : A.DREAM_PLACEHOLDER || "Напиши мечту своими словами";
+
     return (
       '<div class="tim-vitrine">' +
       '<div class="tim-vitrine__stage">' +
@@ -515,7 +520,7 @@
       '<div class="tim-vitrine__compose">' +
       '<label class="tim-sr-only" for="f-dream-new">Новая мечта</label>' +
       '<input id="f-dream-new" class="tim-vitrine__input" type="text" autocomplete="off" placeholder="' +
-      escapeHtml(A.DREAM_PLACEHOLDER || "Напиши мечту своими словами") +
+      escapeHtml(ph) +
       '" value="' +
       escapeHtml(draft) +
       '">' +
