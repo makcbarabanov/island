@@ -777,13 +777,23 @@
     });
   }
 
-  /** Пока клавиатура открыта — поднять карточку и прокрутить список к 1-й мечте. */
+  /** Сброс «уезда» страницы после клавиатуры (синее небо под сценой). */
+  function resetPageScroll() {
+    try {
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    } catch (_) {}
+  }
+
+  /** Пока клавиатура открыта — поднять карточку; список — только внутри stage, без scrollIntoView. */
   function syncVitrineKeyboardLayout() {
     if (!(state.screen === 3 || state.screen === "3" || state.screen === 7)) return;
     const focused = isComposeFocused();
     const vv = window.visualViewport;
     const fullH = window.innerHeight || 0;
     const kbOpen = !!(focused || (vv && fullH - vv.height > 100));
+    const wasKb = els.screen && els.screen.classList.contains("is-kb");
     if (els.screen) els.screen.classList.toggle("is-kb", kbOpen);
 
     const layout = (A.CARD_LAYOUT && A.CARD_LAYOUT[3]) || { top: 880 };
@@ -797,19 +807,13 @@
     }
     els.card.style.top = top + "px";
 
-    if (kbOpen) {
-      const stage = els.body.querySelector(".tim-vitrine__stage");
-      if (stage) {
-        stage.scrollTop = 0;
-        const first = stage.querySelector(".tim-vitrine-item");
-        if (first && typeof first.scrollIntoView === "function") {
-          try {
-            first.scrollIntoView({ block: "start", inline: "nearest" });
-          } catch (_) {
-            stage.scrollTop = 0;
-          }
-        }
-      }
+    const listStage = els.body.querySelector(".tim-vitrine__stage");
+    if (listStage && kbOpen) listStage.scrollTop = 0;
+
+    // После закрытия клавиатуры — вернуть страницу наверх (иначе синяя полоса body)
+    if (wasKb && !kbOpen) {
+      resetPageScroll();
+      fitTimCanvas();
     }
   }
 
@@ -892,13 +896,21 @@
       applyScene(3);
       state.screen = 3;
       renderCard();
-      const again = document.getElementById("f-dream-new");
-      if (again) {
-        try {
-          again.focus();
-          const len = again.value.length;
-          again.setSelectionRange(len, len);
-        } catch (_) {}
+      resetPageScroll();
+      // После «+» не возвращаем фокус — иначе снова клавиатура и «уезд» экрана
+      if (!o.clearDraft) {
+        const again = document.getElementById("f-dream-new");
+        if (again) {
+          try {
+            again.focus({ preventScroll: true });
+            const len = again.value.length;
+            again.setSelectionRange(len, len);
+          } catch (_) {
+            try {
+              again.focus();
+            } catch (__) {}
+          }
+        }
       }
       return;
     }
@@ -1303,8 +1315,16 @@
         setError("Сначала напиши хотя бы одну мечту.");
         return;
       }
+      // Не в ЛК с витрины: мечты копятся, дальше онбординг 4→5, сохранение после соцсетей
+      state.pendingDreamSave = true;
       state.pendingDreams = state.dreamBasket.slice();
-      await saveDreams();
+      resetPageScroll();
+      const user = state.user || readSavedUser();
+      if (user && user.id) {
+        go(5);
+      } else {
+        go(4);
+      }
       return;
     }
     if (act === "again-dream") {
