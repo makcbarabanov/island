@@ -724,17 +724,15 @@ body {
 }
 .tim-basket-item {
   display: grid;
-  grid-template-columns: 56px 1fr;
-  grid-template-rows: auto auto;
+  grid-template-columns: 56px 1fr auto;
   gap: 8px 16px;
+  align-items: start;
   padding: 20px 22px;
   background: #fff;
   border-radius: 32px;
   border: 2px solid rgba(77, 128, 183, 0.22);
 }
 .tim-basket-item__num {
-  grid-row: 1 / span 2;
-  align-self: start;
   width: 56px;
   height: 56px;
   border-radius: 18px;
@@ -753,26 +751,38 @@ body {
   color: var(--blue-dark);
   font-weight: 600;
   word-break: break-word;
+  padding-top: 8px;
 }
 .tim-basket-item__acts {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  flex-direction: row;
+  gap: 8px;
+  padding-top: 4px;
 }
-.tim-basket-item__btn {
+.tim-ico-btn {
+  width: 64px;
+  height: 64px;
   border: 0;
-  background: rgba(77, 128, 183, 0.12);
-  color: var(--blue);
-  font: inherit;
-  font-size: 28px;
-  font-weight: 700;
-  padding: 10px 18px;
   border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
 }
-.tim-basket-item__btn--del {
-  background: rgba(180, 60, 60, 0.1);
-  color: #a33;
+.tim-ico-btn--edit {
+  background: rgba(77, 128, 183, 0.14);
+  color: var(--blue-dark);
+}
+.tim-ico-btn--del {
+  background: rgba(200, 48, 48, 0.12);
+  color: #c62828;
+}
+.tim-ico {
+  width: 36px;
+  height: 36px;
+  display: block;
 }
 .tim-screen[data-screen="8"] .tim-link--confirm {
   display: block;

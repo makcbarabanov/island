@@ -394,6 +394,45 @@
     return state.dreamBasket.length;
   }
 
+  /** 1 мечту, 2 мечты, 5 мечт */
+  function dreamWordAccusative(n) {
+    const abs = Math.abs(n) % 100;
+    const d = abs % 10;
+    if (abs > 10 && abs < 20) return "мечт";
+    if (d === 1) return "мечту";
+    if (d >= 2 && d <= 4) return "мечты";
+    return "мечт";
+  }
+
+  function dreamWordNominative(n) {
+    const abs = Math.abs(n) % 100;
+    const d = abs % 10;
+    if (abs > 10 && abs < 20) return "мечт";
+    if (d === 1) return "мечта";
+    if (d >= 2 && d <= 4) return "мечты";
+    return "мечт";
+  }
+
+  function addDreamsLabel(n) {
+    return "Добавить " + n + " " + dreamWordAccusative(n);
+  }
+
+  function iconEdit() {
+    return (
+      '<svg class="tim-ico" viewBox="0 0 24 24" aria-hidden="true">' +
+      '<path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm2.92 2.33H5v-.92l9.06-9.06.92.92L5.92 19.58zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>' +
+      "</svg>"
+    );
+  }
+
+  function iconDelete() {
+    return (
+      '<svg class="tim-ico" viewBox="0 0 24 24" aria-hidden="true">' +
+      '<path fill="currentColor" d="M18.3 5.71a1 1 0 0 0-1.41 0L12 10.59 7.11 5.7A1 1 0 0 0 5.7 7.11L10.59 12 5.7 16.89a1 1 0 1 0 1.41 1.41L12 13.41l4.89 4.89a1 1 0 0 0 1.41-1.41L13.41 12l4.89-4.89a1 1 0 0 0 0-1.4z"/>' +
+      "</svg>"
+    );
+  }
+
   function renderBasketBadge() {
     const n = basketCount();
     if (!n) return "";
@@ -413,11 +452,12 @@
     const ph = editing
       ? "Поправь текст этой мечты"
       : A.DREAM_PLACEHOLDER || "Одна мечта — своими словами.";
-    const primary = editing ? "Сохранить в корзину" : "Добавить в корзину";
-    const n = basketCount();
+    const n = editing ? 1 : basketCount() + 1;
+    const primary = editing ? "Сохранить мечту" : addDreamsLabel(n);
+    const count = basketCount();
     return (
       '<div class="tim-dream-compose">' +
-      (n
+      (count
         ? '<div class="tim-dream-compose__top">' + renderBasketBadge() + "</div>"
         : "") +
       (editing
@@ -435,14 +475,6 @@
       btn(primary, { act: "dream-add", noarrow: true }) +
       (editing
         ? '<button type="button" class="tim-link tim-link--confirm" data-act="dream-edit-cancel">Отмена</button>'
-        : "") +
-      (n
-        ? btn(state.busy ? "Сохраняю…" : "На остров · " + n, {
-            act: "dream-save",
-            soft: true,
-            noarrow: true,
-            disabled: state.busy,
-          })
         : "") +
       "</div>"
     );
@@ -465,12 +497,20 @@
           escapeHtml(text) +
           "</p>" +
           '<div class="tim-basket-item__acts">' +
-          '<button type="button" class="tim-basket-item__btn" data-act="basket-edit" data-i="' +
+          '<button type="button" class="tim-ico-btn tim-ico-btn--edit" data-act="basket-edit" data-i="' +
           i +
-          '">Изменить</button>' +
-          '<button type="button" class="tim-basket-item__btn tim-basket-item__btn--del" data-act="basket-del" data-i="' +
+          '" aria-label="Изменить мечту ' +
+          (i + 1) +
+          '">' +
+          iconEdit() +
+          "</button>" +
+          '<button type="button" class="tim-ico-btn tim-ico-btn--del" data-act="basket-del" data-i="' +
           i +
-          '">Удалить</button>' +
+          '" aria-label="Удалить мечту ' +
+          (i + 1) +
+          '">' +
+          iconDelete() +
+          "</button>" +
           "</div></li>";
       });
       rows = '<ul class="tim-basket-list">' + rows + "</ul>";
@@ -481,8 +521,7 @@
       '<p class="tim-confirm-tech">Корзина мечт</p>' +
       '<p class="tim-confirm-count">' +
       (list.length
-        ? escapeHtml(String(list.length)) +
-          (list.length === 1 ? " мечта" : list.length < 5 ? " мечты" : " мечт")
+        ? escapeHtml(String(list.length)) + " " + dreamWordNominative(list.length)
         : "Пока пусто") +
       "</p>" +
       rows +
@@ -665,7 +704,7 @@
       }
       state.dreamText = "";
       setError("");
-      renderCard();
+      go(8);
       return;
     }
     if (act === "dream-edit-cancel") {
