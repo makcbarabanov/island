@@ -942,7 +942,7 @@ body {
 }
 .tim-field--social {
   margin-top: 0;
-  margin-bottom: 14px;
+  margin-bottom: 0;
 }
 .tim-screen[data-screen="4"] .tim-btn,
 .tim-screen[data-screen="5"] .tim-btn,
@@ -951,36 +951,58 @@ body {
   margin-top: 0;
 }
 
-/* Компактный блок: кнопка сразу под полями, без «дыры» и без скролла */
+/* Соцсети: панель на 2 слота заранее → «Далее» не прыгает */
 .tim-reg--socials {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
   min-height: 0;
   padding-bottom: 0;
   box-sizing: border-box;
 }
 .tim-socials__panel {
   flex: 0 0 auto;
-  height: auto;
-  min-height: 280px;
-  max-height: none;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 248px;
+  min-height: 248px;
+  max-height: 248px;
   overflow: hidden;
   padding: 0 4px;
   box-sizing: border-box;
 }
+.tim-socials__slot {
+  flex: 0 0 116px;
+  height: 116px;
+  min-height: 116px;
+}
+.tim-socials__slot .tim-field--social {
+  height: 100%;
+  margin: 0;
+}
+.tim-socials__slot .tim-input-check-row,
+.tim-socials__slot .tim-input-check-row input {
+  height: 100%;
+}
 .tim-socials__placeholder {
-  margin: 36px 12px 0;
+  margin: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   font-size: 28px;
   font-weight: 700;
   color: rgba(18, 58, 119, 0.55);
+  box-sizing: border-box;
+  padding: 0 12px;
 }
 .tim-socials__dock {
   position: static;
   flex: 0 0 auto;
-  margin-top: 4px;
+  margin-top: 8px;
 }
 
 .tim-confirm-check {
@@ -1048,16 +1070,21 @@ body {
   border-radius: calc(65px * 1080 / 941);
   font-size: calc(44px * 1080 / 941);
 }
+.tim-screen[data-screen="5"] .tim-socials__slot .tim-field input {
+  height: 116px;
+  border-radius: 36px;
+  font-size: 36px;
+}
 .tim-screen[data-screen="4"] .tim-reg,
 .tim-screen[data-screen="fio"] .tim-reg {
   padding-bottom: 8px;
 }
 /* Экран 4: всё в один viewport — выше + плотнее поля */
 .tim-screen[data-screen="4"] .tim-field {
-  margin-bottom: 14px;
+  margin-bottom: 18px;
 }
 .tim-screen[data-screen="4"] .tim-field-row .tim-field {
-  margin-bottom: 14px;
+  margin-bottom: 18px;
 }
 .tim-screen[data-screen="4"] .tim-field input,
 .tim-screen[data-screen="4"] .tim-phone-code {

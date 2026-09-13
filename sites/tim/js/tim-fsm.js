@@ -596,19 +596,19 @@
     });
     icons += "</div>";
 
-    let panelInner = "";
+    // Два слота всегда: поля появляются/исчезают на месте, «Далее» не прыгает
+    let slot1 = "";
+    let slot2 = "";
     const active = state.activeChannel;
     if (active === "max" || active === "telegram") {
       const entry = normalizeContactEntry(state.contacts[active], true);
       state.contacts[active] = entry;
-      const label = active === "max" ? "MAX" : "Telegram";
-      panelInner =
-        renderSocialFieldRow("f-social-user", "Юзернейм (@nick)", entry.user, active + "_user") +
-        renderSocialFieldRow("f-social-phone", "Телефон", entry.phone, active + "_phone");
+      slot1 = renderSocialFieldRow("f-social-user", "Юзернейм (@nick)", entry.user, active + "_user");
+      slot2 = renderSocialFieldRow("f-social-phone", "Телефон", entry.phone, active + "_phone");
     } else if (active === "vk") {
       const entry = normalizeContactEntry(state.contacts.vk, false);
       state.contacts.vk = entry;
-      panelInner = renderSocialFieldRow(
+      slot1 = renderSocialFieldRow(
         "f-social-value",
         "ВКонтакте — ссылка на профиль",
         entry.value,
@@ -617,20 +617,26 @@
     } else if (active === "whatsapp") {
       const entry = normalizeContactEntry(state.contacts.whatsapp, false);
       state.contacts.whatsapp = entry;
-      panelInner = renderSocialFieldRow("f-social-value", "WhatsApp — номер", entry.value, "whatsapp_value");
+      slot1 = renderSocialFieldRow("f-social-value", "WhatsApp — номер", entry.value, "whatsapp_value");
     } else if (active === "email") {
       const entry = normalizeContactEntry(state.contacts.email, false);
       state.contacts.email = entry;
-      panelInner = renderSocialFieldRow("f-social-value", "Почта", entry.value, "email_value");
+      slot1 = renderSocialFieldRow("f-social-value", "Почта", entry.value, "email_value");
     } else {
-      panelInner = '<p class="tim-socials__placeholder">Выбери канал — поля появятся здесь</p>';
+      slot1 =
+        '<p class="tim-socials__placeholder">Выбери канал — поля появятся здесь</p>';
     }
 
     return (
       '<div class="tim-reg tim-reg--socials">' +
       icons +
       '<div class="tim-socials__panel" id="tim-socials-panel">' +
-      panelInner +
+      '<div class="tim-socials__slot">' +
+      slot1 +
+      "</div>" +
+      '<div class="tim-socials__slot">' +
+      slot2 +
+      "</div>" +
       "</div>" +
       '<div class="tim-socials__dock">' +
       btn("Далее", { act: "socials-next", noarrow: true }) +
