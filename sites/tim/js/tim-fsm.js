@@ -492,18 +492,8 @@
     // «Отправить» только после первого «+» — иначе новичок путает кнопки
     const cta = n >= 1 ? renderSendCta(n) : "";
 
-    const plaqueSrc = A.ICONS && A.ICONS.vitrinePlaque;
-    const label = n
-      ? plaqueSrc
-        ? '<div class="tim-vitrine__label tim-vitrine__label--plaque">' +
-          '<img class="tim-vitrine__plaque" src="' +
-          plaqueSrc +
-          '" alt="">' +
-          '<span>Витрина мечт · ' +
-          escapeHtml(String(n)) +
-          "</span></div>"
-        : '<p class="tim-vitrine__label">Витрина мечт · ' + escapeHtml(String(n)) + "</p>"
-      : "";
+    // «Витрина мечт» — на обоях (scene_04_confirm_many); HTML-табличку не рисуем
+    const label = "";
 
     const ph =
       n >= 1
