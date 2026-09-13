@@ -19,11 +19,13 @@
       max: "",
       telegram: "",
       vk: "",
+      whatsapp: "",
+      email: "",
       ok: "",
       facebook: "",
-      other: [], // [{label, value}]
+      other: [],
     },
-    activeChannel: "telegram",
+    activeChannel: null, // null = ни одна соцсеть не раскрыта
     dreamText: "",
     /** Витрина мечт: строго по одной, без парсера */
     dreamBasket: [],
@@ -295,15 +297,7 @@
     } else if (s === 3) {
       html = renderDreamVitrine();
     } else if (s === 4) {
-      html =
-        field("f-name", "Имя", state.name) +
-        field("f-city", "Город", state.city) +
-        field("f-surname", "Фамилия*", state.surname) +
-        '<div class="tim-field"><label for="f-phone">Номер телефона*</label><div class="tim-phone-row"><span class="tim-phone-code">+7</span><input id="f-phone" inputmode="numeric" value="' +
-        escapeHtml(digitsOnly(state.phone).replace(/^8/, "")) +
-        '" placeholder="9001234567"></div></div>' +
-        field("f-password", "Пароль*", state.password, "password") +
-        btn(state.busy ? "Регистрация…" : "Зарегистрироваться", { act: "register", disabled: state.busy });
+      html = renderRegisterScreen();
     } else if (s === 5) {
       html = renderContacts();
     } else if (s === 6) {
@@ -340,6 +334,93 @@
 
     els.body.innerHTML = html;
     bindCard();
+  }
+
+  function renderRegisterScreen() {
+    const n = basketCount() || (state.pendingDreams && state.pendingDreams.length) || 0;
+    const lead =
+      n > 0
+        ? "Супер, я вижу твои " +
+          n +
+          " " +
+          dreamWordAccusative(n) +
+          "! Чтобы отправить их на остров, оставь хотя бы один контакт для связи с тобой."
+        : "Чтобы попасть на остров, оставь хотя бы один контакт для связи с тобой.";
+
+    const socials = [
+      ["max", "MAX"],
+      ["telegram", "TG"],
+      ["vk", "VK"],
+      ["whatsapp", "WA"],
+      ["email", "Mail"],
+    ];
+    let icons = '<p class="tim-reg-optional">По желанию — ещё один канал</p><div class="tim-channels tim-channels--reg">';
+    socials.forEach(function (c) {
+      const id = c[0];
+      const filled = !!(state.contacts[id] && String(state.contacts[id]).trim());
+      const cls =
+        "tim-ch" +
+        (state.activeChannel === id ? " is-active" : "") +
+        (filled ? " is-filled" : "");
+      icons +=
+        '<button type="button" class="' +
+        cls +
+        '" data-act="ch-' +
+        id +
+        '" aria-label="' +
+        escapeHtml(c[1]) +
+        '">' +
+        escapeHtml(c[1]) +
+        "</button>";
+    });
+    icons += "</div>";
+
+    let socialField = "";
+    const active = state.activeChannel;
+    if (active) {
+      const meta = {
+        max: { label: "MAX — ник или номер", ph: "@nick или +7…" },
+        telegram: { label: "Telegram — @username или номер", ph: "@username или +7…" },
+        vk: { label: "ВКонтакте — ссылка на профиль", ph: "https://vk.com/…" },
+        whatsapp: { label: "WhatsApp — номер (этот или другой)", ph: "9001234567" },
+        email: { label: "Почта", ph: "you@example.com" },
+      };
+      const m = meta[active] || { label: "Контакт", ph: "" };
+      socialField =
+        '<div class="tim-field tim-field--social">' +
+        '<label for="f-contact-value">' +
+        escapeHtml(m.label) +
+        "</label>" +
+        '<input id="f-contact-value" type="text" placeholder="' +
+        escapeHtml(m.ph) +
+        '" value="' +
+        escapeHtml(state.contacts[active] || "") +
+        '"></div>';
+    }
+
+    const ctaLabel = state.pendingDreamSave
+      ? state.busy
+        ? "Отправляю…"
+        : "Отправить на остров"
+      : state.busy
+        ? "Регистрация…"
+        : "Далее";
+
+    return (
+      '<div class="tim-reg">' +
+      '<p class="tim-reg-lead">' +
+      escapeHtml(lead) +
+      "</p>" +
+      '<div class="tim-field"><label for="f-phone">Телефон*</label><div class="tim-phone-row"><span class="tim-phone-code">+7</span><input id="f-phone" inputmode="numeric" value="' +
+      escapeHtml(digitsOnly(state.phone).replace(/^8/, "").replace(/^\+?7/, "")) +
+      '" placeholder="9001234567"></div></div>' +
+      field("f-password", "Пароль для входа в личный кабинет*", state.password, "password") +
+      field("f-surname", "Фамилия (чтобы не спутать с другим Максом)*", state.surname) +
+      icons +
+      socialField +
+      btn(ctaLabel, { act: "register", disabled: state.busy, noarrow: true }) +
+      "</div>"
+    );
   }
 
   function renderContacts() {
@@ -775,7 +856,8 @@
     }
     if (act.indexOf("ch-") === 0) {
       persistContactField();
-      state.activeChannel = act.slice(3);
+      const next = act.slice(3);
+      state.activeChannel = state.activeChannel === next ? null : next;
       renderCard();
       return;
     }
@@ -869,6 +951,7 @@
 
   function persistContactField(addOther) {
     const active = state.activeChannel;
+    if (!active) return;
     if (active === "other") {
       const labelEl = document.getElementById("f-other-label");
       const valEl = document.getElementById("f-other-value");
@@ -954,9 +1037,14 @@
   }
 
   async function doRegister() {
+    persistContactField();
     readRegFields();
-    if (!state.name || !state.surname || !state.city || !state.password) {
-      setError("Заполни имя, фамилию, город и пароль.");
+    if (!state.name || !state.city) {
+      setError("Вернись к знакомству: нужны имя и город.");
+      return;
+    }
+    if (!state.surname || !state.password) {
+      setError("Нужны фамилия и пароль.");
       return;
     }
     if (digitsOnly(state.phone).length < 11) {
@@ -975,8 +1063,8 @@
           phone: state.phone,
           city: state.city,
           password: state.password,
-          telegram: null,
-          vk: null,
+          telegram: state.contacts.telegram || null,
+          vk: state.contacts.vk || null,
         }),
       });
       const data = await res.json().catch(function () {
@@ -994,12 +1082,13 @@
       });
       if (!loginRes.ok) throw new Error(user.detail || "Аккаунт создан, войди вручную");
       saveUser(user);
+      await saveContactsToServer();
       state.busy = false;
       if (state.pendingDreamSave) {
         await saveDreams();
         return;
       }
-      go(5);
+      afterContacts();
     } catch (e) {
       state.busy = false;
       setError(e.message || "Сеть недоступна");

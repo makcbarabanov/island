@@ -788,6 +788,32 @@ body {
   gap: 14px;
   margin-bottom: 24px;
 }
+.tim-channels--reg {
+  grid-template-columns: repeat(5, 1fr);
+  margin-top: 8px;
+}
+.tim-reg-lead {
+  margin: 0 0 28px;
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--blue-dark);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+.tim-reg-optional {
+  margin: 28px 0 12px;
+  font-size: 28px;
+  font-weight: 700;
+  color: rgba(18, 58, 119, 0.7);
+}
+.tim-field--social {
+  margin-top: 8px;
+  margin-bottom: 20px;
+}
+.tim-screen[data-screen="4"] .tim-btn {
+  width: 100%;
+  margin-top: 12px;
+}
 .tim-ch {
   appearance: none;
   border: 2px solid transparent;
