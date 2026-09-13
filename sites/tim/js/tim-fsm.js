@@ -53,8 +53,8 @@
 
   /**
    * Режим корзины:
-   * - combined (по умолчанию): ввод + список на экране 3, без прыжка
-   * - split: старый 3 ↔ 8; URL ?basket_ui=split или localStorage tim_basket_ui=split
+   * - split (по умолчанию): отдельный экран списка 3 ↔ 8
+   * - combined: ввод + список на одном экране; URL ?basket_ui=combined
    */
   function basketUiMode() {
     try {
@@ -64,7 +64,7 @@
       const fromLs = (localStorage.getItem("tim_basket_ui") || "").trim().toLowerCase();
       if (fromLs === "split" || fromLs === "combined") return fromLs;
     } catch (_) {}
-    return "combined";
+    return "split";
   }
 
   function isBasketCombined() {
