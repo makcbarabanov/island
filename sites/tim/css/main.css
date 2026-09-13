@@ -814,6 +814,20 @@ body {
   width: 100%;
   margin-top: 12px;
 }
+
+/* Экран 4 / login: форма выше песка — скролл внутри карточки */
+.tim-screen[data-screen="4"] .tim-card,
+.tim-screen[data-screen="login"] .tim-card {
+  bottom: 36px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+}
+.tim-screen[data-screen="4"] .tim-reg {
+  padding-bottom: 28px;
+}
 .tim-ch {
   appearance: none;
   border: 2px solid transparent;

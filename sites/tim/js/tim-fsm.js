@@ -52,6 +52,9 @@
     logo: document.getElementById("tim-logo"),
   };
 
+  /** Отмена устаревшего апгрейда lite→full при быстрой смене экрана */
+  let sceneLoadToken = 0;
+
   let designW = (A && A.DESIGN_WIDTH) || 941;
   let designH = (A && A.DESIGN_HEIGHT) || 1672;
 
@@ -120,6 +123,23 @@
       .replace(/"/g, "&quot;");
   }
 
+  /** Сначала lite JPEG, затем WebP (если другой URL и экран ещё тот же). */
+  function setSceneProgressive(entry) {
+    const urls = A.sceneUrls ? A.sceneUrls(entry) : { lite: entry, full: entry };
+    const lite = urls.lite || "";
+    const full = urls.full || lite;
+    const token = ++sceneLoadToken;
+    if (lite) els.scene.src = lite;
+    if (!full || full === lite) return;
+    const img = new Image();
+    img.decoding = "async";
+    img.onload = function () {
+      if (token !== sceneLoadToken) return;
+      els.scene.src = full;
+    };
+    img.src = full;
+  }
+
   function applyScene(screen) {
     const key = screen;
     const baked = !!(A.BAKED_SCENE && A.BAKED_SCENE[key]);
@@ -131,17 +151,19 @@
     els.screen.dataset.baked = baked ? "1" : "0";
 
     // Экран 3 (витрина): 0 мечт — «запиши»; ≥1 — «Вау, какая мечта!»
+    let sceneEntry;
     if (key === 3 || key === "3") {
       if (state.dreamBasket && state.dreamBasket.length && A.confirmSceneForCount) {
-        els.scene.src = A.confirmSceneForCount(state.dreamBasket.length);
+        sceneEntry = A.confirmSceneForCount(state.dreamBasket.length);
       } else {
-        els.scene.src = A.SCENE[3] || A.SCENE[1];
+        sceneEntry = A.SCENE[3] || A.SCENE[1];
       }
     } else if ((key === 8 || key === "8") && A.confirmSceneForCount) {
-      els.scene.src = A.confirmSceneForCount(state.dreamBasket.length || 1);
+      sceneEntry = A.confirmSceneForCount(state.dreamBasket.length || 1);
     } else {
-      els.scene.src = A.SCENE[key] || A.SCENE[1];
+      sceneEntry = A.SCENE[key] || A.SCENE[1];
     }
+    setSceneProgressive(sceneEntry);
     els.scene.setAttribute("width", String(designW));
     els.scene.setAttribute("height", String(designH));
 

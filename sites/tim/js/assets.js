@@ -11,20 +11,37 @@
   const DESIGN_CANON = { w: 1080, h: 2400 };
   const S1 = DESIGN_CANON.w / DESIGN_LEGACY.w;
 
+  /** Сцена: lite (быстрый JPEG) → full (WebP). Строка = один URL без апгрейда (fin/). */
+  function scenePair(base) {
+    return {
+      lite: V2 + base + "_lite.jpg",
+      full: V2 + base + ".webp",
+    };
+  }
+
   const SCENE = {
-    1: V2 + "scene_01_welcome_1080x2400.png",
-    2: V2 + "scene_02_video_1080x2400.png",
-    3: V2 + "scene_03_dream_1080x2400.png",
+    1: scenePair("scene_01_welcome_1080x2400"),
+    2: scenePair("scene_02_video_1080x2400"),
+    3: scenePair("scene_03_dream_1080x2400"),
     4: FIN + "13.png",
     5: FIN + "14.png",
     6: FIN + "15.png",
     7: FIN + "16.png",
-    8: V2 + "scene_04_confirm_many_1080x2400.png",
+    8: scenePair("scene_04_confirm_many_1080x2400"),
     9: FIN + "18.png",
     login: FIN + "13.png",
-    confirmOne: V2 + "scene_04_confirm_one_1080x2400.png",
-    confirmMany: V2 + "scene_04_confirm_many_1080x2400.png",
+    confirmOne: scenePair("scene_04_confirm_one_1080x2400"),
+    confirmMany: scenePair("scene_04_confirm_many_1080x2400"),
   };
+
+  function sceneUrls(entry) {
+    if (!entry) return { lite: "", full: "" };
+    if (typeof entry === "string") return { lite: entry, full: entry };
+    return {
+      lite: entry.lite || entry.full || "",
+      full: entry.full || entry.lite || "",
+    };
+  }
 
   const BAKED_SCENE = {
     1: true,
@@ -118,6 +135,7 @@
     S1: S1,
     designFor: designFor,
     confirmSceneForCount: confirmSceneForCount,
+    sceneUrls: sceneUrls,
     FIN: FIN,
     V2: V2,
     SCENE: SCENE,
