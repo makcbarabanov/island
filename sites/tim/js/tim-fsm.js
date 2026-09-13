@@ -1516,7 +1516,8 @@
       state.pendingDreams = null;
       state.dreamBasket = [];
       state.dreamText = "";
-      go(9);
+      // Экран 9 (успех) убран из потока — сразу в кабинет
+      window.location.href = lkUrl();
     } catch (e) {
       state.busy = false;
       setError(e.message || "Ошибка сохранения");
