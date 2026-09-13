@@ -144,8 +144,13 @@
     els.scene.setAttribute("height", String(designH));
 
     const layout = (A.CARD_LAYOUT && A.CARD_LAYOUT[key]) || { left: 61, top: 850, width: 819 };
+    let top = layout.top;
+    // витрина с мечтами: ниже на песок, не под табличку на скале
+    if ((key === 3 || key === "3") && state.dreamBasket && state.dreamBasket.length) {
+      top = Math.max(top, 1120);
+    }
     els.card.style.left = layout.left + "px";
-    els.card.style.top = layout.top + "px";
+    els.card.style.top = top + "px";
     els.card.style.width = layout.width + "px";
 
     if (baked) {
@@ -455,11 +460,20 @@
     return el ? el.value.trim() : String(state.dreamText || "").trim();
   }
 
+  function shouldShowSend() {
+    if (basketCount() < 1) return false;
+    if (hasWholeWord(readDraftDream())) return false;
+    const el = document.getElementById("f-dream-new");
+    if (el && document.activeElement === el) return false;
+    return true;
+  }
+
   function renderDreamVitrine() {
     const list = state.dreamBasket;
     const draft = state.dreamText || "";
     const canPlus = hasWholeWord(draft);
     const n = list.length;
+    const showSend = n >= 1 && !hasWholeWord(draft);
 
     let rows = "";
     if (list.length) {
@@ -489,11 +503,14 @@
       rows = '<p class="tim-vitrine-empty" aria-hidden="true"></p>';
     }
 
-    // «Отправить» только после первого «+» — иначе новичок путает кнопки
-    const cta = n >= 1 ? renderSendCta(n) : "";
-
-    // «Витрина мечт» — на обоях (scene_04_confirm_many); HTML-табличку не рисуем
-    const label = "";
+    // Send только когда поле пустое (не во время набора следующей) — иначе путают с «+»
+    const cta = showSend ? renderSendCta(n) : "";
+    const hint =
+      n >= 1
+        ? '<p class="tim-vitrine__hint" id="tim-vitrine-hint">В витрине ' +
+          escapeHtml(String(n)) +
+          " · выше ↑ · «+» добавит ещё</p>"
+        : "";
 
     const ph =
       n >= 1
@@ -501,12 +518,14 @@
         : A.DREAM_PLACEHOLDER || "Напиши мечту своими словами";
 
     return (
-      '<div class="tim-vitrine">' +
+      '<div class="tim-vitrine' +
+      (n ? " has-items" : "") +
+      '">' +
       '<div class="tim-vitrine__stage">' +
-      label +
       rows +
       "</div>" +
       '<div class="tim-vitrine__dock">' +
+      hint +
       '<div class="tim-vitrine__compose">' +
       '<label class="tim-sr-only" for="f-dream-new">Новая мечта</label>' +
       '<input id="f-dream-new" class="tim-vitrine__input" type="text" autocomplete="off" placeholder="' +
@@ -555,13 +574,19 @@
     const plus = els.body.querySelector(".tim-vitrine__plus");
     const canPlus = hasWholeWord(draft);
     const n = basketCount();
+    const hint = document.getElementById("tim-vitrine-hint");
     if (plus) {
       plus.disabled = !canPlus;
       plus.classList.toggle("is-disabled", !canPlus);
     }
+    if (hint && n >= 1) {
+      hint.textContent =
+        "В витрине " + n + " · выше ↑ · «+» добавит ещё";
+    }
     let ctaWrap = document.getElementById("tim-vitrine-cta");
     const dock = els.body.querySelector(".tim-vitrine__dock");
-    if (n < 1) {
+    const show = shouldShowSend();
+    if (!show) {
       if (ctaWrap) ctaWrap.remove();
       return;
     }
@@ -593,6 +618,10 @@
     const input = document.getElementById("f-dream-new");
     if (input) {
       input.addEventListener("input", syncVitrineDock);
+      input.addEventListener("focus", syncVitrineDock);
+      input.addEventListener("blur", function () {
+        setTimeout(syncVitrineDock, 120);
+      });
       input.addEventListener("keydown", function (e) {
         if (e.key === "Enter") {
           e.preventDefault();
