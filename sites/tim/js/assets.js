@@ -54,6 +54,9 @@
   const ICONS = {
     editDream: V2 + "icon_edit_dream_128.png",
     deleteDream: V2 + "icon_delete_dream_128.png",
+    // После Компаса: положить файлы и прописать пути
+    sendDream: "", // assets/v2/icon_send_dream_128.png
+    vitrinePlaque: "", // assets/v2/plaque_vitrine_dreams.png
   };
 
   const CARD_LAYOUT = {

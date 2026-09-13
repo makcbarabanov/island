@@ -422,8 +422,32 @@
     return '<img class="tim-ico" src="' + src + '" alt="" width="36" height="36" decoding="async">';
   }
 
+  function iconSendPlane() {
+    const src = A.ICONS && A.ICONS.sendDream;
+    if (src) {
+      return '<img class="tim-send-ico" src="' + src + '" alt="" width="40" height="40" decoding="async">';
+    }
+    return (
+      '<svg class="tim-send-ico" viewBox="0 0 24 24" aria-hidden="true">' +
+      '<path fill="currentColor" d="M3.4 20.6 21 12 3.4 3.4l-.1 6.7L15 12 3.3 13.9l.1 6.7z"/>' +
+      "</svg>"
+    );
+  }
+
   function sendDreamsLabel(n) {
     return "Отправить " + n + " " + dreamWordAccusative(n) + " Тиму";
+  }
+
+  function renderSendCta(n) {
+    return (
+      '<button type="button" class="tim-btn tim-btn--noarrow tim-btn--send" data-act="dream-save"' +
+      (state.busy ? " disabled" : "") +
+      ">" +
+      iconSendPlane() +
+      "<span>" +
+      escapeHtml(state.busy ? "Отправляю…" : sendDreamsLabel(n)) +
+      "</span></button>"
+    );
   }
 
   function readDraftDream() {
@@ -436,7 +460,6 @@
     const draft = state.dreamText || "";
     const canPlus = hasWholeWord(draft);
     const n = list.length;
-    const canSend = n >= 1;
 
     let rows = "";
     if (list.length) {
@@ -466,25 +489,26 @@
       rows = '<p class="tim-vitrine-empty" aria-hidden="true"></p>';
     }
 
-    const cta = canSend
-      ? btn(state.busy ? "Отправляю…" : sendDreamsLabel(n), {
-          act: "dream-save",
-          noarrow: true,
-          disabled: state.busy,
-        })
-      : btn("Запиши мечту ↑", {
-          act: "dream-hint",
-          noarrow: true,
-          locked: true,
-          disabled: true,
-        });
+    // «Отправить» только после первого «+» — иначе новичок путает кнопки
+    const cta = n >= 1 ? renderSendCta(n) : "";
+
+    const plaqueSrc = A.ICONS && A.ICONS.vitrinePlaque;
+    const label = n
+      ? plaqueSrc
+        ? '<div class="tim-vitrine__label tim-vitrine__label--plaque">' +
+          '<img class="tim-vitrine__plaque" src="' +
+          plaqueSrc +
+          '" alt="">' +
+          '<span>Витрина мечт · ' +
+          escapeHtml(String(n)) +
+          "</span></div>"
+        : '<p class="tim-vitrine__label">Витрина мечт · ' + escapeHtml(String(n)) + "</p>"
+      : "";
 
     return (
       '<div class="tim-vitrine">' +
       '<div class="tim-vitrine__stage">' +
-      (n
-        ? '<p class="tim-vitrine__label">Витрина мечт · ' + escapeHtml(String(n)) + "</p>"
-        : "") +
+      label +
       rows +
       "</div>" +
       '<div class="tim-vitrine__dock">' +
@@ -500,15 +524,19 @@
       '" data-act="dream-plus" aria-label="Добавить мечту в витрину"' +
       (canPlus ? "" : " disabled") +
       ">+</button></div>" +
-      '<div class="tim-vitrine__cta" id="tim-vitrine-cta">' +
-      cta +
-      "</div></div></div>"
+      (cta ? '<div class="tim-vitrine__cta" id="tim-vitrine-cta">' + cta + "</div>" : "") +
+      "</div></div>"
     );
   }
 
-  function refreshDreamScreen() {
-    const draftEl = document.getElementById("f-dream-new");
-    if (draftEl) state.dreamText = draftEl.value;
+  function refreshDreamScreen(opts) {
+    const o = opts || {};
+    if (o.clearDraft) {
+      state.dreamText = "";
+    } else {
+      const draftEl = document.getElementById("f-dream-new");
+      if (draftEl) state.dreamText = draftEl.value;
+    }
     if (state.screen === 3 || state.screen === "3" || state.screen === 7) {
       applyScene(3);
       state.screen = 3;
@@ -530,28 +558,26 @@
     const draft = readDraftDream();
     state.dreamText = draft;
     const plus = els.body.querySelector(".tim-vitrine__plus");
-    const ctaWrap = document.getElementById("tim-vitrine-cta");
     const canPlus = hasWholeWord(draft);
     const n = basketCount();
     if (plus) {
       plus.disabled = !canPlus;
       plus.classList.toggle("is-disabled", !canPlus);
     }
-    if (!ctaWrap) return;
-    if (n >= 1) {
-      ctaWrap.innerHTML = btn(state.busy ? "Отправляю…" : sendDreamsLabel(n), {
-        act: "dream-save",
-        noarrow: true,
-        disabled: state.busy,
-      });
-    } else {
-      ctaWrap.innerHTML = btn("Запиши мечту ↑", {
-        act: "dream-hint",
-        noarrow: true,
-        locked: true,
-        disabled: true,
-      });
+    let ctaWrap = document.getElementById("tim-vitrine-cta");
+    const dock = els.body.querySelector(".tim-vitrine__dock");
+    if (n < 1) {
+      if (ctaWrap) ctaWrap.remove();
+      return;
     }
+    if (!ctaWrap && dock) {
+      ctaWrap = document.createElement("div");
+      ctaWrap.className = "tim-vitrine__cta";
+      ctaWrap.id = "tim-vitrine-cta";
+      dock.appendChild(ctaWrap);
+    }
+    if (!ctaWrap) return;
+    ctaWrap.innerHTML = renderSendCta(n);
     ctaWrap.querySelectorAll("[data-act]").forEach(function (el) {
       el.addEventListener("click", function () {
         onAct(el.getAttribute("data-act"), null);
@@ -769,9 +795,8 @@
         return;
       }
       state.dreamBasket.push(text);
-      state.dreamText = "";
       setError("");
-      refreshDreamScreen();
+      refreshDreamScreen({ clearDraft: true });
       return;
     }
     if (act === "basket-del") {
@@ -785,13 +810,8 @@
     }
     if (act === "dream-save") {
       commitDreamEditsFromDom();
-      const draft = readDraftDream();
-      if (hasWholeWord(draft) && state.dreamBasket.length < 20) {
-        state.dreamBasket.push(draft);
-        state.dreamText = "";
-      }
       if (!state.dreamBasket.length) {
-        setError("Сначала добавь хотя бы одну мечту в витрину («+»).");
+        setError("Сначала добавь хотя бы одну мечту кнопкой «+».");
         return;
       }
       state.pendingDreams = state.dreamBasket.slice();
