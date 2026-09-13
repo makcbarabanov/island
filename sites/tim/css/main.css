@@ -565,232 +565,138 @@ body {
 .tim-screen[data-screen="2"] .tim-btn {
   margin-top: 300px;
 }
-/* Экран 3: одна мечта + корзина */
+/* Экран 3: витрина мечт + фиксированный док внизу */
 .tim-screen[data-screen="3"] .tim-card {
   padding: 0;
-  max-height: 1280px;
+  max-height: none;
+  overflow: visible;
+}
+.tim-vitrine {
+  display: flex;
+  flex-direction: column;
+  min-height: 1180px;
+  gap: 20px;
+}
+.tim-vitrine__stage {
+  flex: 1 1 auto;
+  min-height: 320px;
+  max-height: 720px;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
-.tim-dream-compose {
-  position: relative;
-}
-.tim-dream-compose--combined.has-basket .tim-field--dream textarea {
-  height: 220px;
-  min-height: 180px;
-}
-.tim-basket-inline {
-  margin-top: 28px;
-  padding: 24px 22px 8px;
-  background: rgba(255, 255, 255, 0.92);
-  border-radius: 40px;
-  border: 2px solid rgba(255, 255, 255, 0.8);
-  box-shadow: 0 12px 36px rgba(20, 60, 90, 0.14);
-}
-.tim-basket-inline__title {
+.tim-vitrine__label {
   margin: 0 0 16px;
   font-size: 32px;
   font-weight: 800;
   color: var(--blue-dark);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.55);
 }
-.tim-basket-inline .tim-basket-list {
-  max-height: 480px;
-  margin-bottom: 12px;
+.tim-vitrine-empty {
+  margin: 0;
+  min-height: 40px;
 }
-.tim-basket-inline .tim-btn {
-  margin-top: 8px;
-  width: 100%;
-}
-.tim-dream-compose__top {
+.tim-vitrine-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
-  justify-content: flex-end;
-  margin: 0 0 16px;
+  flex-direction: column;
+  gap: 14px;
 }
-.tim-basket {
-  position: relative;
-  top: auto;
-  right: auto;
-  z-index: 5;
-  width: 96px;
-  height: 96px;
-  border: 0;
-  border-radius: 28px;
-  background: rgba(255, 255, 255, 0.95);
-  box-shadow: 0 12px 32px rgba(20, 60, 90, 0.2);
-  cursor: pointer;
+.tim-vitrine-item {
+  display: grid;
+  grid-template-columns: 52px 1fr 68px;
+  gap: 10px;
+  align-items: center;
+}
+.tim-vitrine-item__num {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--blue-dark);
+  font-size: 26px;
+  font-weight: 800;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0;
+  box-shadow: 0 4px 14px rgba(20, 60, 90, 0.12);
 }
-.tim-basket__bag {
-  width: 42px;
-  height: 36px;
-  border: 4px solid var(--blue-dark);
-  border-radius: 0 0 12px 12px;
-  position: relative;
-  box-sizing: border-box;
-}
-.tim-basket__bag::before {
-  content: "";
-  position: absolute;
-  left: 6px;
-  right: 6px;
-  top: -16px;
-  height: 16px;
-  border: 4px solid var(--blue-dark);
-  border-bottom: 0;
-  border-radius: 14px 14px 0 0;
-  box-sizing: border-box;
-}
-.tim-basket__badge {
-  position: absolute;
-  top: -8px;
-  right: -8px;
-  min-width: 44px;
-  height: 44px;
-  padding: 0 10px;
-  border-radius: 999px;
-  background: var(--blue);
-  color: #fff;
-  font-size: 28px;
-  font-weight: 800;
-  line-height: 44px;
-  text-align: center;
-  box-shadow: 0 4px 12px rgba(20, 60, 90, 0.25);
-}
-.tim-dream-edit-label {
-  margin: 0 0 16px;
-  font-size: 32px;
-  font-weight: 800;
-  color: var(--blue-dark);
-}
-.tim-screen[data-screen="3"] .tim-field--dream {
-  margin-bottom: 28px;
-}
-.tim-screen[data-screen="3"] .tim-field--dream textarea {
-  height: 360px;
-  min-height: 320px;
-  background: rgba(255, 255, 255, 0.9);
-  border: 2px solid rgba(77, 128, 183, 0.4);
-  border-radius: 48px;
-  padding: 36px 40px;
-  font-size: 40px;
-  line-height: 1.35;
-  resize: none;
-}
-.tim-screen[data-screen="3"] .tim-field--dream textarea::placeholder {
-  color: rgba(18, 58, 119, 0.5);
-  white-space: pre-wrap;
-}
-.tim-screen[data-screen="3"] .tim-btn {
-  margin-top: 0;
-}
-.tim-screen[data-screen="3"] .tim-btn + .tim-btn,
-.tim-screen[data-screen="3"] .tim-link--confirm {
-  margin-top: 16px;
-}
-.tim-screen[data-screen="3"] .tim-link--confirm {
-  display: block;
-  text-align: center;
-  padding: 14px 20px;
+.tim-vitrine-item__text {
+  width: 100%;
+  border: 2px solid rgba(77, 128, 183, 0.35);
   border-radius: 28px;
-  background: rgba(255, 255, 255, 0.92);
-  color: var(--blue);
-  font-weight: 700;
-}
-
-/* Экран 8: корзина — список */
-.tim-screen[data-screen="8"] .tim-card {
-  padding: 0;
-  background: transparent;
-  border: 0;
-  box-shadow: none;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-}
-.tim-confirm-panel {
   background: rgba(255, 255, 255, 0.9);
-  border-radius: 48px;
-  padding: 28px 32px 32px;
-  box-shadow: 0 16px 48px rgba(20, 60, 90, 0.18);
-  border: 2px solid rgba(255, 255, 255, 0.75);
-}
-.tim-confirm-tech {
-  display: inline-block;
-  margin: 0 0 12px;
-  padding: 10px 20px;
-  font-size: 28px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--blue-dark);
-  background: #fff;
-  border-radius: 999px;
-  box-shadow: 0 4px 12px rgba(20, 60, 90, 0.12);
-}
-.tim-confirm-count {
-  margin: 0 0 16px;
-  font-size: 40px;
-  font-weight: 800;
-  color: var(--blue-dark);
-}
-.tim-basket-empty {
-  margin: 0 0 20px;
+  padding: 18px 24px;
+  font: inherit;
   font-size: 34px;
-  line-height: 1.35;
-  color: #4a6080;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--blue-dark);
+  box-sizing: border-box;
 }
-.tim-basket-list {
-  list-style: none;
-  margin: 0 0 24px;
-  padding: 0;
-  max-height: 720px;
-  overflow-y: auto;
+.tim-vitrine-item__text:focus {
+  outline: none;
+  border-color: var(--blue);
+  background: #fff;
+}
+.tim-vitrine__dock {
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   gap: 16px;
-}
-.tim-basket-item {
-  display: grid;
-  grid-template-columns: 56px 1fr auto;
-  gap: 8px 16px;
-  align-items: start;
-  padding: 20px 22px;
-  background: #fff;
-  border-radius: 32px;
-  border: 2px solid rgba(77, 128, 183, 0.22);
-}
-.tim-basket-item__num {
-  width: 56px;
-  height: 56px;
-  border-radius: 18px;
-  background: rgba(77, 128, 183, 0.15);
-  color: var(--blue-dark);
-  font-size: 28px;
-  font-weight: 800;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.tim-basket-item__text {
-  margin: 0;
-  font-size: 34px;
-  line-height: 1.3;
-  color: var(--blue-dark);
-  font-weight: 600;
-  word-break: break-word;
   padding-top: 8px;
 }
-.tim-basket-item__acts {
-  display: flex;
-  flex-direction: row;
-  gap: 8px;
-  padding-top: 4px;
+.tim-vitrine__compose {
+  display: grid;
+  grid-template-columns: 1fr 96px;
+  gap: 12px;
+  align-items: stretch;
 }
-.tim-ico-btn {
-  width: 72px;
-  height: 72px;
+.tim-vitrine__input {
+  width: 100%;
+  border: 2px solid rgba(77, 128, 183, 0.4);
+  border-radius: 40px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 28px 32px;
+  font: inherit;
+  font-size: 36px;
+  color: var(--blue-dark);
+  box-sizing: border-box;
+}
+.tim-vitrine__input::placeholder {
+  color: rgba(18, 58, 119, 0.45);
+}
+.tim-vitrine__input:focus {
+  outline: none;
+  border-color: var(--blue);
+  background: #fff;
+}
+.tim-vitrine__plus {
+  border: 0;
+  border-radius: 40px;
+  background: var(--blue);
+  color: #fff;
+  font-size: 56px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 10px 28px rgba(11, 73, 201, 0.28);
+}
+.tim-vitrine__plus.is-disabled,
+.tim-vitrine__plus:disabled {
+  background: rgba(120, 140, 160, 0.45);
+  color: rgba(255, 255, 255, 0.75);
+  box-shadow: none;
+  cursor: default;
+}
+.tim-vitrine__cta .tim-btn {
+  margin-top: 0;
+  width: 100%;
+}
+.tim-screen[data-screen="3"] .tim-ico-btn {
+  width: 68px;
+  height: 68px;
   border: 0;
   border-radius: 22px;
   display: inline-flex;
@@ -799,35 +705,17 @@ body {
   cursor: pointer;
   padding: 8px;
   flex-shrink: 0;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.9);
   box-shadow: 0 4px 12px rgba(20, 60, 90, 0.12);
 }
-.tim-ico-btn--edit {
-  color: var(--blue-dark);
-}
-.tim-ico-btn--del {
+.tim-screen[data-screen="3"] .tim-ico-btn--del {
   color: #c62828;
 }
-.tim-ico {
-  width: 52px;
-  height: 52px;
+.tim-screen[data-screen="3"] .tim-ico {
+  width: 48px;
+  height: 48px;
   display: block;
   object-fit: contain;
-}
-.tim-screen[data-screen="8"] .tim-link--confirm {
-  display: block;
-  margin-top: 14px;
-  padding: 14px 20px;
-  border-radius: 28px;
-  background: rgba(255, 255, 255, 0.92);
-  color: var(--blue);
-  font-weight: 700;
-  box-shadow: 0 4px 12px rgba(20, 60, 90, 0.1);
-  text-align: center;
-}
-.tim-screen[data-screen="8"] .tim-btn {
-  margin-top: 18px;
-  width: 100%;
 }
 .tim-video video[hidden],
 .tim-video__ph[hidden] {

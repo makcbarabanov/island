@@ -68,9 +68,9 @@
       width: 900,
     },
     3: {
-      left: 90,
-      top: 1280,
-      width: 900,
+      left: 70,
+      top: 880,
+      width: 940,
     },
     4: { left: 61, top: 719, width: 819 },
     5: { left: 71, top: 640, width: 800 },
@@ -92,8 +92,7 @@
     placeholderLabel: "Видео скоро появится\nНажми, чтобы продолжить",
   };
 
-  const DREAM_PLACEHOLDER =
-    "Одна мечта — своими словами. Потом можешь добавить ещё через корзину.";
+  const DREAM_PLACEHOLDER = "Напиши мечту своими словами";
 
   function designFor(screen) {
     const s = String(screen);
