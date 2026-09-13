@@ -409,6 +409,7 @@ body {
   gap: 19px;
 }
 .tim-phone-code {
+  appearance: none;
   height: 140px;
   border-radius: 43px;
   border: 2px solid rgba(77, 128, 183, 0.28);
@@ -416,8 +417,123 @@ body {
   place-items: center;
   font-weight: 700;
   font-size: 43px;
+  font-family: inherit;
   background: rgba(255, 255, 255, 0.7);
   color: var(--blue);
+  cursor: pointer;
+  padding: 0;
+}
+.tim-phone-code:active {
+  transform: scale(0.98);
+}
+
+.tim-dial-picker {
+  max-height: 420px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 0 0 24px;
+  padding: 8px 0;
+  background: rgba(255, 255, 255, 0.94);
+  border: 2px solid rgba(77, 128, 183, 0.28);
+  border-radius: 36px;
+  box-shadow: 0 16px 40px rgba(35, 76, 110, 0.16);
+}
+.tim-dial-picker__item {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  padding: 22px 28px;
+  font: inherit;
+  font-size: 36px;
+  color: var(--text);
+  cursor: pointer;
+}
+.tim-dial-picker__item.is-on,
+.tim-dial-picker__item:hover {
+  background: rgba(8, 175, 194, 0.12);
+}
+.tim-dial-picker__code {
+  font-weight: 800;
+  color: var(--blue);
+  min-width: 110px;
+}
+.tim-dial-picker__label {
+  color: var(--muted);
+  font-size: 32px;
+}
+
+.tim-field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 0;
+}
+.tim-field-row .tim-field {
+  margin-bottom: calc(24px * 1080 / 941);
+}
+
+.tim-input-check-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.tim-input-check-row input {
+  width: 100%;
+  padding-left: 88px;
+  padding-right: 90px;
+}
+.tim-input-check-row--phone input {
+  padding-left: calc(34px * 1080 / 941);
+}
+.tim-field-row .tim-input-check-row input {
+  padding-right: calc(34px * 1080 / 941);
+}
+.tim-field-ico {
+  position: absolute;
+  left: 28px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  color: rgba(18, 58, 119, 0.45);
+  pointer-events: none;
+  z-index: 1;
+}
+.tim-field-check {
+  position: absolute;
+  right: 28px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 34px;
+  font-weight: 800;
+  color: #fff;
+  background: #1fad5a;
+  box-shadow: 0 6px 16px rgba(31, 173, 90, 0.35);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+  z-index: 1;
+}
+.tim-field--check.is-ok .tim-field-check {
+  opacity: 1;
+}
+
+.tim-reg-legal {
+  margin: 18px 0 0;
+  text-align: center;
+  font-size: 26px;
+  color: rgba(18, 58, 119, 0.65);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
 .tim-btn {
@@ -810,13 +926,17 @@ body {
   margin-top: 8px;
   margin-bottom: 20px;
 }
-.tim-screen[data-screen="4"] .tim-btn {
+.tim-screen[data-screen="4"] .tim-btn,
+.tim-screen[data-screen="5"] .tim-btn,
+.tim-screen[data-screen="fio"] .tim-btn {
   width: 100%;
   margin-top: 12px;
 }
 
-/* Экран 4 / login: форма выше песка — скролл внутри карточки */
+/* Аккаунт / соцсети / ФИО: скролл внутри карточки на коротком экране */
 .tim-screen[data-screen="4"] .tim-card,
+.tim-screen[data-screen="5"] .tim-card,
+.tim-screen[data-screen="fio"] .tim-card,
 .tim-screen[data-screen="login"] .tim-card {
   bottom: 36px;
   overflow-x: hidden;
@@ -825,7 +945,9 @@ body {
   overscroll-behavior: contain;
   touch-action: pan-y;
 }
-.tim-screen[data-screen="4"] .tim-reg {
+.tim-screen[data-screen="4"] .tim-reg,
+.tim-screen[data-screen="5"] .tim-reg,
+.tim-screen[data-screen="fio"] .tim-reg {
   padding-bottom: 28px;
 }
 .tim-ch {

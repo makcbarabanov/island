@@ -12,7 +12,10 @@
     name: "",
     city: "",
     surname: "",
+    patronymic: "",
     phone: "",
+    dialCode: "+7",
+    dialPickerOpen: false,
     password: "",
     user: null,
     contacts: {
@@ -111,8 +114,29 @@
 
   function fullPhone(digits) {
     let d = digitsOnly(digits);
-    if (d.charAt(0) === "8") d = d.slice(1);
-    return "+7" + d;
+    const code = state.dialCode || "+7";
+    const codeDigits = digitsOnly(code);
+    // если вставили номер с кодом страны — не дублируем
+    if (codeDigits && d.indexOf(codeDigits) === 0 && d.length > codeDigits.length) {
+      d = d.slice(codeDigits.length);
+    }
+    if (code === "+7" && d.charAt(0) === "8") d = d.slice(1);
+    if (code === "+7" && d.charAt(0) === "7" && d.length >= 11) d = d.slice(1);
+    return code + d;
+  }
+
+  function nationalPhoneDigits() {
+    const full = digitsOnly(state.phone);
+    const codeDigits = digitsOnly(state.dialCode || "+7");
+    if (codeDigits && full.indexOf(codeDigits) === 0) return full.slice(codeDigits.length);
+    return full;
+  }
+
+  function phoneLooksOk() {
+    const national = nationalPhoneDigits();
+    const code = state.dialCode || "+7";
+    if (code === "+7") return national.length === 10;
+    return national.length >= 6 && national.length <= 14;
   }
 
   function escapeHtml(s) {
@@ -200,13 +224,14 @@
       els.tagline.src = A.DECOR.tagline;
     }
     if (els.headerLogin) {
-      els.headerLogin.hidden = !(key === 1 || key === "1");
+      els.headerLogin.hidden = !(key === 1 || key === "1" || key === 4 || key === "4" || key === "login");
     }
     fitTimCanvas();
   }
 
   function go(screen) {
     state.screen = screen;
+    state.dialPickerOpen = false;
     setError("");
     applyScene(screen);
     renderCard();
@@ -319,10 +344,12 @@
     } else if (s === 3) {
       html = renderDreamVitrine();
     } else if (s === 4) {
-      html = renderRegisterScreen();
+      html = renderAccountScreen();
     } else if (s === 5) {
-      html = renderContacts();
-    } else if (s === 6) {
+      html = renderSocialsScreen();
+    } else if (s === "fio") {
+      html = renderFioScreen();
+    } else if (s === 6 || s === "pwa") {
       html =
         '<h2>Установить как приложение?</h2><p class="lead">Так Остров будет всегда под рукой. Предложение один раз — потом можно найти установку в профиле.</p>' +
         btn("Установить", { act: "pwa-install", noarrow: true }) +
@@ -346,9 +373,12 @@
     } else if (s === "login") {
       html =
         '<h2>Вход</h2>' +
-        '<div class="tim-field"><label for="f-phone">Телефон</label><div class="tim-phone-row"><span class="tim-phone-code">+7</span><input id="f-phone" inputmode="numeric" value="' +
-        escapeHtml(digitsOnly(state.phone).replace(/^8/, "")) +
+        '<div class="tim-field"><label for="f-phone">Телефон</label><div class="tim-phone-row"><button type="button" class="tim-phone-code" id="btn-dial-code" data-act="dial-open">' +
+        escapeHtml(state.dialCode || "+7") +
+        '</button><input id="f-phone" inputmode="numeric" value="' +
+        escapeHtml(nationalPhoneDigits()) +
         '"></div></div>' +
+        (state.dialPickerOpen ? renderDialPicker() : "") +
         field("f-password", "Пароль", "", "password") +
         btn(state.busy ? "Вход…" : "Войти", { act: "login", disabled: state.busy }) +
         '<button type="button" class="tim-link" data-act="back-hello">К знакомству</button>';
@@ -358,17 +388,111 @@
     bindCard();
   }
 
-  function renderRegisterScreen() {
-    const n = basketCount() || (state.pendingDreams && state.pendingDreams.length) || 0;
-    const lead =
-      n > 0
-        ? "Супер, я вижу твои " +
-          n +
-          " " +
-          dreamWordAccusative(n) +
-          "! Чтобы отправить их на остров, оставь хотя бы один контакт для связи с тобой."
-        : "Чтобы попасть на остров, оставь хотя бы один контакт для связи с тобой.";
+  function renderDialPicker() {
+    const codes = A.DIAL_CODES && A.DIAL_CODES.length ? A.DIAL_CODES : [{ code: "+7", label: "Россия" }];
+    let list = '<div class="tim-dial-picker" role="listbox" aria-label="Код страны">';
+    codes.forEach(function (row) {
+      const on = row.code === (state.dialCode || "+7");
+      list +=
+        '<button type="button" class="tim-dial-picker__item' +
+        (on ? " is-on" : "") +
+        '" data-act="dial-pick" data-code="' +
+        escapeHtml(row.code) +
+        '" role="option" aria-selected="' +
+        (on ? "true" : "false") +
+        '"><span class="tim-dial-picker__code">' +
+        escapeHtml(row.code) +
+        '</span><span class="tim-dial-picker__label">' +
+        escapeHtml(row.label) +
+        "</span></button>";
+    });
+    list += "</div>";
+    return list;
+  }
 
+  function renderAccountScreen() {
+    const nameOk = !!String(state.name || "").trim();
+    const cityOk = !!String(state.city || "").trim();
+    const icoUser =
+      '<svg class="tim-field-ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 12a4.5 4.5 0 1 0-4.5-4.5A4.5 4.5 0 0 0 12 12zm0 2.25c-3.6 0-7.5 1.8-7.5 4.5V21h15v-2.25c0-2.7-3.9-4.5-7.5-4.5z"/></svg>';
+    const icoPin =
+      '<svg class="tim-field-ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 14.5 9 2.5 2.5 0 0 1 12 11.5z"/></svg>';
+    const icoLock =
+      '<svg class="tim-field-ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M17 9h-1V7a4 4 0 0 0-8 0v2H7a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2zm-6 0V7a2 2 0 0 1 4 0v2z"/></svg>';
+    const cta = state.busy
+      ? state.pendingDreamSave
+        ? "Отправляю…"
+        : "Регистрация…"
+      : "Зарегистрироваться";
+
+    return (
+      '<div class="tim-reg tim-reg--account">' +
+      '<div class="tim-field tim-field--check' +
+      (nameOk ? " is-ok" : "") +
+      '">' +
+      '<label class="tim-sr-only" for="f-name">Имя</label>' +
+      '<div class="tim-input-check-row">' +
+      icoUser +
+      '<input id="f-name" type="text" placeholder="Имя" value="' +
+      escapeHtml(state.name || "") +
+      '" autocomplete="given-name">' +
+      '<span class="tim-field-check" aria-hidden="true">✓</span>' +
+      "</div></div>" +
+      '<div class="tim-field tim-field--check' +
+      (cityOk ? " is-ok" : "") +
+      '">' +
+      '<label class="tim-sr-only" for="f-city">Город</label>' +
+      '<div class="tim-input-check-row">' +
+      icoPin +
+      '<input id="f-city" type="text" placeholder="Город" value="' +
+      escapeHtml(state.city || "") +
+      '" autocomplete="address-level2">' +
+      '<span class="tim-field-check" aria-hidden="true">✓</span>' +
+      "</div></div>" +
+      '<div class="tim-field-row">' +
+      '<div class="tim-field">' +
+      '<label class="tim-sr-only" for="f-surname">Фамилия</label>' +
+      '<div class="tim-input-check-row">' +
+      icoUser +
+      '<input id="f-surname" type="text" placeholder="Фамилия" value="' +
+      escapeHtml(state.surname || "") +
+      '" autocomplete="family-name">' +
+      "</div></div>" +
+      '<div class="tim-field">' +
+      '<label class="tim-sr-only" for="f-patronymic">Отчество</label>' +
+      '<div class="tim-input-check-row">' +
+      '<input id="f-patronymic" type="text" placeholder="Отчество" value="' +
+      escapeHtml(state.patronymic || "") +
+      '" autocomplete="additional-name">' +
+      "</div></div>" +
+      "</div>" +
+      '<div class="tim-field">' +
+      '<label class="tim-sr-only" for="f-phone">Номер телефона</label>' +
+      '<div class="tim-phone-row">' +
+      '<button type="button" class="tim-phone-code" id="btn-dial-code" data-act="dial-open" aria-label="Код страны">' +
+      escapeHtml(state.dialCode || "+7") +
+      "</button>" +
+      '<div class="tim-input-check-row tim-input-check-row--phone">' +
+      '<input id="f-phone" inputmode="numeric" placeholder="9001234567" value="' +
+      escapeHtml(nationalPhoneDigits()) +
+      '" autocomplete="tel-national">' +
+      "</div></div></div>" +
+      (state.dialPickerOpen ? renderDialPicker() : "") +
+      '<div class="tim-field">' +
+      '<label class="tim-sr-only" for="f-password">Пароль</label>' +
+      '<div class="tim-input-check-row">' +
+      icoLock +
+      '<input id="f-password" type="password" placeholder="Пароль *" value="' +
+      escapeHtml(state.password || "") +
+      '" autocomplete="new-password">' +
+      "</div></div>" +
+      btn(cta, { act: "register", disabled: state.busy }) +
+      '<p class="tim-reg-legal">Регистрируясь, ты принимаешь условия сервиса</p>' +
+      "</div>"
+    );
+  }
+
+  function renderSocialsScreen() {
     const socials = [
       ["max", "MAX"],
       ["telegram", "TG"],
@@ -404,106 +528,52 @@
         max: { label: "MAX — ник или номер", ph: "@nick или +7…" },
         telegram: { label: "Telegram — @username или номер", ph: "@username или +7…" },
         vk: { label: "ВКонтакте — ссылка на профиль", ph: "https://vk.com/…" },
-        whatsapp: { label: "WhatsApp — номер (этот или другой)", ph: "9001234567" },
+        whatsapp: { label: "WhatsApp — номер", ph: "9001234567" },
         email: { label: "Почта", ph: "you@example.com" },
       };
       const m = meta[active] || { label: "Контакт", ph: "" };
+      const val = state.contacts[active] || "";
+      const ok = !!String(val).trim();
       socialField =
-        '<div class="tim-field tim-field--social">' +
+        '<div class="tim-field tim-field--social tim-field--check' +
+        (ok ? " is-ok" : "") +
+        '">' +
         '<label for="f-contact-value">' +
         escapeHtml(m.label) +
         "</label>" +
+        '<div class="tim-input-check-row">' +
         '<input id="f-contact-value" type="text" placeholder="' +
         escapeHtml(m.ph) +
         '" value="' +
-        escapeHtml(state.contacts[active] || "") +
-        '"></div>';
+        escapeHtml(val) +
+        '" autocomplete="off">' +
+        '<span class="tim-field-check" title="Заполнено" aria-hidden="true">✓</span>' +
+        "</div></div>";
     }
 
-    const ctaLabel = state.pendingDreamSave
+    return (
+      '<div class="tim-reg tim-reg--socials">' +
+      icons +
+      socialField +
+      btn("Далее", { act: "socials-next", noarrow: true }) +
+      "</div>"
+    );
+  }
+
+  function renderFioScreen() {
+    const cta = state.pendingDreamSave
       ? state.busy
         ? "Отправляю…"
         : "Отправить на остров"
       : state.busy
         ? "Регистрация…"
         : "Далее";
-
     return (
-      '<div class="tim-reg">' +
-      '<p class="tim-reg-lead">' +
-      escapeHtml(lead) +
-      "</p>" +
-      '<div class="tim-field"><label for="f-phone">Телефон*</label><div class="tim-phone-row"><span class="tim-phone-code">+7</span><input id="f-phone" inputmode="numeric" value="' +
-      escapeHtml(digitsOnly(state.phone).replace(/^8/, "").replace(/^\+?7/, "")) +
-      '" placeholder="9001234567"></div></div>' +
-      field("f-password", "Пароль для входа в личный кабинет*", state.password, "password") +
-      field("f-surname", "Фамилия (чтобы не спутать с другим Максом)*", state.surname) +
-      icons +
-      socialField +
-      btn(ctaLabel, { act: "register", disabled: state.busy, noarrow: true }) +
+      '<div class="tim-reg tim-reg--fio">' +
+      field("f-surname", "Фамилия*", state.surname) +
+      field("f-patronymic", "Отчество", state.patronymic) +
+      btn(cta, { act: "fio-next", disabled: state.busy, noarrow: true }) +
       "</div>"
-    );
-  }
-
-  function renderContacts() {
-    const chans = [
-      ["max", "MAX"],
-      ["telegram", "TG"],
-      ["vk", "VK"],
-      ["ok", "OK"],
-      ["facebook", "FB"],
-      ["other", "Ещё"],
-    ];
-    let icons = '<div class="tim-channels">';
-    chans.forEach(function (c) {
-      const id = c[0];
-      const filled =
-        id === "other"
-          ? state.contacts.other.length > 0
-          : !!(state.contacts[id] && String(state.contacts[id]).trim());
-      const cls =
-        "tim-ch" + (state.activeChannel === id ? " is-active" : "") + (filled ? " is-filled" : "");
-      icons +=
-        '<button type="button" class="' +
-        cls +
-        '" data-act="ch-' +
-        id +
-        '">' +
-        escapeHtml(c[1]) +
-        "</button>";
-    });
-    icons += "</div>";
-
-    const active = state.activeChannel;
-    let fields = '<div class="contact-fields">';
-    if (active === "other") {
-      fields +=
-        field("f-other-label", "Как называется", "") +
-        field("f-other-value", "Контакт / ссылка", "") +
-        '<p class="hint">Можно добавить несколько «Ещё».</p>';
-    } else if (active === "max") {
-      fields +=
-        field("f-contact-value", "MAX (ник или номер)", state.contacts.max) +
-        '<p class="hint">Можно пропустить экран целиком.</p>';
-    } else {
-      const labels = {
-        telegram: "Telegram (@username или номер)",
-        vk: "ВКонтакте (ссылка или id)",
-        ok: "Одноклассники",
-        facebook: "Facebook",
-      };
-      fields +=
-        field("f-contact-value", labels[active] || "Контакт", state.contacts[active] || "") +
-        '<p class="hint">Можно пропустить экран целиком.</p>';
-    }
-    fields += "</div>";
-
-    return (
-      icons +
-      fields +
-      btn("Сохранить контакт", { act: "contact-save", soft: true, noarrow: true }) +
-      btn("Далее", { act: "contacts-next" }) +
-      '<button type="button" class="tim-link" data-act="contacts-skip">Пропустить</button>'
     );
   }
 
@@ -756,6 +826,16 @@
     els.body.querySelectorAll("[data-act]").forEach(function (el) {
       el.addEventListener("click", function () {
         const act = el.getAttribute("data-act");
+        if (act === "dial-pick") {
+          const code = el.getAttribute("data-code") || "+7";
+          readRegFields();
+          state.dialCode = code;
+          const p = document.getElementById("f-phone");
+          if (p) state.phone = fullPhone(p.value);
+          state.dialPickerOpen = false;
+          renderCard();
+          return;
+        }
         const iAttr = el.getAttribute("data-i");
         onAct(act, iAttr != null ? Number(iAttr) : null);
       });
@@ -763,6 +843,42 @@
     if (state.screen === 1) bindCitySuggest();
     if (state.screen === 2) bindVideoScreen();
     if (state.screen === 3 || state.screen === 7) bindVitrine();
+    if (state.screen === 4 || state.screen === "login") bindAccountChecks();
+    if (state.screen === 5) bindSocialCheck();
+  }
+
+  function bindAccountChecks() {
+    ["f-name", "f-city"].forEach(function (id) {
+      const input = document.getElementById(id);
+      if (!input) return;
+      const wrap = input.closest(".tim-field--check");
+      input.addEventListener("input", function () {
+        if (wrap) wrap.classList.toggle("is-ok", !!input.value.trim());
+      });
+    });
+  }
+
+  function syncSocialChips() {
+    els.body.querySelectorAll(".tim-ch[data-act]").forEach(function (btn) {
+      const act = btn.getAttribute("data-act") || "";
+      if (act.indexOf("ch-") !== 0) return;
+      const id = act.slice(3);
+      const filled = !!(state.contacts[id] && String(state.contacts[id]).trim());
+      btn.classList.toggle("is-filled", filled);
+      btn.classList.toggle("is-active", state.activeChannel === id);
+    });
+  }
+
+  function bindSocialCheck() {
+    const input = document.getElementById("f-contact-value");
+    if (!input || !state.activeChannel) return;
+    const wrap = input.closest(".tim-field--check");
+    input.addEventListener("input", function () {
+      const v = input.value.trim();
+      state.contacts[state.activeChannel] = v;
+      if (wrap) wrap.classList.toggle("is-ok", !!v);
+      syncSocialChips();
+    });
   }
 
   function markVideoWatched() {
@@ -842,9 +958,11 @@
   function readRegFields() {
     readHelloFields();
     const s = document.getElementById("f-surname");
+    const pat = document.getElementById("f-patronymic");
     const p = document.getElementById("f-phone");
     const pw = document.getElementById("f-password");
     if (s) state.surname = s.value.trim();
+    if (pat) state.patronymic = pat.value.trim();
     if (p) state.phone = fullPhone(p.value);
     if (pw) state.password = pw.value;
   }
@@ -872,7 +990,35 @@
       go(4);
       return;
     }
-    if (act === "register") {
+    if (act === "dial-open") {
+      readRegFields();
+      state.dialPickerOpen = !state.dialPickerOpen;
+      renderCard();
+      return;
+    }
+    if (act === "auth-next") {
+      // совместимость: сразу форма аккаунта
+      go(4);
+      return;
+    }
+    if (act === "socials-next") {
+      persistContactField();
+      saveContactsDraft();
+      state.activeChannel = null;
+      state.busy = true;
+      renderCard();
+      try {
+        await saveContactsToServer();
+      } catch (_) {}
+      state.busy = false;
+      if (state.pendingDreamSave) {
+        await saveDreams();
+        return;
+      }
+      afterContacts();
+      return;
+    }
+    if (act === "fio-next" || act === "register") {
       await doRegister();
       return;
     }
@@ -1039,7 +1185,7 @@
     if (pwaAlreadyStandalone() || pwaOfferDone()) {
       go(3);
     } else {
-      go(6);
+      go("pwa");
     }
   }
 
@@ -1062,17 +1208,27 @@
     persistContactField();
     readRegFields();
     if (!state.name || !state.city) {
-      setError("Вернись к знакомству: нужны имя и город.");
+      setError("Нужны имя и город.");
       return;
     }
-    if (!state.surname || !state.password) {
-      setError("Нужны фамилия и пароль.");
+    if (!state.password) {
+      setError("Придумай пароль для входа.");
       return;
     }
-    if (digitsOnly(state.phone).length < 11) {
-      setError("Проверь телефон: нужны 10 цифр после +7.");
+    if (!phoneLooksOk()) {
+      setError(
+        (state.dialCode || "+7") === "+7"
+          ? "Проверь телефон: 10 цифр после кода страны."
+          : "Проверь номер телефона."
+      );
       return;
     }
+    try {
+      localStorage.setItem(
+        "tim_patronymic",
+        JSON.stringify({ patronymic: state.patronymic || "", at: Date.now() })
+      );
+    } catch (_) {}
     state.busy = true;
     renderCard();
     try {
@@ -1081,7 +1237,7 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: state.name,
-          surname: state.surname,
+          surname: state.surname || "",
           phone: state.phone,
           city: state.city,
           password: state.password,
@@ -1104,13 +1260,9 @@
       });
       if (!loginRes.ok) throw new Error(user.detail || "Аккаунт создан, войди вручную");
       saveUser(user);
-      await saveContactsToServer();
       state.busy = false;
-      if (state.pendingDreamSave) {
-        await saveDreams();
-        return;
-      }
-      afterContacts();
+      // Соцсети — следующий экран на той же обложке
+      go(5);
     } catch (e) {
       state.busy = false;
       setError(e.message || "Сеть недоступна");
@@ -1123,7 +1275,7 @@
     const pw = document.getElementById("f-password");
     state.phone = fullPhone(p ? p.value : "");
     state.password = pw ? pw.value : "";
-    if (digitsOnly(state.phone).length < 11 || !state.password) {
+    if (!phoneLooksOk() || !state.password) {
       setError("Введи телефон и пароль.");
       return;
     }
@@ -1231,10 +1383,11 @@
       state.city = saved.city || "";
     }
     fitTimCanvas();
-    const screenParam = (location.search || "").match(/[?&]screen=(\d+|login)/);
+    const screenParam = (location.search || "").match(/[?&]screen=(\d+|login|fio|pwa)/);
     if (screenParam) {
       const raw = screenParam[1];
-      go(raw === "login" ? "login" : parseInt(raw, 10));
+      if (raw === "login" || raw === "fio" || raw === "pwa") go(raw);
+      else go(parseInt(raw, 10));
       return;
     }
     go(1);
