@@ -600,20 +600,47 @@ body {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
+.tim-confirm-panel {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 48px;
+  padding: 28px 32px 32px;
+  box-shadow: 0 16px 48px rgba(20, 60, 90, 0.18);
+  border: 2px solid rgba(255, 255, 255, 0.75);
+}
 .tim-confirm-tech {
-  margin: 0 0 8px;
-  font-size: 32px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  display: inline-block;
+  margin: 0 0 12px;
+  padding: 10px 20px;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: rgba(18, 58, 119, 0.72);
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+  color: var(--blue-dark);
+  background: #fff;
+  border-radius: 999px;
+  box-shadow: 0 4px 12px rgba(20, 60, 90, 0.12);
 }
 .tim-confirm-count {
-  margin: 0 0 22px;
+  margin: 0 0 16px;
   font-size: 40px;
   font-weight: 800;
   color: var(--blue-dark);
+}
+.tim-confirm-hint {
+  margin: 0 0 18px;
+  font-size: 32px;
+  line-height: 1.35;
+  color: #4a6080;
+}
+.tim-screen[data-screen="8"] .tim-link--confirm {
+  display: block;
+  margin-top: 14px;
+  padding: 14px 20px;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--blue);
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(20, 60, 90, 0.1);
 }
 .tim-screen[data-screen="8"] .tim-field--confirm textarea {
   height: 360px;

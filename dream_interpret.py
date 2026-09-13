@@ -86,6 +86,7 @@ def _normalize(payload: Dict[str, Any], original: str) -> DreamInterpretResponse
                     dreams.append(t)
     if not dreams:
         dreams = [original.strip()]
+    dreams = _expand_dream_list(dreams, original)
     understood = (payload.get("understood") or "").strip() or "Я так понял твою мечту:"
     question = payload.get("question")
     if question is not None:
@@ -130,18 +131,41 @@ def _call_openrouter(text: str) -> str:
 
 
 def _fallback_split(text: str) -> List[str]:
-    """Грубый разбор без модели — чтобы сверка всё равно открылась."""
+    """Грубый разбор без модели: переносы, точки, запятые между фразами."""
     raw = (text or "").strip()
     if not raw:
         return []
-    parts = re.split(r"[\n;]+|(?<=[.!?…])\s+", raw)
-    dreams = [p.strip(" \t-–—*•") for p in parts if p and p.strip(" \t-–—*•")]
+    out: List[str] = []
+    for chunk in re.split(r"[\n;]+", raw):
+        chunk = chunk.strip()
+        if not chunk:
+            continue
+        for part in re.split(r"(?<=[.!?…])\s+", chunk):
+            part = part.strip().lstrip("-–—*• ").strip()
+            if not part:
+                continue
+            if "," in part:
+                sub = [s.strip() for s in re.split(r"\s*,\s*", part) if s.strip()]
+                if len(sub) > 1 and all(len(s) >= 3 for s in sub):
+                    out.extend(sub)
+                    continue
+            out.append(part)
+    if not out:
+        out = [raw]
+    return out[:20]
+
+
+def _expand_dream_list(dreams: List[str], original: str) -> List[str]:
     if not dreams:
-        dreams = [raw]
-    # слишком мелкая нарезка — склей обратно
-    if len(dreams) > 20:
-        dreams = dreams[:20]
-    return dreams
+        return _fallback_split(original)
+    if len(dreams) == 1:
+        expanded = _fallback_split(dreams[0])
+        if len(expanded) > 1:
+            return expanded[:20]
+    flat: List[str] = []
+    for d in dreams:
+        flat.extend(_fallback_split(d))
+    return (flat or dreams)[:20]
 
 
 def interpret_dream(body: DreamInterpretRequest) -> DreamInterpretResponse:

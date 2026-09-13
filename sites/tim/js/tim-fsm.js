@@ -123,6 +123,57 @@
       .replace(/"/g, "&quot;");
   }
 
+  /** Разбор списка мечт без модели: точки, переносы, запятые между фразами */
+  function splitDreamText(text) {
+    const raw = String(text || "").trim();
+    if (!raw) return [];
+    const out = [];
+    raw.split(/[\n;]+/).forEach(function (chunk) {
+      chunk = chunk.trim();
+      if (!chunk) return;
+      chunk.split(/(?<=[.!?…])\s+/).forEach(function (part) {
+        part = part.trim().replace(/^[\-*•]+\s*/, "");
+        if (!part) return;
+        if (/,/.test(part)) {
+          const sub = part.split(/\s*,\s*/).filter(Boolean);
+          if (sub.length > 1 && sub.every(function (s) {
+            return s.length >= 3;
+          })) {
+            sub.forEach(function (s) {
+              out.push(s.trim());
+            });
+            return;
+          }
+        }
+        out.push(part);
+      });
+    });
+    if (!out.length) return [raw];
+    return out.slice(0, 20);
+  }
+
+  function normalizeDreamList(rawDreams, originalText) {
+    let list = (rawDreams || [])
+      .map(function (d) {
+        return typeof d === "string" ? d.trim() : String((d && d.title) || "").trim();
+      })
+      .filter(Boolean);
+    if (!list.length) list = splitDreamText(originalText);
+    if (list.length <= 1) {
+      const expanded = splitDreamText(list[0] || originalText || "");
+      if (expanded.length > 1) list = expanded;
+    } else {
+      const flat = [];
+      list.forEach(function (item) {
+        splitDreamText(item).forEach(function (s) {
+          flat.push(s);
+        });
+      });
+      if (flat.length) list = flat;
+    }
+    return list.slice(0, 20);
+  }
+
   function applyScene(screen) {
     const key = screen;
     const baked = !!(A.BAKED_SCENE && A.BAKED_SCENE[key]);
@@ -425,6 +476,7 @@
 
     if (!left) {
       return (
+        '<div class="tim-confirm-panel">' +
         '<p class="tim-confirm-tech">Проверь записи</p>' +
         '<p class="tim-confirm-count">Готово: ' +
         escapeHtml(String(state.confirmAccepted.length)) +
@@ -436,18 +488,22 @@
           disabled: state.busy || !state.confirmAccepted.length,
           noarrow: true,
         }) +
-        '<button type="button" class="tim-link" data-act="dream-fix">Написать заново</button>'
+        '<button type="button" class="tim-link tim-link--confirm" data-act="dream-fix">Написать заново</button>' +
+        "</div>"
       );
     }
 
     return (
+      '<div class="tim-confirm-panel">' +
       '<p class="tim-confirm-tech">Проверь записи</p>' +
       '<p class="tim-confirm-count">Мечта ' +
       escapeHtml(String(num)) +
       " из " +
       escapeHtml(String(total)) +
-      (state.confirmFallback ? " · без облака — из твоих слов" : "") +
       "</p>" +
+      (state.confirmFallback
+        ? '<p class="tim-confirm-hint">Записи из твоих слов — поправь, если Тим разрезал не так.</p>'
+        : "") +
       '<div class="tim-field tim-field--confirm">' +
       '<label class="tim-sr-only" for="f-confirm-dream">Текст мечты</label>' +
       '<textarea id="f-confirm-dream" rows="5">' +
@@ -464,8 +520,9 @@
             noarrow: true,
           })
         : "") +
-      '<button type="button" class="tim-link" data-act="confirm-add">+ Добавить мечту</button>' +
-      '<button type="button" class="tim-link" data-act="dream-fix">Написать заново</button>'
+      '<button type="button" class="tim-link tim-link--confirm" data-act="confirm-add">+ Добавить мечту</button>' +
+      '<button type="button" class="tim-link tim-link--confirm" data-act="dream-fix">Написать заново</button>' +
+      "</div>"
     );
   }
 
@@ -538,12 +595,7 @@
   }
 
   function startConfirm(dreams, fallback) {
-    const list = (dreams || [])
-      .map(function (d) {
-        return typeof d === "string" ? d.trim() : String((d && d.title) || "").trim();
-      })
-      .filter(Boolean);
-    if (!list.length && state.dreamText) list.push(state.dreamText.trim());
+    const list = normalizeDreamList(dreams, state.dreamText);
     state.confirmQueue = list.slice();
     state.confirmAccepted = [];
     state.confirmDone = 0;
@@ -957,19 +1009,13 @@
         return {};
       });
       if (!res.ok) throw new Error("ai");
-      const dreams = Array.isArray(data.dreams) && data.dreams.length ? data.dreams : [state.dreamText];
+      const dreams =
+        Array.isArray(data.dreams) && data.dreams.length ? data.dreams : [state.dreamText];
       state.busy = false;
       startConfirm(dreams, !!data.fallback);
     } catch (_) {
       state.busy = false;
-      // клиентский fallback: по строкам
-      const parts = String(state.dreamText || "")
-        .split(/[\n;]+/)
-        .map(function (s) {
-          return s.trim();
-        })
-        .filter(Boolean);
-      startConfirm(parts.length ? parts : [state.dreamText], true);
+      startConfirm(splitDreamText(state.dreamText), true);
     }
   }
 
