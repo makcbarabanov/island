@@ -361,11 +361,7 @@
     } else if (s === "fio") {
       html = renderFioScreen();
     } else if (s === 6 || s === "pwa") {
-      html =
-        '<h2>Установить как приложение?</h2><p class="lead">Так Остров будет всегда под рукой. Предложение один раз — потом можно найти установку в профиле.</p>' +
-        btn("Установить", { act: "pwa-install", noarrow: true }) +
-        btn("Открыть в браузере", { act: "pwa-browser", soft: true, noarrow: true }) +
-        '<button type="button" class="tim-link" data-act="pwa-later">Позже</button>';
+      html = renderResumeScreen();
     } else if (s === 7) {
       html = renderDreamVitrine();
     } else if (s === 8) {
@@ -657,6 +653,18 @@
       field("f-surname", "Фамилия*", state.surname) +
       field("f-patronymic", "Отчество", state.patronymic) +
       btn(cta, { act: "fio-next", disabled: state.busy, noarrow: true }) +
+      "</div>"
+    );
+  }
+
+  /** Экран 6 — резюме: PWA / ВК / браузер → ЛК */
+  function renderResumeScreen() {
+    return (
+      '<div class="tim-reg tim-reg--resume">' +
+      '<p class="tim-resume-lead">Добро пожаловать на Остров.<br>Мечты сохранены — выбери, как продолжить.</p>' +
+      btn("Установить приложение", { act: "pwa-install", noarrow: true }) +
+      '<a class="tim-btn tim-btn--soft tim-btn--noarrow" href="https://vk.ru/islanddreams" target="_blank" rel="noopener noreferrer">Группа ВКонтакте</a>' +
+      btn("Остаться в браузере", { act: "pwa-browser", soft: true, noarrow: true }) +
       "</div>"
     );
   }
@@ -1259,7 +1267,7 @@
     }
     if (act === "pwa-browser" || act === "pwa-later") {
       markPwaDone();
-      go(3);
+      window.location.href = lkUrl();
       return;
     }
     if (act === "dream-hint") {
@@ -1448,11 +1456,8 @@
   }
 
   function afterContacts() {
-    if (pwaAlreadyStandalone() || pwaOfferDone()) {
-      go(3);
-    } else {
-      go("pwa");
-    }
+    // Резюме: PWA / ВК / браузер → ЛК
+    go(6);
   }
 
   async function doPwaInstall() {
@@ -1463,11 +1468,13 @@
         await state.deferredInstall.userChoice;
       } catch (_) {}
       state.deferredInstall = null;
-      go(3);
+      window.location.href = lkUrl();
       return;
     }
-    setError("На iPhone: «Поделиться» → «На экран „Домой“». На Android установка может быть в меню браузера.");
-    go(3);
+    setError(
+      "На iPhone: «Поделиться» → «На экран Домой». Или нажми «Остаться в браузере»."
+    );
+    renderCard();
   }
 
   async function doRegister() {
@@ -1615,8 +1622,8 @@
       state.pendingDreams = null;
       state.dreamBasket = [];
       state.dreamText = "";
-      // Экран 9 (успех) убран из потока — сразу в кабинет
-      window.location.href = lkUrl();
+      // Резюме: установка / ВК / браузер → ЛК
+      go(6);
     } catch (e) {
       state.busy = false;
       setError(e.message || "Ошибка сохранения");

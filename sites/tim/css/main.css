@@ -1225,6 +1225,29 @@ body {
   margin-top: 0;
 }
 
+.tim-reg--resume {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.tim-resume-lead {
+  margin: 0 0 8px;
+  text-align: center;
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--blue-dark);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+.tim-reg--resume .tim-btn {
+  width: 100%;
+  margin-top: 0;
+}
+.tim-screen[data-screen="6"] .tim-card,
+.tim-screen[data-screen="pwa"] .tim-card {
+  bottom: 36px;
+}
+
 .hidden {
   display: none !important;
 }

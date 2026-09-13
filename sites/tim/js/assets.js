@@ -34,7 +34,7 @@
     8: scenePair("scene_04_confirm_many_1080x2400"),
     9: FIN + "18.png",
     fio: FIO_SCENE,
-    pwa: FIN + "16.png",
+    pwa: FIN + "15.png",
     login: ACCOUNT_SCENE,
     confirmOne: scenePair("scene_04_confirm_one_1080x2400"),
     confirmMany: scenePair("scene_04_confirm_many_1080x2400"),
@@ -112,7 +112,7 @@
     },
     4: ACCOUNT_LAYOUT,
     5: SOCIALS_LAYOUT,
-    6: { left: 61, top: 736, width: 819 },
+    6: { left: 61, top: 820, width: 819 },
     7: { left: 61, top: 736, width: 819 },
     8: {
       left: 70,
@@ -121,7 +121,7 @@
     },
     9: { left: 61, top: 869, width: 819 },
     fio: { left: 70, top: 1100, width: 940 },
-    pwa: { left: 61, top: 736, width: 819 },
+    pwa: { left: 61, top: 820, width: 819 },
     login: ACCOUNT_LAYOUT,
   };
 
