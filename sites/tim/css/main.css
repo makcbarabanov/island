@@ -717,6 +717,15 @@ body {
   padding-top: 0;
   max-height: 600px;
 }
+/* Клавиатура: список короче и скролл к первой мечте (JS ставит .is-kb) */
+.tim-screen[data-screen="3"].is-kb .tim-vitrine__stage,
+.tim-screen[data-screen="3"].is-kb .tim-vitrine.has-items .tim-vitrine__stage {
+  max-height: 360px;
+}
+.tim-screen[data-screen="3"].is-kb .tim-vitrine,
+.tim-screen[data-screen="3"].is-kb .tim-vitrine.has-items {
+  min-height: 0;
+}
 .tim-vitrine__hint {
   margin: 0 0 4px;
   padding: 12px 18px;

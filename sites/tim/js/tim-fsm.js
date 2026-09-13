@@ -730,15 +730,33 @@
     return el ? el.value.trim() : String(state.dreamText || "").trim();
   }
 
-  function updateVitrineCta() {
+  /** Сколько мечт уйдёт Тиму: корзина + недописанный черновик (считаем дописанным). */
+  function effectiveSendCount() {
     const n = basketCount();
+    return hasWholeWord(readDraftDream()) ? n + 1 : n;
+  }
+
+  function commitDraftDreamIfAny() {
+    const draft = readDraftDream();
+    if (!hasWholeWord(draft)) return false;
+    if (state.dreamBasket.length >= 20) return false;
+    state.dreamBasket.push(draft);
+    state.dreamText = "";
+    const el = document.getElementById("f-dream-new");
+    if (el) el.value = "";
+    return true;
+  }
+
+  function updateVitrineCta() {
     const dock = els.body.querySelector(".tim-vitrine__dock");
     let ctaWrap = document.getElementById("tim-vitrine-cta");
     let html = "";
+    // Клавиатура открыта → только «Готово!» (снять фокус, не путать с + / отправкой)
     if (isComposeFocused()) {
       html = renderDoneCta();
-    } else if (n >= 1 && !hasWholeWord(readDraftDream())) {
-      html = renderSendCta(n);
+    } else {
+      const sendN = effectiveSendCount();
+      if (sendN >= 1) html = renderSendCta(sendN);
     }
     if (!html) {
       if (ctaWrap) ctaWrap.remove();
@@ -757,6 +775,42 @@
         onAct(el.getAttribute("data-act"), null);
       });
     });
+  }
+
+  /** Пока клавиатура открыта — поднять карточку и прокрутить список к 1-й мечте. */
+  function syncVitrineKeyboardLayout() {
+    if (!(state.screen === 3 || state.screen === "3" || state.screen === 7)) return;
+    const focused = isComposeFocused();
+    const vv = window.visualViewport;
+    const fullH = window.innerHeight || 0;
+    const kbOpen = !!(focused || (vv && fullH - vv.height > 100));
+    if (els.screen) els.screen.classList.toggle("is-kb", kbOpen);
+
+    const layout = (A.CARD_LAYOUT && A.CARD_LAYOUT[3]) || { top: 880 };
+    let top = layout.top;
+    if (state.dreamBasket && state.dreamBasket.length) {
+      top = Math.max(top, 1040);
+    }
+    if (kbOpen) {
+      // временно выше: первая мечта остаётся в видимой зоне над клавиатурой
+      top = Math.min(top, 620);
+    }
+    els.card.style.top = top + "px";
+
+    if (kbOpen) {
+      const stage = els.body.querySelector(".tim-vitrine__stage");
+      if (stage) {
+        stage.scrollTop = 0;
+        const first = stage.querySelector(".tim-vitrine-item");
+        if (first && typeof first.scrollIntoView === "function") {
+          try {
+            first.scrollIntoView({ block: "start", inline: "nearest" });
+          } catch (_) {
+            stage.scrollTop = 0;
+          }
+        }
+      }
+    }
   }
 
   function renderDreamVitrine() {
@@ -793,9 +847,8 @@
       rows = '<p class="tim-vitrine-empty" aria-hidden="true"></p>';
     }
 
-    // При фокусе — «Готово!»; без клавы и пустом поле — «Отправить»
-    const cta =
-      n >= 1 && !hasWholeWord(draft) ? renderSendCta(n) : "";
+    const sendN = n + (hasWholeWord(draft) ? 1 : 0);
+    const cta = !isComposeFocused() && sendN >= 1 ? renderSendCta(sendN) : "";
 
     const ph =
       n >= 1
@@ -862,6 +915,7 @@
       plus.classList.toggle("is-disabled", !canPlus);
     }
     updateVitrineCta();
+    syncVitrineKeyboardLayout();
   }
 
   function commitDreamEditsFromDom() {
@@ -877,9 +931,16 @@
     const input = document.getElementById("f-dream-new");
     if (input) {
       input.addEventListener("input", syncVitrineDock);
-      input.addEventListener("focus", syncVitrineDock);
+      input.addEventListener("focus", function () {
+        syncVitrineDock();
+        setTimeout(syncVitrineKeyboardLayout, 50);
+        setTimeout(syncVitrineKeyboardLayout, 280);
+      });
       input.addEventListener("blur", function () {
-        setTimeout(syncVitrineDock, 120);
+        setTimeout(function () {
+          syncVitrineDock();
+          syncVitrineKeyboardLayout();
+        }, 120);
       });
       input.addEventListener("keydown", function (e) {
         if (e.key === "Enter") {
@@ -907,7 +968,11 @@
           inp.blur();
         }
       });
+      inp.addEventListener("focus", function () {
+        setTimeout(syncVitrineKeyboardLayout, 50);
+      });
     });
+    syncVitrineKeyboardLayout();
   }
 
   function bindCard() {
@@ -1199,7 +1264,10 @@
       const el = document.getElementById("f-dream-new");
       if (el) el.blur();
       setError("");
-      setTimeout(syncVitrineDock, 80);
+      setTimeout(function () {
+        syncVitrineDock();
+        syncVitrineKeyboardLayout();
+      }, 80);
       return;
     }
     if (act === "dream-plus") {
@@ -1229,8 +1297,10 @@
     }
     if (act === "dream-save") {
       commitDreamEditsFromDom();
+      // Черновик в поле = дописанная мечта (без обязательного «+»)
+      commitDraftDreamIfAny();
       if (!state.dreamBasket.length) {
-        setError("Сначала добавь хотя бы одну мечту кнопкой «+».");
+        setError("Сначала напиши хотя бы одну мечту.");
         return;
       }
       state.pendingDreams = state.dreamBasket.slice();
@@ -1530,9 +1600,16 @@
       e.preventDefault();
       state.deferredInstall = e;
     });
-    window.addEventListener("resize", fitTimCanvas);
+    window.addEventListener("resize", function () {
+      fitTimCanvas();
+      syncVitrineKeyboardLayout();
+    });
     if (window.visualViewport) {
-      window.visualViewport.addEventListener("resize", fitTimCanvas);
+      window.visualViewport.addEventListener("resize", function () {
+        fitTimCanvas();
+        syncVitrineKeyboardLayout();
+      });
+      window.visualViewport.addEventListener("scroll", syncVitrineKeyboardLayout);
     }
 
     els.headerLogin.addEventListener("click", function () {
