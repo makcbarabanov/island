@@ -71,20 +71,16 @@
   let designW = (A && A.DESIGN_WIDTH) || 941;
   let designH = (A && A.DESIGN_HEIGHT) || 1672;
 
-  /** Масштаб artboard по ширине и высоте окна — один экран без скролла страницы. */
+  /** Масштаб только по ширине (max 430). Лёгкий вертикальный скролл — ок; без песочных полей по бокам. */
   function fitTimCanvas() {
     if (!els.stage || !els.canvas) return;
-    const maxW = Math.min(window.innerWidth || 430, 430);
-    const vv = window.visualViewport;
-    const viewH = Math.max(320, (vv && vv.height) || window.innerHeight || 640);
-    const scale = Math.min(maxW / designW, viewH / designH);
-    const stageW = Math.round(designW * scale);
-    const stageH = Math.round(designH * scale);
+    const stageW = Math.min(window.innerWidth || 430, 430);
+    const scale = stageW / designW;
     els.canvas.style.width = designW + "px";
     els.canvas.style.height = designH + "px";
     els.canvas.style.transform = "scale(" + scale + ")";
     els.stage.style.width = stageW + "px";
-    els.stage.style.height = stageH + "px";
+    els.stage.style.height = Math.round(designH * scale) + "px";
     els.stage.style.minHeight = "";
   }
 
