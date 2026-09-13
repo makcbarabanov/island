@@ -593,13 +593,15 @@ body {
 }
 .tim-vitrine__label--plaque {
   position: relative;
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 88px;
-  padding: 18px 36px;
+  width: 100%;
+  min-height: 120px;
+  padding: 28px 48px;
   margin: 0 0 18px;
   text-shadow: none;
+  box-sizing: border-box;
 }
 .tim-vitrine__plaque {
   position: absolute;
@@ -612,6 +614,10 @@ body {
 .tim-vitrine__label--plaque span {
   position: relative;
   z-index: 1;
+  color: #3a2a18;
+  font-size: 36px;
+  font-weight: 800;
+  text-align: center;
 }
 .tim-vitrine-empty {
   margin: 0;
@@ -715,6 +721,18 @@ body {
 .tim-vitrine__cta .tim-btn {
   margin-top: 0;
   width: 100%;
+}
+.tim-btn--send {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+.tim-btn--send .tim-send-ico {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  object-fit: contain;
 }
 .tim-screen[data-screen="3"] .tim-ico-btn {
   width: 68px;
