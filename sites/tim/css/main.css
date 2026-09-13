@@ -565,16 +565,83 @@ body {
 .tim-screen[data-screen="2"] .tim-btn {
   margin-top: 300px;
 }
-/* Экран 3: поле мечты на baked-сцене */
+/* Экран 3: одна мечта + корзина */
 .tim-screen[data-screen="3"] .tim-card {
   padding: 0;
+}
+.tim-dream-compose {
+  position: relative;
+}
+.tim-dream-compose__top {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 0 16px;
+}
+.tim-basket {
+  position: relative;
+  top: auto;
+  right: auto;
+  z-index: 5;
+  width: 96px;
+  height: 96px;
+  border: 0;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 12px 32px rgba(20, 60, 90, 0.2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.tim-basket__bag {
+  width: 42px;
+  height: 36px;
+  border: 4px solid var(--blue-dark);
+  border-radius: 0 0 12px 12px;
+  position: relative;
+  box-sizing: border-box;
+}
+.tim-basket__bag::before {
+  content: "";
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  top: -16px;
+  height: 16px;
+  border: 4px solid var(--blue-dark);
+  border-bottom: 0;
+  border-radius: 14px 14px 0 0;
+  box-sizing: border-box;
+}
+.tim-basket__badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  min-width: 44px;
+  height: 44px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--blue);
+  color: #fff;
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 44px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(20, 60, 90, 0.25);
+}
+.tim-dream-edit-label {
+  margin: 0 0 16px;
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--blue-dark);
 }
 .tim-screen[data-screen="3"] .tim-field--dream {
   margin-bottom: 28px;
 }
 .tim-screen[data-screen="3"] .tim-field--dream textarea {
-  height: 420px;
-  min-height: 420px;
+  height: 360px;
+  min-height: 320px;
   background: rgba(255, 255, 255, 0.9);
   border: 2px solid rgba(77, 128, 183, 0.4);
   border-radius: 48px;
@@ -590,8 +657,21 @@ body {
 .tim-screen[data-screen="3"] .tim-btn {
   margin-top: 0;
 }
+.tim-screen[data-screen="3"] .tim-btn + .tim-btn,
+.tim-screen[data-screen="3"] .tim-link--confirm {
+  margin-top: 16px;
+}
+.tim-screen[data-screen="3"] .tim-link--confirm {
+  display: block;
+  text-align: center;
+  padding: 14px 20px;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--blue);
+  font-weight: 700;
+}
 
-/* Экран 8: сверка мечт на песке */
+/* Экран 8: корзина — список */
 .tim-screen[data-screen="8"] .tim-card {
   padding: 0;
   background: transparent;
@@ -626,11 +706,73 @@ body {
   font-weight: 800;
   color: var(--blue-dark);
 }
-.tim-confirm-hint {
-  margin: 0 0 18px;
-  font-size: 32px;
+.tim-basket-empty {
+  margin: 0 0 20px;
+  font-size: 34px;
   line-height: 1.35;
   color: #4a6080;
+}
+.tim-basket-list {
+  list-style: none;
+  margin: 0 0 24px;
+  padding: 0;
+  max-height: 720px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.tim-basket-item {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  grid-template-rows: auto auto;
+  gap: 8px 16px;
+  padding: 20px 22px;
+  background: #fff;
+  border-radius: 32px;
+  border: 2px solid rgba(77, 128, 183, 0.22);
+}
+.tim-basket-item__num {
+  grid-row: 1 / span 2;
+  align-self: start;
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  background: rgba(77, 128, 183, 0.15);
+  color: var(--blue-dark);
+  font-size: 28px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tim-basket-item__text {
+  margin: 0;
+  font-size: 34px;
+  line-height: 1.3;
+  color: var(--blue-dark);
+  font-weight: 600;
+  word-break: break-word;
+}
+.tim-basket-item__acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.tim-basket-item__btn {
+  border: 0;
+  background: rgba(77, 128, 183, 0.12);
+  color: var(--blue);
+  font: inherit;
+  font-size: 28px;
+  font-weight: 700;
+  padding: 10px 18px;
+  border-radius: 20px;
+  cursor: pointer;
+}
+.tim-basket-item__btn--del {
+  background: rgba(180, 60, 60, 0.1);
+  color: #a33;
 }
 .tim-screen[data-screen="8"] .tim-link--confirm {
   display: block;
@@ -641,31 +783,11 @@ body {
   color: var(--blue);
   font-weight: 700;
   box-shadow: 0 4px 12px rgba(20, 60, 90, 0.1);
-}
-.tim-screen[data-screen="8"] .tim-field--confirm textarea {
-  height: 360px;
-  min-height: 280px;
-  max-height: 520px;
-  background: rgba(255, 255, 255, 0.92);
-  border: 2px solid rgba(77, 128, 183, 0.35);
-  border-radius: 44px;
-  padding: 32px 36px;
-  font-size: 40px;
-  line-height: 1.35;
-  resize: vertical;
-}
-.tim-confirm-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin-top: 8px;
-}
-.tim-confirm-actions .tim-btn {
-  margin-top: 0;
-  width: 100%;
+  text-align: center;
 }
 .tim-screen[data-screen="8"] .tim-btn {
   margin-top: 18px;
+  width: 100%;
 }
 .tim-video video[hidden],
 .tim-video__ph[hidden] {

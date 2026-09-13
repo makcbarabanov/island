@@ -25,18 +25,14 @@
     },
     activeChannel: "telegram",
     dreamText: "",
-    interpreted: null, // { dreams: [{title}], understood, ambiguous }
+    /** Корзина мечт: строго по одной, без парсера */
+    dreamBasket: [],
+    editingIndex: null, // null = новая; number = правка существующей
     busy: false,
     deferredInstall: null,
     videoWatched: false,
     pendingDreamSave: false,
     pendingDreams: null,
-    /** Сверка (экран 8): очередь + принятые */
-    confirmQueue: [],
-    confirmAccepted: [],
-    confirmDone: 0,
-    confirmTotal: 0,
-    confirmFallback: false,
   };
 
   const els = {
@@ -123,66 +119,6 @@
       .replace(/"/g, "&quot;");
   }
 
-  function trimDreamPhrase(s) {
-    return String(s || "")
-      .trim()
-      .replace(/[.!?…]+$/g, "")
-      .trim();
-  }
-
-  /** Разбор списка мечт без модели: точки, переносы, запятые между фразами */
-  function splitDreamText(text) {
-    const raw = String(text || "").trim();
-    if (!raw) return [];
-    const out = [];
-    raw.split(/[\n;]+/).forEach(function (chunk) {
-      chunk = chunk.trim();
-      if (!chunk) return;
-      chunk.split(/(?<=[.!?…])\s+/).forEach(function (part) {
-        part = part.trim().replace(/^[\-*•]+\s*/, "");
-        if (!part) return;
-        if (/,/.test(part)) {
-          const sub = part.split(/\s*,\s*/).filter(Boolean);
-          if (sub.length > 1 && sub.every(function (s) {
-            return s.length >= 3;
-          })) {
-            sub.forEach(function (s) {
-              const t = trimDreamPhrase(s);
-              if (t) out.push(t);
-            });
-            return;
-          }
-        }
-        const cleaned = trimDreamPhrase(part);
-        if (cleaned) out.push(cleaned);
-      });
-    });
-    if (!out.length) return [raw];
-    return out.slice(0, 20);
-  }
-
-  function normalizeDreamList(rawDreams, originalText) {
-    let list = (rawDreams || [])
-      .map(function (d) {
-        return typeof d === "string" ? d.trim() : String((d && d.title) || "").trim();
-      })
-      .filter(Boolean);
-    if (!list.length) list = splitDreamText(originalText);
-    if (list.length <= 1) {
-      const expanded = splitDreamText(list[0] || originalText || "");
-      if (expanded.length > 1) list = expanded;
-    } else {
-      const flat = [];
-      list.forEach(function (item) {
-        splitDreamText(item).forEach(function (s) {
-          flat.push(s);
-        });
-      });
-      if (flat.length) list = flat;
-    }
-    return list.slice(0, 20);
-  }
-
   function applyScene(screen) {
     const key = screen;
     const baked = !!(A.BAKED_SCENE && A.BAKED_SCENE[key]);
@@ -194,7 +130,7 @@
     els.screen.dataset.baked = baked ? "1" : "0";
 
     if ((key === 8 || key === "8") && A.confirmSceneForCount) {
-      els.scene.src = A.confirmSceneForCount(state.confirmTotal || 1);
+      els.scene.src = A.confirmSceneForCount(state.dreamBasket.length || 1);
     } else {
       els.scene.src = A.SCENE[key] || A.SCENE[1];
     }
@@ -346,20 +282,7 @@
           locked: !watched,
         });
     } else if (s === 3) {
-      const ph = (A.DREAM_PLACEHOLDER || "Напиши о чём ты мечтаешь своими словами.").replace(/\n/g, " ");
-      html =
-        '<div class="tim-field tim-field--dream">' +
-        '<label class="tim-sr-only" for="f-dream">Мечта</label>' +
-        '<textarea id="f-dream" rows="6" placeholder="' +
-        escapeHtml(ph) +
-        '">' +
-        escapeHtml(state.dreamText) +
-        "</textarea></div>" +
-        btn(state.busy ? "Думаю…" : "Передай Тиму", {
-          act: "dream-next",
-          noarrow: true,
-          disabled: state.busy,
-        });
+      html = renderDreamCompose();
     } else if (s === 4) {
       html =
         field("f-name", "Имя", state.name) +
@@ -379,18 +302,9 @@
         btn("Открыть в браузере", { act: "pwa-browser", soft: true, noarrow: true }) +
         '<button type="button" class="tim-link" data-act="pwa-later">Позже</button>';
     } else if (s === 7) {
-      html =
-        '<div class="tim-field"><label for="f-dream">Твоя мечта</label><textarea id="f-dream" placeholder="Хочу свозить маму на море и чтобы она больше путешествовала…">' +
-        escapeHtml(state.dreamText) +
-        "</textarea></div>" +
-        '<div class="tim-modes">' +
-        '<button type="button" class="tim-mode is-on" disabled>Текст</button>' +
-        '<button type="button" class="tim-mode" disabled>Голосом · скоро</button>' +
-        '<button type="button" class="tim-mode" disabled>Файлом · скоро</button>' +
-        "</div>" +
-        btn(state.busy ? "Думаю…" : "Далее", { act: "dream-next", disabled: state.busy });
+      html = renderDreamCompose();
     } else if (s === 8) {
-      html = renderInterpret();
+      html = renderBasketList();
     } else if (s === 9) {
       html =
         '<div class="success-actions">' +
@@ -476,156 +390,119 @@
     );
   }
 
-  function renderInterpret() {
-    const total = state.confirmTotal || state.confirmQueue.length || 1;
-    const done = state.confirmDone || 0;
-    const cur = state.confirmQueue[0] || "";
-    const num = Math.min(done + 1, Math.max(total, 1));
-    const left = state.confirmQueue.length;
+  function basketCount() {
+    return state.dreamBasket.length;
+  }
 
-    if (!left) {
-      return (
-        '<div class="tim-confirm-panel">' +
-        '<p class="tim-confirm-tech">Проверь записи</p>' +
-        '<p class="tim-confirm-count">Готово: ' +
-        escapeHtml(String(state.confirmAccepted.length)) +
-        " из " +
-        escapeHtml(String(total)) +
-        "</p>" +
-        btn(state.busy ? "Сохраняю…" : "Сохранить на Остров", {
-          act: "dream-save",
-          disabled: state.busy || !state.confirmAccepted.length,
-          noarrow: true,
-        }) +
-        '<button type="button" class="tim-link tim-link--confirm" data-act="dream-fix">Написать заново</button>' +
-        "</div>"
-      );
-    }
-
+  function renderBasketBadge() {
+    const n = basketCount();
+    if (!n) return "";
     return (
-      '<div class="tim-confirm-panel">' +
-      '<p class="tim-confirm-tech">Проверь записи</p>' +
-      '<p class="tim-confirm-count">Мечта ' +
-      escapeHtml(String(num)) +
-      " из " +
-      escapeHtml(String(total)) +
-      "</p>" +
-      (state.confirmFallback
-        ? '<p class="tim-confirm-hint">Записи из твоих слов — поправь, если Тим разрезал не так.</p>'
+      '<button type="button" class="tim-basket" data-act="basket-open" aria-label="Корзина мечт, ' +
+      n +
+      '">' +
+      '<span class="tim-basket__bag" aria-hidden="true"></span>' +
+      '<span class="tim-basket__badge">' +
+      escapeHtml(String(n)) +
+      "</span></button>"
+    );
+  }
+
+  function renderDreamCompose() {
+    const editing = state.editingIndex != null;
+    const ph = editing
+      ? "Поправь текст этой мечты"
+      : A.DREAM_PLACEHOLDER || "Одна мечта — своими словами.";
+    const primary = editing ? "Сохранить в корзину" : "Добавить в корзину";
+    const n = basketCount();
+    return (
+      '<div class="tim-dream-compose">' +
+      (n
+        ? '<div class="tim-dream-compose__top">' + renderBasketBadge() + "</div>"
         : "") +
-      '<div class="tim-field tim-field--confirm">' +
-      '<label class="tim-sr-only" for="f-confirm-dream">Текст мечты</label>' +
-      '<textarea id="f-confirm-dream" rows="5">' +
-      escapeHtml(cur) +
+      (editing
+        ? '<p class="tim-dream-edit-label">Правка мечты ' +
+          escapeHtml(String(state.editingIndex + 1)) +
+          "</p>"
+        : "") +
+      '<div class="tim-field tim-field--dream">' +
+      '<label class="tim-sr-only" for="f-dream">Мечта</label>' +
+      '<textarea id="f-dream" rows="6" placeholder="' +
+      escapeHtml(String(ph).replace(/\n/g, " ")) +
+      '">' +
+      escapeHtml(state.dreamText) +
       "</textarea></div>" +
-      '<div class="tim-confirm-actions">' +
-      btn("Принять", { act: "confirm-accept", noarrow: true }) +
-      btn("Удалить", { act: "confirm-delete", soft: true, noarrow: true }) +
-      "</div>" +
-      (left > 1
-        ? btn("Принять все оставшиеся", {
-            act: "confirm-accept-all",
+      btn(primary, { act: "dream-add", noarrow: true }) +
+      (editing
+        ? '<button type="button" class="tim-link tim-link--confirm" data-act="dream-edit-cancel">Отмена</button>'
+        : "") +
+      (n
+        ? btn(state.busy ? "Сохраняю…" : "На остров · " + n, {
+            act: "dream-save",
             soft: true,
             noarrow: true,
+            disabled: state.busy,
           })
         : "") +
-      '<button type="button" class="tim-link tim-link--confirm" data-act="confirm-add">+ Добавить мечту</button>' +
-      '<button type="button" class="tim-link tim-link--confirm" data-act="dream-fix">Написать заново</button>' +
       "</div>"
     );
   }
 
-  function readConfirmText() {
-    const ta = document.getElementById("f-confirm-dream");
-    return ta ? ta.value.trim() : state.confirmQueue[0] || "";
-  }
-
-  function finishConfirmIfEmpty() {
-    if (state.confirmQueue.length) {
-      renderCard();
-      // обновить сцену one/many если осталась 1
-      if (els.scene && A.confirmSceneForCount) {
-        /* сцену one/many фиксируем по confirmTotal с старта — не дёргаем */
-      }
-      return;
+  function renderBasketList() {
+    const list = state.dreamBasket;
+    let rows = "";
+    if (!list.length) {
+      rows =
+        '<p class="tim-basket-empty">Корзина пуста. Добавь хотя бы одну мечту.</p>';
+    } else {
+      list.forEach(function (text, i) {
+        rows +=
+          '<li class="tim-basket-item">' +
+          '<span class="tim-basket-item__num">' +
+          escapeHtml(String(i + 1)) +
+          "</span>" +
+          '<p class="tim-basket-item__text">' +
+          escapeHtml(text) +
+          "</p>" +
+          '<div class="tim-basket-item__acts">' +
+          '<button type="button" class="tim-basket-item__btn" data-act="basket-edit" data-i="' +
+          i +
+          '">Изменить</button>' +
+          '<button type="button" class="tim-basket-item__btn tim-basket-item__btn--del" data-act="basket-del" data-i="' +
+          i +
+          '">Удалить</button>' +
+          "</div></li>";
+      });
+      rows = '<ul class="tim-basket-list">' + rows + "</ul>";
     }
-    if (!state.confirmAccepted.length) {
-      setError("Нет мечт для сохранения. Добавь или напиши заново.");
-      renderCard();
-      return;
-    }
-    state.pendingDreams = state.confirmAccepted.slice();
-    saveDreams();
-  }
 
-  function confirmAcceptCurrent() {
-    const text = readConfirmText();
-    if (!text) {
-      setError("Пустую мечту нельзя принять — поправь или удали.");
-      return;
-    }
-    state.confirmAccepted.push(text);
-    state.confirmQueue.shift();
-    state.confirmDone += 1;
-    setError("");
-    finishConfirmIfEmpty();
-  }
-
-  function confirmDeleteCurrent() {
-    state.confirmQueue.shift();
-    state.confirmDone += 1;
-    setError("");
-    finishConfirmIfEmpty();
-  }
-
-  function confirmAcceptAll() {
-    const first = readConfirmText();
-    if (state.confirmQueue.length) {
-      state.confirmQueue[0] = first || state.confirmQueue[0];
-    }
-    while (state.confirmQueue.length) {
-      const t = String(state.confirmQueue.shift() || "").trim();
-      if (t) state.confirmAccepted.push(t);
-      state.confirmDone += 1;
-    }
-    setError("");
-    finishConfirmIfEmpty();
-  }
-
-  function confirmAdd() {
-    const cur = readConfirmText();
-    if (state.confirmQueue.length) state.confirmQueue[0] = cur;
-    state.confirmQueue.push("");
-    state.confirmTotal += 1;
-    // показать новую пустую: сдвинем текущую в конец? лучше вставить после текущей
-    // сейчас: сохранили текущий текст в [0], добавили пустую в конец — юзер сначала добьёт текущую
-    setError("");
-    renderCard();
-  }
-
-  function startConfirm(dreams, fallback) {
-    const list = normalizeDreamList(dreams, state.dreamText);
-    state.confirmQueue = list.slice();
-    state.confirmAccepted = [];
-    state.confirmDone = 0;
-    state.confirmTotal = list.length || 1;
-    state.confirmFallback = !!fallback;
-    state.interpreted = {
-      understood: fallback
-        ? "Тим пока не достучался до облака — проверь записи."
-        : "Проверь записи",
-      dreams: list.map(function (t) {
-        return { title: t };
-      }),
-      ambiguous: !!fallback,
-    };
-    go(8);
+    return (
+      '<div class="tim-confirm-panel tim-basket-panel">' +
+      '<p class="tim-confirm-tech">Корзина мечт</p>' +
+      '<p class="tim-confirm-count">' +
+      (list.length
+        ? escapeHtml(String(list.length)) +
+          (list.length === 1 ? " мечта" : list.length < 5 ? " мечты" : " мечт")
+        : "Пока пусто") +
+      "</p>" +
+      rows +
+      btn("+ Добавить мечту", { act: "basket-add", soft: true, noarrow: true }) +
+      btn(state.busy ? "Сохраняю…" : "Сохранить на Остров", {
+        act: "dream-save",
+        noarrow: true,
+        disabled: state.busy || !list.length,
+      }) +
+      '<button type="button" class="tim-link tim-link--confirm" data-act="basket-back">К полю ввода</button>' +
+      "</div>"
+    );
   }
 
   function bindCard() {
     els.body.querySelectorAll("[data-act]").forEach(function (el) {
       el.addEventListener("click", function () {
-        onAct(el.getAttribute("data-act"));
+        const act = el.getAttribute("data-act");
+        const iAttr = el.getAttribute("data-i");
+        onAct(act, iAttr != null ? Number(iAttr) : null);
       });
     });
     if (state.screen === 1) bindCitySuggest();
@@ -716,7 +593,7 @@
     if (pw) state.password = pw.value;
   }
 
-  async function onAct(act) {
+  async function onAct(act, index) {
     if (act === "hello-next") {
       readHelloFields();
       if (!state.name || !state.city) {
@@ -766,55 +643,97 @@
     }
     if (act === "pwa-browser" || act === "pwa-later") {
       markPwaDone();
-      go(7);
-      return;
-    }
-    if (act === "dream-next") {
-      const ta = document.getElementById("f-dream");
-      state.dreamText = ta ? ta.value.trim() : "";
-      if (!state.dreamText) {
-        setError("Напиши мечту — хотя бы пару слов.");
-        return;
-      }
-      await interpretDream();
-      return;
-    }
-    if (act === "dream-fix") {
       go(3);
       return;
     }
-    if (act === "confirm-accept") {
-      confirmAcceptCurrent();
+    if (act === "dream-add") {
+      const ta = document.getElementById("f-dream");
+      const text = ta ? ta.value.trim() : "";
+      if (!text) {
+        setError("Напиши одну мечту — хотя бы пару слов.");
+        return;
+      }
+      if (state.editingIndex != null) {
+        state.dreamBasket[state.editingIndex] = text;
+        state.editingIndex = null;
+      } else {
+        if (state.dreamBasket.length >= 20) {
+          setError("Пока максимум 20 мечт за раз.");
+          return;
+        }
+        state.dreamBasket.push(text);
+      }
+      state.dreamText = "";
+      setError("");
+      renderCard();
       return;
     }
-    if (act === "confirm-delete") {
-      confirmDeleteCurrent();
+    if (act === "dream-edit-cancel") {
+      state.editingIndex = null;
+      state.dreamText = "";
+      setError("");
+      renderCard();
       return;
     }
-    if (act === "confirm-accept-all") {
-      confirmAcceptAll();
+    if (act === "basket-open") {
+      go(8);
       return;
     }
-    if (act === "confirm-add") {
-      confirmAdd();
+    if (act === "basket-back") {
+      state.editingIndex = null;
+      state.dreamText = "";
+      go(3);
+      return;
+    }
+    if (act === "basket-add") {
+      state.editingIndex = null;
+      state.dreamText = "";
+      go(3);
+      return;
+    }
+    if (act === "basket-edit") {
+      const i = index;
+      if (i == null || !state.dreamBasket[i]) return;
+      state.editingIndex = i;
+      state.dreamText = state.dreamBasket[i];
+      go(3);
+      return;
+    }
+    if (act === "basket-del") {
+      const i = index;
+      if (i == null || i < 0 || i >= state.dreamBasket.length) return;
+      state.dreamBasket.splice(i, 1);
+      if (state.editingIndex != null) {
+        if (state.editingIndex === i) {
+          state.editingIndex = null;
+          state.dreamText = "";
+        } else if (state.editingIndex > i) {
+          state.editingIndex -= 1;
+        }
+      }
+      setError("");
+      if (!state.dreamBasket.length) {
+        go(3);
+        return;
+      }
+      applyScene(8);
+      renderCard();
       return;
     }
     if (act === "dream-save") {
-      if (!state.pendingDreams || !state.pendingDreams.length) {
-        if (state.confirmAccepted && state.confirmAccepted.length) {
-          state.pendingDreams = state.confirmAccepted.slice();
-        }
+      if (!state.dreamBasket.length) {
+        setError("Сначала добавь хотя бы одну мечту в корзину.");
+        return;
       }
+      state.pendingDreams = state.dreamBasket.slice();
       await saveDreams();
       return;
     }
     if (act === "again-dream") {
       state.dreamText = "";
-      state.interpreted = null;
-      state.confirmQueue = [];
-      state.confirmAccepted = [];
-      state.confirmDone = 0;
-      state.confirmTotal = 0;
+      state.dreamBasket = [];
+      state.editingIndex = null;
+      state.pendingDreams = null;
       go(3);
       return;
     }
@@ -896,7 +815,7 @@
 
   function afterContacts() {
     if (pwaAlreadyStandalone() || pwaOfferDone()) {
-      go(7);
+      go(3);
     } else {
       go(6);
     }
@@ -910,11 +829,11 @@
         await state.deferredInstall.userChoice;
       } catch (_) {}
       state.deferredInstall = null;
-      go(7);
+      go(3);
       return;
     }
     setError("На iPhone: «Поделиться» → «На экран „Домой“». На Android установка может быть в меню браузера.");
-    // всё равно пускаем дальше по кнопке «Открыть в браузере» — здесь не блокируем
+    go(3);
   }
 
   async function doRegister() {
@@ -1005,43 +924,15 @@
     }
   }
 
-  async function interpretDream() {
-    state.busy = true;
-    renderCard();
-    try {
-      const res = await fetch(apiBase() + "/api/v1/dream-interpret", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: state.dreamText }),
-      });
-      const data = await res.json().catch(function () {
-        return {};
-      });
-      if (!res.ok) throw new Error("ai");
-      const dreams =
-        Array.isArray(data.dreams) && data.dreams.length ? data.dreams : [state.dreamText];
-      state.busy = false;
-      startConfirm(dreams, !!data.fallback);
-    } catch (_) {
-      state.busy = false;
-      startConfirm(splitDreamText(state.dreamText), true);
-    }
-  }
-
   function collectEditedDreams() {
     if (state.pendingDreams && state.pendingDreams.length) {
       return state.pendingDreams.slice();
     }
-    if (state.confirmAccepted && state.confirmAccepted.length) {
-      return state.confirmAccepted.slice();
+    if (state.dreamBasket && state.dreamBasket.length) {
+      return state.dreamBasket.slice();
     }
-    const inputs = els.body.querySelectorAll("input[data-dream-i]");
-    const out = [];
-    inputs.forEach(function (inp) {
-      const t = inp.value.trim();
-      if (t) out.push(t);
-    });
-    return out.length ? out : [state.dreamText];
+    const t = String(state.dreamText || "").trim();
+    return t ? [t] : [];
   }
 
   async function saveDreams() {
@@ -1076,6 +967,9 @@
       state.busy = false;
       state.pendingDreamSave = false;
       state.pendingDreams = null;
+      state.dreamBasket = [];
+      state.dreamText = "";
+      state.editingIndex = null;
       go(9);
     } catch (e) {
       state.busy = false;
