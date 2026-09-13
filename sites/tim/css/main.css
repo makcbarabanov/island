@@ -59,6 +59,11 @@ body {
   background: transparent;
 }
 
+html,
+body {
+  overflow-x: hidden;
+}
+
 /* Елезаметный номер сборки (= .app-version). Старый номер → кэш HTML. */
 .tim-build {
   position: absolute;
@@ -913,8 +918,9 @@ body {
 }
 .tim-channels--reg {
   grid-template-columns: repeat(5, 1fr);
-  margin-top: 12px;
-  margin-bottom: 20px;
+  margin-top: 8px;
+  margin-bottom: 12px;
+  gap: 12px;
 }
 .tim-reg-lead {
   margin: 0 0 28px;
@@ -925,65 +931,57 @@ body {
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.45);
 }
 .tim-reg-optional {
-  margin: 0 0 16px;
-  padding: 18px 28px;
-  font-size: 30px;
+  margin: 0 0 12px;
+  padding: 14px 24px;
+  font-size: 28px;
   font-weight: 800;
   color: var(--blue-dark);
   text-align: center;
   background: #fff;
-  border-radius: 28px;
+  border-radius: 24px;
   box-shadow: 0 8px 22px rgba(35, 76, 110, 0.12);
 }
 .tim-field--social {
-  margin-top: 8px;
-  margin-bottom: 16px;
+  margin-top: 0;
+  margin-bottom: 14px;
 }
 .tim-screen[data-screen="4"] .tim-btn,
 .tim-screen[data-screen="5"] .tim-btn,
 .tim-screen[data-screen="fio"] .tim-btn {
   width: 100%;
-  margin-top: 12px;
+  margin-top: 0;
 }
 
+/* Компактный блок: кнопка сразу под полями, без «дыры» и без скролла */
 .tim-reg--socials {
   position: relative;
   display: flex;
   flex-direction: column;
-  min-height: 1180px;
-  padding-bottom: 200px;
+  gap: 12px;
+  min-height: 0;
+  padding-bottom: 0;
   box-sizing: border-box;
 }
 .tim-socials__panel {
   flex: 0 0 auto;
-  height: 420px;
-  min-height: 420px;
-  max-height: 420px;
-  overflow-x: hidden;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  padding: 8px 4px 12px;
+  height: auto;
+  min-height: 280px;
+  max-height: none;
+  overflow: hidden;
+  padding: 0 4px;
   box-sizing: border-box;
 }
-.tim-socials__hint {
-  margin: 0 0 16px;
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--blue-dark);
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
-}
 .tim-socials__placeholder {
-  margin: 48px 12px 0;
+  margin: 36px 12px 0;
   text-align: center;
-  font-size: 30px;
+  font-size: 28px;
   font-weight: 700;
   color: rgba(18, 58, 119, 0.55);
 }
 .tim-socials__dock {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 8px;
+  position: static;
+  flex: 0 0 auto;
+  margin-top: 4px;
 }
 
 .tim-confirm-check {
@@ -1039,8 +1037,17 @@ body {
   touch-action: pan-y;
 }
 .tim-screen[data-screen="5"] .tim-card {
-  bottom: 36px;
+  bottom: auto;
   overflow: hidden;
+}
+.tim-screen[data-screen="5"] .tim-ch {
+  height: 100px;
+  font-size: 26px;
+}
+.tim-screen[data-screen="5"] .tim-btn {
+  height: calc(130px * 1080 / 941);
+  border-radius: calc(65px * 1080 / 941);
+  font-size: calc(44px * 1080 / 941);
 }
 .tim-screen[data-screen="4"] .tim-reg,
 .tim-screen[data-screen="fio"] .tim-reg {

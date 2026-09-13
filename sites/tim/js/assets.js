@@ -91,6 +91,8 @@
   };
 
   const ACCOUNT_LAYOUT = { left: 70, top: 980, width: 940 };
+  /** Соцсети: выше и компактнее — «Далее» в первом экране без скролла */
+  const SOCIALS_LAYOUT = { left: 70, top: 860, width: 940 };
 
   const CARD_LAYOUT = {
     1: {
@@ -109,7 +111,7 @@
       width: 940,
     },
     4: ACCOUNT_LAYOUT,
-    5: ACCOUNT_LAYOUT,
+    5: SOCIALS_LAYOUT,
     6: { left: 61, top: 736, width: 819 },
     7: { left: 61, top: 736, width: 819 },
     8: {

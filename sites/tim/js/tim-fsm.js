@@ -71,15 +71,20 @@
   let designW = (A && A.DESIGN_WIDTH) || 941;
   let designH = (A && A.DESIGN_HEIGHT) || 1672;
 
-  /** Масштаб artboard только по ширине stage. Высота stage = scene×scale. */
+  /** Масштаб artboard по ширине и высоте окна — один экран без скролла страницы. */
   function fitTimCanvas() {
     if (!els.stage || !els.canvas) return;
-    const stageW = els.stage.clientWidth || 1;
-    const scale = stageW / designW;
+    const maxW = Math.min(window.innerWidth || 430, 430);
+    const vv = window.visualViewport;
+    const viewH = Math.max(320, (vv && vv.height) || window.innerHeight || 640);
+    const scale = Math.min(maxW / designW, viewH / designH);
+    const stageW = Math.round(designW * scale);
+    const stageH = Math.round(designH * scale);
     els.canvas.style.width = designW + "px";
     els.canvas.style.height = designH + "px";
     els.canvas.style.transform = "scale(" + scale + ")";
-    els.stage.style.height = Math.round(designH * scale) + "px";
+    els.stage.style.width = stageW + "px";
+    els.stage.style.height = stageH + "px";
     els.stage.style.minHeight = "";
   }
 
@@ -612,9 +617,6 @@
       state.contacts[active] = entry;
       const label = active === "max" ? "MAX" : "Telegram";
       panelInner =
-        '<p class="tim-socials__hint">' +
-        escapeHtml(label) +
-        ": юзернейм и телефон — отдельно</p>" +
         renderSocialFieldRow("f-social-user", "Юзернейм (@nick)", entry.user, active + "_user") +
         renderSocialFieldRow("f-social-phone", "Телефон", entry.phone, active + "_phone");
     } else if (active === "vk") {
