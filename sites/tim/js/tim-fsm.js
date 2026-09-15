@@ -17,6 +17,8 @@
     dialCode: "+7",
     dialPickerOpen: false,
     password: "",
+    password2: "",
+    pwaInstalledUi: false,
     user: null,
     contacts: {
       max: { user: "", phone: "" },
@@ -492,6 +494,13 @@
       escapeHtml(state.password || "") +
       '" autocomplete="new-password">' +
       "</div></div>" +
+      '<div class="tim-field">' +
+      '<label class="tim-sr-only" for="f-password2">Повтор пароля</label>' +
+      '<div class="tim-input-check-row">' +
+      '<input id="f-password2" type="password" placeholder="Повтор пароля *" value="' +
+      escapeHtml(state.password2 || "") +
+      '" autocomplete="new-password">' +
+      "</div></div>" +
       btn(cta, { act: "register", disabled: state.busy }) +
       '<p class="tim-reg-legal">Регистрируясь, ты принимаешь условия сервиса</p>' +
       "</div>"
@@ -668,10 +677,18 @@
 
   /** Экран 6 — резюме: PWA / ВК / браузер → ЛК */
   function renderResumeScreen() {
+    const installed = !!(state.pwaInstalledUi || pwaAlreadyStandalone());
+    const installBlock = installed
+      ? '<div class="tim-pwa-installed" role="status">' +
+        '<img class="tim-pwa-installed__ico" src="/assets/icons/icon-192.png" alt="" width="64" height="64">' +
+        '<p class="tim-pwa-installed__text">Ваше приложение установлено — ищи иконку «Остров» на экране телефона</p>' +
+        "</div>"
+      : btn("Установить приложение", { act: "pwa-install", noarrow: true });
+
     return (
       '<div class="tim-reg tim-reg--resume">' +
       '<p class="tim-resume-lead">Добро пожаловать на Остров.<br>Мечты сохранены — выбери, как продолжить.</p>' +
-      btn("Установить приложение", { act: "pwa-install", noarrow: true }) +
+      installBlock +
       '<a class="tim-btn tim-btn--soft tim-btn--noarrow" href="https://vk.ru/islanddreams" target="_blank" rel="noopener noreferrer">Группа ВКонтакте</a>' +
       btn("Перейти в личный кабинет", { act: "pwa-browser", soft: true, noarrow: true }) +
       "</div>"
@@ -1191,10 +1208,12 @@
     const pat = document.getElementById("f-patronymic");
     const p = document.getElementById("f-phone");
     const pw = document.getElementById("f-password");
+    const pw2 = document.getElementById("f-password2");
     if (s) state.surname = s.value.trim();
     if (pat) state.patronymic = pat.value.trim();
     if (p) state.phone = fullPhone(p.value);
     if (pw) state.password = pw.value;
+    if (pw2) state.password2 = pw2.value;
   }
 
   async function onAct(act, index) {
@@ -1477,23 +1496,18 @@
         await state.deferredInstall.userChoice;
       } catch (_) {}
       state.deferredInstall = null;
-      window.location.href = lkUrl();
-      return;
+    } else if (!pwaAlreadyStandalone()) {
+      const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent || "");
+      if (isIos) {
+        setError("iPhone: «Поделиться» → «На экран „Домой“», потом ищи иконку «Остров».");
+      } else {
+        setError(
+          "Если диалог не появился: меню ⋮ → «Установить приложение» / «Добавить на главный экран»."
+        );
+      }
     }
-    // Нет beforeinstallprompt: Chrome ещё не готов / iOS / уже установлено
-    if (pwaAlreadyStandalone()) {
-      setError("Приложение уже открыто. Можно перейти в кабинет.");
-      renderCard();
-      return;
-    }
-    const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent || "");
-    if (isIos) {
-      setError("iPhone: «Поделиться» → «На экран „Домой“».");
-    } else {
-      setError(
-        "Если кнопки установки нет в браузере: меню ⋮ → «Установить приложение» / «Добавить на главный экран». Или зайди в кабинет."
-      );
-    }
+    // Остаёмся на экране 6: кнопка → «установлено»
+    state.pwaInstalledUi = true;
     renderCard();
   }
 
@@ -1506,6 +1520,14 @@
     }
     if (!state.password) {
       setError("Придумай пароль для входа.");
+      return;
+    }
+    if (!state.password2) {
+      setError("Повтори пароль.");
+      return;
+    }
+    if (state.password !== state.password2) {
+      setError("Пароли не совпадают.");
       return;
     }
     if (!phoneLooksOk()) {
@@ -1628,7 +1650,13 @@
         const res = await fetch(apiBase() + "/dreams", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: user.id, dream: dreams[i] }),
+          body: JSON.stringify({
+            user_id: user.id,
+            dream: dreams[i],
+            // status_id 2 = «Сейчас» в ЛК (дефолтный фильтр); 1 = «План» — мечты «пропадали»
+            status_id: 2,
+            is_public: false,
+          }),
         });
         if (!res.ok) {
           const err = await res.json().catch(function () {

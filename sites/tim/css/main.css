@@ -1243,6 +1243,31 @@ body {
   width: 100%;
   margin-top: 0;
 }
+.tim-pwa-installed {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 22px 28px;
+  border-radius: 48px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 10px 28px rgba(20, 60, 90, 0.14);
+  box-sizing: border-box;
+}
+.tim-pwa-installed__ico {
+  flex: 0 0 72px;
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+  object-fit: cover;
+  display: block;
+}
+.tim-pwa-installed__text {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--blue-dark);
+}
 .tim-screen[data-screen="6"] .tim-card,
 .tim-screen[data-screen="pwa"] .tim-card {
   bottom: 36px;
