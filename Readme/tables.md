@@ -387,9 +387,28 @@ UNIQUE(user_id, dream_id). Индексы: `idx_user_dream_help_intent_user`, `i
 
 ---
 
+### `vk_community_events`
+
+**Назначение:** Append-only журнал VK Callback API сообщества («Творцы мечты»). Сырые события для контекста агента; не SSOT мечт. Миграция `_sql/mig_vk_community_events.sql`. Endpoint: `POST /api/v1/vk/callback`.
+
+| Колонка       | Тип | Описание |
+|---------------|-----|----------|
+| `id`          | BIGSERIAL PK | |
+| `group_id`    | BIGINT NOT NULL | id сообщества VK |
+| `event_id`    | TEXT NOT NULL | id события Callback; UNIQUE с `group_id` |
+| `event_type`  | TEXT NOT NULL | `message_new` \| `wall_post_new` \| `wall_reply_new` |
+| `object_id`   | BIGINT NULL | id сообщения / поста / комментария |
+| `from_id`     | BIGINT NULL | автор |
+| `peer_id`     | BIGINT NULL | peer / owner / post_id (по типу) |
+| `text`        | TEXT NULL | текст если есть |
+| `raw_payload` | JSONB NOT NULL | полный payload |
+| `ingested_at` | TIMESTAMPTZ | время записи |
+
+---
+
 ## Актуальные таблицы (без префикса _old_)
 
-Приложение ОСТРОВ использует: **users**, **dreams**, **dreams_log**, **dreams_categories**, **dreams_statuses**, **dreams_steps**, **dream_books**, **dream_books_log**, **buddy_requests**, **user_buddy_links**, **user_dream_views**, **user_dream_favorites**, **dream_favorite_notifications**, **buddy_step_daily_reports**, **buddy_alert_notifications**, **buddy_daily_digest_runs**, **user_dream_help_intent**, **steps_rules**, **roadmap**. Остальные таблицы в схеме `public` считаются неиспользуемыми.
+Приложение ОСТРОВ использует: **users**, **dreams**, **dreams_log**, **dreams_categories**, **dreams_statuses**, **dreams_steps**, **dream_books**, **dream_books_log**, **buddy_requests**, **user_buddy_links**, **user_dream_views**, **user_dream_favorites**, **dream_favorite_notifications**, **buddy_step_daily_reports**, **buddy_alert_notifications**, **buddy_daily_digest_runs**, **user_dream_help_intent**, **steps_rules**, **roadmap**, **telegram_chat_events**, **vk_community_events**. Остальные таблицы в схеме `public` считаются неиспользуемыми.
 
 ## Таблицы с префиксом _old_
 

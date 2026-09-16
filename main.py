@@ -16,7 +16,7 @@ from psycopg2 import pool
 from psycopg2.extras import RealDictCursor, Json, execute_values
 from fastapi import FastAPI, HTTPException, File, UploadFile, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, RedirectResponse, JSONResponse
+from fastapi.responses import FileResponse, RedirectResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import Optional, List, Tuple
@@ -41,6 +41,7 @@ from buddy_alerts_core import (
     count_unread_buddy_alerts,
     mark_buddy_notification_read,
 )
+from vk.events import insert_event as vk_insert_event
 
 # bcrypt принимает пароль не длиннее 72 байт; длинные обрезаем, чтобы не было 500 при входе/регистрации
 def _step_title_series_key(title: Optional[str]) -> str:
@@ -5126,6 +5127,69 @@ def funnel_breakfast_log(body: BreakfastLogRequest, request: Request):
 def api_dream_interpret(body: DreamInterpretRequest):
     """Tim AI-hook: понять текст мечты. В dreams не пишет — только JSON для confirm."""
     return interpret_dream(body)
+
+
+@app.post("/api/v1/vk/callback")
+async def vk_callback(request: Request):
+    """
+    VK Callback API для сообщества.
+    confirmation → plaintext строка; события → журнал vk_community_events, ответ «ok».
+    Без AI и без автоответов.
+    """
+    try:
+        payload = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="invalid json")
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=400, detail="invalid payload")
+
+    event_type = str(payload.get("type") or "").strip()
+    confirmation = (os.getenv("VK_CALLBACK_CONFIRMATION") or "").strip()
+    secret_expected = (os.getenv("VK_CALLBACK_SECRET") or "").strip()
+    group_expected = (os.getenv("VK_GROUP_ID") or "").strip()
+
+    if event_type == "confirmation":
+        if not confirmation:
+            raise HTTPException(status_code=503, detail="VK_CALLBACK_CONFIRMATION не задан")
+        if group_expected:
+            try:
+                if int(payload.get("group_id") or 0) != int(group_expected):
+                    raise HTTPException(status_code=403, detail="group_id mismatch")
+            except ValueError:
+                raise HTTPException(status_code=503, detail="VK_GROUP_ID некорректен")
+        return PlainTextResponse(confirmation)
+
+    if secret_expected:
+        if str(payload.get("secret") or "") != secret_expected:
+            raise HTTPException(status_code=403, detail="bad secret")
+    if group_expected:
+        try:
+            if int(payload.get("group_id") or 0) != int(group_expected):
+                raise HTTPException(status_code=403, detail="group_id mismatch")
+        except ValueError:
+            raise HTTPException(status_code=503, detail="VK_GROUP_ID некорректен")
+
+    if event_type in ("message_new", "wall_reply_new", "wall_post_new"):
+        conn = None
+        try:
+            conn = get_db_connection()
+            with conn.cursor() as cur:
+                vk_insert_event(cur, payload)
+            conn.commit()
+        except Exception:
+            if conn is not None:
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+            app_logger.exception("vk callback ingest failed type=%s", event_type)
+            # VK ретраит при не-ok; лучше ok после лога, чтобы не зациклить — но тогда потеряем событие.
+            # Для этапа 1: 500 → VK повторит.
+            raise HTTPException(status_code=500, detail="ingest failed")
+        finally:
+            _return_conn(conn)
+
+    return PlainTextResponse("ok")
 
 
 @app.delete("/admin/users/{user_id}")

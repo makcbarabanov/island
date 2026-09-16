@@ -2,6 +2,13 @@
 
 Старые пункты могут ссылаться на прежний монолитный `Readme/Readme.md`; актуальная структура — корневой [README.md](../README.md), [PROJECT.md](PROJECT.md), [RUNBOOK.md](RUNBOOK.md).
 
+## 2026-09-16 — VK Callback этап 1: журнал сообщества (v393)
+
+- `POST /api/v1/vk/callback` (confirmation + secret + group_id)
+- Таблица `vk_community_events` (message_new / wall_post_new / wall_reply_new, идемпотентно)
+- Клиент `vk/client.py` + smoke `scripts/vk_smoke.py` (read-only; photos upload → ожидаем error 27)
+- Секреты только в `.env` на сервере (не в Git)
+
 ## 2026-09-16 — Tim: показать пароль при регистрации (v392)
 
 - На экране аккаунта кнопка «Показать» / «Скрыть» для пароля и повтора
