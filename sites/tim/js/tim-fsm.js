@@ -18,6 +18,7 @@
     dialPickerOpen: false,
     password: "",
     password2: "",
+    showRegPassword: false,
     pwaInstalledUi: false,
     user: null,
     contacts: {
@@ -489,15 +490,26 @@
       (state.dialPickerOpen ? renderDialPicker() : "") +
       '<div class="tim-field">' +
       '<label class="tim-sr-only" for="f-password">Пароль</label>' +
-      '<div class="tim-input-check-row">' +
-      '<input id="f-password" type="password" placeholder="Пароль *" value="' +
+      '<div class="tim-input-check-row tim-input-check-row--pw">' +
+      '<input id="f-password" type="' +
+      (state.showRegPassword ? "text" : "password") +
+      '" placeholder="Пароль *" value="' +
       escapeHtml(state.password || "") +
       '" autocomplete="new-password">' +
+      '<button type="button" class="tim-pw-toggle" data-act="pw-toggle" aria-pressed="' +
+      (state.showRegPassword ? "true" : "false") +
+      '" aria-label="' +
+      (state.showRegPassword ? "Скрыть пароль" : "Показать пароль") +
+      '">' +
+      (state.showRegPassword ? "Скрыть" : "Показать") +
+      "</button>" +
       "</div></div>" +
       '<div class="tim-field">' +
       '<label class="tim-sr-only" for="f-password2">Повтор пароля</label>' +
-      '<div class="tim-input-check-row">' +
-      '<input id="f-password2" type="password" placeholder="Повтор пароля *" value="' +
+      '<div class="tim-input-check-row tim-input-check-row--pw">' +
+      '<input id="f-password2" type="' +
+      (state.showRegPassword ? "text" : "password") +
+      '" placeholder="Повтор пароля *" value="' +
       escapeHtml(state.password2 || "") +
       '" autocomplete="new-password">' +
       "</div></div>" +
@@ -1242,6 +1254,12 @@
     if (act === "dial-open") {
       readRegFields();
       state.dialPickerOpen = !state.dialPickerOpen;
+      renderCard();
+      return;
+    }
+    if (act === "pw-toggle") {
+      readRegFields();
+      state.showRegPassword = !state.showRegPassword;
       renderCard();
       return;
     }

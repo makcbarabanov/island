@@ -529,6 +529,37 @@ body {
 .tim-field--check.is-ok .tim-field-check {
   opacity: 1;
 }
+.tim-input-check-row--pw input {
+  padding-right: 180px;
+}
+.tim-pw-toggle {
+  appearance: none;
+  position: absolute;
+  right: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  border: 0;
+  background: rgba(8, 175, 194, 0.14);
+  color: var(--blue-dark);
+  font: inherit;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 14px 22px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.tim-pw-toggle[aria-pressed="true"] {
+  background: rgba(8, 175, 194, 0.28);
+}
+.tim-screen[data-screen="4"] .tim-pw-toggle {
+  font-size: 24px;
+  padding: 10px 16px;
+}
+.tim-screen[data-screen="4"] .tim-input-check-row--pw input {
+  padding-right: 150px;
+}
 
 .tim-reg-legal {
   margin: 18px 0 0;
