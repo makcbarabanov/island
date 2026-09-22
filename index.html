@@ -1065,14 +1065,28 @@
         .showcase-filter-link { color:#888; text-decoration:none; }
         .showcase-filter-link:hover { color:#4CAF50; }
         .showcase-filter-link.active { color:#333; font-weight:600; }
-        .showcase-breadcrumbs-row { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+        .showcase-breadcrumbs-row { display: flex; align-items: center; flex-wrap: nowrap; gap: 2px; white-space: nowrap; }
+        .showcase-breadcrumbs-row-p { flex-shrink: 0; max-width: 100%; overflow: hidden; }
+        .showcase-breadcrumbs-row-p .showcase-filter-link { font-size: 12px; }
         .showcase-breadcrumbs-row-p .showcase-p { color: #4CAF50; font-weight: 600; }
+        #app-showcase-breadcrumbs {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 4px;
+            margin-bottom: 8px;
+            font-size: 12px;
+            line-height: 1.25;
+            min-height: 2.6em; /* две короткие строки: Все/Избранные + Помог/… */
+            box-sizing: border-box;
+        }
         @media (min-width: 769px) {
-            #app-showcase-breadcrumbs { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 4px; }
+            #app-showcase-breadcrumbs { flex-direction: row; flex-wrap: nowrap; align-items: center; gap: 4px; min-height: 1.4em; }
             .showcase-sep-rows { display: inline !important; }
         }
         @media (max-width: 768px) {
-            #app-showcase-breadcrumbs { flex-direction: column; align-items: flex-start; gap: 6px; }
+            #app-showcase-breadcrumbs { flex-direction: column; align-items: flex-start; gap: 2px; }
+            .showcase-breadcrumbs-row-p .showcase-filter-link { font-size: 11px; }
+            .showcase-sep { margin: 0 2px; }
             .showcase-sep-rows { display: none !important; }
         }
         .app-showcase-title.active { color:#333; font-weight:700; }
@@ -1318,6 +1332,7 @@
         .app-menu a:hover { background: #e0e0e0; transform: translate(-2px, -2px); }
         .app-menu a.active { background: #fff; color: #2e7d32; font-weight: 600; border: none; box-shadow: none; }
         .dreams-title-row { display: flex; align-items: center; gap: 4px; margin-bottom: 10px; flex-wrap: nowrap; min-height: 26px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .dreams-title-row.hidden { display: none !important; }
         .dreams-title-row .app-section-title { margin: 0; flex-shrink: 0; }
         .dreams-filter { display: flex; align-items: center; gap: 2px; flex-wrap: nowrap; margin-left: 4px; flex-shrink: 0; }
         .dreams-filter.hidden { display: none !important; }
@@ -1905,7 +1920,7 @@
                     <a href="#" id="menu-steps-buddy">Бадди</a>
                 </div>
             </nav>
-            <div id="app-showcase-breadcrumbs" class="app-showcase-breadcrumbs hidden" style="display:none;flex-direction:column;align-items:flex-start;gap:6px;margin-bottom:12px;font-size:13px;">
+            <div id="app-showcase-breadcrumbs" class="app-showcase-breadcrumbs hidden" style="display:none;">
                 <div class="showcase-breadcrumbs-row">
                     <a href="#" id="app-showcase-title" class="app-showcase-title" style="font-weight:600;color:#000;text-decoration:none;">Все (<span class="showcase-count" data-count="all">0</span>)</a>
                     <span class="showcase-sep">·</span>
@@ -2698,7 +2713,7 @@
                         </div>
                     </div>
                     <button type="button" class="app-footer-logout" id="app-footer-logout" title="Выйти" onclick="logout()">Выйти</button>
-                    <span class="app-version" aria-hidden="true">395</span>
+                    <span class="app-version" aria-hidden="true">396</span>
                 </div>
             </footer>
         </div>
@@ -4071,7 +4086,12 @@
             var reportsFilterEl = document.getElementById('reports-filter-top');
             if (section === 'showcase') {
                 if (titleRowEl) titleRowEl.classList.add('hidden');
+                if (dreamsFilterEl) dreamsFilterEl.classList.add('hidden');
+                if (stepsFilterEl) stepsFilterEl.classList.add('hidden');
+                if (reportsFilterEl) reportsFilterEl.classList.add('hidden');
                 if (breadcrumbsEl) { breadcrumbsEl.classList.remove('hidden'); breadcrumbsEl.style.display = 'flex'; }
+                setTimeout(updateStickySpacer, 0);
+                setTimeout(updateStickySpacer, 150);
             } else {
                 if (titleRowEl) titleRowEl.classList.remove('hidden');
                 if (sectionTitleEl) {
