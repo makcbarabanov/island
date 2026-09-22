@@ -126,9 +126,8 @@
   };
 
   const ABOUT_VIDEO = {
-    src: "",
+    src: "assets/video/presentation.mp4",
     poster: "",
-    // Пока файла нет — честная заглушка; как только положите mp4 и src — плеер сам включится
     placeholderLabel: "Ролик скоро будет здесь.\nПока жми большую кнопку ниже ↓",
   };
 

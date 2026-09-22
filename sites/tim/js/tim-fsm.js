@@ -361,16 +361,20 @@
       const cfg = A.ABOUT_VIDEO || {};
       const hasVideo = !!(cfg.src && cfg.src.trim());
       const watched = !!state.videoWatched;
-      // Без файла ролика кнопка сразу активна; с видео — цвет после просмотра/тапа
+      // Без файла ролика кнопка сразу активна; с видео — цвет после открытия/просмотра
       const ctaLocked = hasVideo ? !watched : false;
       html =
         '<div class="tim-video" id="tim-video-wrap">' +
         (hasVideo
-          ? '<video id="about-video" controls playsinline preload="metadata" src="' +
+          ? '<button type="button" class="tim-video__open" id="btn-video-open" data-act="video-open" aria-label="Смотреть видео об Острове">' +
+            '<video class="tim-video__thumb" muted playsinline preload="metadata" src="' +
             escapeHtml(cfg.src) +
             '"' +
             (cfg.poster ? ' poster="' + escapeHtml(cfg.poster) + '"' : "") +
-            "></video>"
+            "></video>" +
+            '<span class="tim-video__play" aria-hidden="true">▶</span>' +
+            '<span class="tim-video__open-label">Видео об Острове</span>' +
+            "</button>"
           : '<button type="button" class="tim-video__ph" id="btn-video-stub" data-act="video-stub">' +
             escapeHtml(cfg.placeholderLabel || "Ролик скоро будет здесь") +
             "</button>") +
@@ -1167,11 +1171,81 @@
     renderCard();
   }
 
-  function bindVideoScreen() {
-    const video = document.getElementById("about-video");
+  function closeAboutVideoFs() {
+    const root = document.getElementById("tim-video-fs");
+    if (!root) return;
+    const video = root.querySelector("video");
     if (video) {
-      video.addEventListener("ended", markVideoWatched);
+      try {
+        video.pause();
+      } catch (e) {}
     }
+    root.hidden = true;
+    document.body.classList.remove("tim-video-fs-open");
+  }
+
+  function openAboutVideoFs() {
+    const cfg = A.ABOUT_VIDEO || {};
+    const src = (cfg.src || "").trim();
+    if (!src) return;
+
+    let root = document.getElementById("tim-video-fs");
+    if (!root) {
+      root = document.createElement("div");
+      root.id = "tim-video-fs";
+      root.className = "tim-video-fs";
+      root.setAttribute("role", "dialog");
+      root.setAttribute("aria-modal", "true");
+      root.setAttribute("aria-label", "Видео об Острове");
+      root.innerHTML =
+        '<button type="button" class="tim-video-fs__close" id="tim-video-fs-close" aria-label="Закрыть">×</button>' +
+        '<div class="tim-video-fs__frame">' +
+        '<video id="about-video-fs" controls playsinline webkit-playsinline preload="metadata"></video>' +
+        "</div>";
+      document.body.appendChild(root);
+      root.addEventListener("click", function (e) {
+        if (e.target === root) closeAboutVideoFs();
+      });
+      const closeBtn = document.getElementById("tim-video-fs-close");
+      if (closeBtn) {
+        closeBtn.addEventListener("click", function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          closeAboutVideoFs();
+        });
+      }
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") closeAboutVideoFs();
+      });
+    }
+
+    const video = root.querySelector("video");
+    if (video) {
+      if (video.getAttribute("src") !== src) {
+        video.setAttribute("src", src);
+        video.load();
+      }
+      video.onended = function () {
+        markVideoWatched();
+      };
+      video.onplay = function () {
+        markVideoWatched();
+      };
+    }
+
+    root.hidden = false;
+    document.body.classList.add("tim-video-fs-open");
+    markVideoWatched();
+    if (video) {
+      const playPromise = video.play();
+      if (playPromise && typeof playPromise.catch === "function") {
+        playPromise.catch(function () {});
+      }
+    }
+  }
+
+  function bindVideoScreen() {
+    /* полноэкран открывается по data-act=video-open */
   }
 
   function bindCitySuggest() {
@@ -1266,6 +1340,10 @@
     }
     if (act === "video-stub") {
       markVideoWatched();
+      return;
+    }
+    if (act === "video-open") {
+      openAboutVideoFs();
       return;
     }
     if (act === "about-next" || act === "about-skip") {
