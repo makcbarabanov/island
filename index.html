@@ -1065,13 +1065,6 @@
         .showcase-filter-link { color:#888; text-decoration:none; }
         .showcase-filter-link:hover { color:#4CAF50; }
         .showcase-filter-link.active { color:#333; font-weight:600; }
-        .showcase-breadcrumbs-row {
-            display: flex;
-            align-items: center;
-            flex-wrap: nowrap;
-            gap: 0;
-            white-space: nowrap;
-        }
         .showcase-breadcrumbs-row-p .showcase-p { color: #4CAF50; font-weight: 600; }
         #app-showcase-breadcrumbs {
             display: flex;
@@ -1079,27 +1072,36 @@
             flex-wrap: nowrap;
             align-items: center;
             gap: 0;
-            margin-bottom: 6px;
+            margin: 0 0 4px 0;
+            padding: 0;
             font-size: 11px;
             line-height: 1.2;
-            letter-spacing: -0.02em;
-            min-height: 1.35em;
+            letter-spacing: -0.03em;
+            height: 1.35em;
             max-height: 1.35em;
             overflow: hidden;
             box-sizing: border-box;
             white-space: nowrap;
+            flex-shrink: 0;
         }
         #app-showcase-breadcrumbs .showcase-filter-link,
         #app-showcase-breadcrumbs .app-showcase-title {
             font-size: 11px;
-            letter-spacing: -0.02em;
+            letter-spacing: -0.03em;
+            flex-shrink: 0;
         }
-        #app-showcase-breadcrumbs .showcase-sep { margin: 0 1px; color: #ccc; user-select: none; }
-        #app-showcase-breadcrumbs .showcase-sep-rows { display: inline !important; margin: 0 1px; }
+        #app-showcase-breadcrumbs .showcase-fav-star {
+            color: #f5c518;
+            font-size: 12px;
+            line-height: 1;
+            margin-right: 0;
+        }
+        #app-showcase-breadcrumbs .showcase-sep { margin: 0 1px; color: #ccc; user-select: none; flex-shrink: 0; }
         @media (max-width: 768px) {
             #app-showcase-breadcrumbs,
             #app-showcase-breadcrumbs .showcase-filter-link,
             #app-showcase-breadcrumbs .app-showcase-title { font-size: 10px; }
+            #app-showcase-breadcrumbs .showcase-fav-star { font-size: 11px; }
         }
         .app-showcase-title.active { color:#333; font-weight:700; }
         .showcase-sep { margin:0 4px; color:#ccc; user-select:none; }
@@ -1933,19 +1935,15 @@
                 </div>
             </nav>
             <div id="app-showcase-breadcrumbs" class="app-showcase-breadcrumbs hidden" style="display:none;">
-                <div class="showcase-breadcrumbs-row">
-                    <a href="#" id="app-showcase-title" class="app-showcase-title" style="font-weight:600;color:#000;text-decoration:none;">Все(<span class="showcase-count" data-count="all">0</span>)</a>
-                    <span class="showcase-sep">·</span>
-                    <a href="#" class="showcase-filter-link" data-filter="favorites">Избранные(<span class="showcase-count" data-count="favorites">0</span>)</a>
-                </div>
-                <span class="showcase-sep showcase-sep-rows">·</span>
-                <div class="showcase-breadcrumbs-row showcase-breadcrumbs-row-p">
-                    <a href="#" class="showcase-filter-link" data-filter="helped"><span class="showcase-p">П</span>омог(<span class="showcase-count" data-count="helped">0</span>)</a>
-                    <span class="showcase-sep">·</span>
-                    <a href="#" class="showcase-filter-link" data-filter="helping"><span class="showcase-p">П</span>омогаю(<span class="showcase-count" data-count="helping">0</span>)</a>
-                    <span class="showcase-sep">·</span>
-                    <a href="#" class="showcase-filter-link" data-filter="in_progress"><span class="showcase-p">П</span>омогают(<span class="showcase-count" data-count="in_progress">0</span>)</a>
-                </div>
+                <a href="#" id="app-showcase-title" class="app-showcase-title" style="font-weight:600;color:#000;text-decoration:none;">Все(<span class="showcase-count" data-count="all">0</span>)</a>
+                <span class="showcase-sep">·</span>
+                <a href="#" class="showcase-filter-link" data-filter="favorites" title="Избранные"><span class="showcase-fav-star" aria-hidden="true">★</span>(<span class="showcase-count" data-count="favorites">0</span>)</a>
+                <span class="showcase-sep">·</span>
+                <a href="#" class="showcase-filter-link" data-filter="helped"><span class="showcase-p">П</span>омог(<span class="showcase-count" data-count="helped">0</span>)</a>
+                <span class="showcase-sep">·</span>
+                <a href="#" class="showcase-filter-link" data-filter="helping"><span class="showcase-p">П</span>омогаю(<span class="showcase-count" data-count="helping">0</span>)</a>
+                <span class="showcase-sep">·</span>
+                <a href="#" class="showcase-filter-link" data-filter="in_progress"><span class="showcase-p">П</span>омогают(<span class="showcase-count" data-count="in_progress">0</span>)</a>
             </div>
             </div>
                 </div>
@@ -2725,7 +2723,7 @@
                         </div>
                     </div>
                     <button type="button" class="app-footer-logout" id="app-footer-logout" title="Выйти" onclick="logout()">Выйти</button>
-                    <span class="app-version" aria-hidden="true">397</span>
+                    <span class="app-version" aria-hidden="true">398</span>
                 </div>
             </footer>
         </div>
@@ -6966,7 +6964,8 @@
             var spacer = document.getElementById('app-sticky-spacer');
             if (sticky && spacer) {
                 var h = sticky.offsetHeight;
-                spacer.style.height = (h > 0 ? h : 180) + 'px';
+                /* небольшой запас, чтобы первая карточка витрины не заезжала под липкий хедер */
+                spacer.style.height = (h > 0 ? h + 8 : 180) + 'px';
             }
         }
         document.getElementById('menu-my-dreams').addEventListener('click', function(e) { e.preventDefault(); headerView = 'me'; applyHeaderView(); switchMenu('dreams'); });
