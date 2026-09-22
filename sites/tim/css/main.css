@@ -711,8 +711,16 @@ body {
   background: rgba(180, 220, 235, 0.85);
 }
 /* слоган «Большие мечты начинаются…» между видео и кнопкой */
+.tim-screen[data-screen="2"] .tim-video-cta-hint {
+  margin: 24px 48px 0;
+  text-align: center;
+  font-size: 34px;
+  font-weight: 700;
+  color: rgba(20, 50, 70, 0.85);
+  line-height: 1.3;
+}
 .tim-screen[data-screen="2"] .tim-btn {
-  margin-top: 300px;
+  margin-top: 220px;
 }
 /* Экран 3: витрина мечт + фиксированный док внизу */
 .tim-screen[data-screen="3"] .tim-card {

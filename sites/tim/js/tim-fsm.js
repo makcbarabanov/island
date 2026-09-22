@@ -252,7 +252,21 @@
     fitTimCanvas();
   }
 
+  function clearAuthPasswords() {
+    state.password = "";
+    state.password2 = "";
+  }
+
+  function phoneNationalMaxLen() {
+    return (state.dialCode || "+7") === "+7" ? 10 : 14;
+  }
+
   function go(screen) {
+    const prev = state.screen;
+    // Пароль общий в state: при переключении «Войти» ↔ регистрация не тащим значение между формами
+    if ((prev === "login") !== (screen === "login")) {
+      clearAuthPasswords();
+    }
     state.screen = screen;
     state.dialPickerOpen = false;
     setError("");
@@ -347,6 +361,8 @@
       const cfg = A.ABOUT_VIDEO || {};
       const hasVideo = !!(cfg.src && cfg.src.trim());
       const watched = !!state.videoWatched;
+      // Без файла ролика кнопка сразу активна; с видео — цвет после просмотра/тапа
+      const ctaLocked = hasVideo ? !watched : false;
       html =
         '<div class="tim-video" id="tim-video-wrap">' +
         (hasVideo
@@ -356,13 +372,14 @@
             (cfg.poster ? ' poster="' + escapeHtml(cfg.poster) + '"' : "") +
             "></video>"
           : '<button type="button" class="tim-video__ph" id="btn-video-stub" data-act="video-stub">' +
-            escapeHtml(cfg.placeholderLabel || "Видео скоро появится") +
+            escapeHtml(cfg.placeholderLabel || "Ролик скоро будет здесь") +
             "</button>") +
         "</div>" +
+        '<p class="tim-video-cta-hint">Дальше — большая кнопка «к Мечтам!»</p>' +
         btn("к Мечтам!", {
           act: "invite-next",
           noarrow: true,
-          locked: !watched,
+          locked: ctaLocked,
         });
     } else if (s === 3) {
       html = renderDreamVitrine();
@@ -394,11 +411,13 @@
         '<h2>Вход</h2>' +
         '<div class="tim-field"><label for="f-phone">Телефон</label><div class="tim-phone-row"><button type="button" class="tim-phone-code" id="btn-dial-code" data-act="dial-open">' +
         escapeHtml(state.dialCode || "+7") +
-        '</button><input id="f-phone" inputmode="numeric" value="' +
+        '</button><input id="f-phone" inputmode="numeric" maxlength="' +
+        phoneNationalMaxLen() +
+        '" value="' +
         escapeHtml(nationalPhoneDigits()) +
         '"></div></div>' +
         (state.dialPickerOpen ? renderDialPicker() : "") +
-        field("f-password", "Пароль", "", "password") +
+        '<div class="tim-field"><label for="f-password">Пароль</label><input id="f-password" type="password" minlength="4" autocomplete="current-password" value=""></div>' +
         btn(state.busy ? "Вход…" : "Войти", { act: "login", disabled: state.busy }) +
         '<button type="button" class="tim-link" data-act="back-hello">К знакомству</button>';
     }
@@ -483,7 +502,9 @@
       escapeHtml(state.dialCode || "+7") +
       "</button>" +
       '<div class="tim-input-check-row tim-input-check-row--phone">' +
-      '<input id="f-phone" inputmode="numeric" placeholder="9001234567" value="' +
+      '<input id="f-phone" inputmode="numeric" maxlength="' +
+      phoneNationalMaxLen() +
+      '" placeholder="9001234567" value="' +
       escapeHtml(nationalPhoneDigits()) +
       '" autocomplete="tel-national">' +
       "</div></div></div>" +
@@ -493,7 +514,7 @@
       '<div class="tim-input-check-row tim-input-check-row--pw">' +
       '<input id="f-password" type="' +
       (state.showRegPassword ? "text" : "password") +
-      '" placeholder="Пароль *" value="' +
+      '" placeholder="Пароль * (мин. 4)" minlength="4" value="' +
       escapeHtml(state.password || "") +
       '" autocomplete="new-password">' +
       '<button type="button" class="tim-pw-toggle" data-act="pw-toggle" aria-pressed="' +
@@ -509,7 +530,7 @@
       '<div class="tim-input-check-row tim-input-check-row--pw">' +
       '<input id="f-password2" type="' +
       (state.showRegPassword ? "text" : "password") +
-      '" placeholder="Повтор пароля *" value="' +
+      '" placeholder="Повтор пароля *" minlength="4" value="' +
       escapeHtml(state.password2 || "") +
       '" autocomplete="new-password">' +
       "</div></div>" +
@@ -1540,6 +1561,10 @@
       setError("Придумай пароль для входа.");
       return;
     }
+    if (state.password.length < 4) {
+      setError("Пароль — минимум 4 символа.");
+      return;
+    }
     if (!state.password2) {
       setError("Повтори пароль.");
       return;
@@ -1673,7 +1698,7 @@
             dream: dreams[i],
             // status_id 2 = «Сейчас» в ЛК (дефолтный фильтр); 1 = «План» — мечты «пропадали»
             status_id: 2,
-            is_public: false,
+            is_public: true,
           }),
         });
         if (!res.ok) {

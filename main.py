@@ -411,7 +411,7 @@ class DreamCreate(BaseModel):
     category_id: Optional[int] = None
     deadline: Optional[str] = None  # YYYY-MM-DD
     price: Optional[float] = None  # рубли
-    is_public: Optional[bool] = False  # по умолчанию закрыто от витрины
+    is_public: Optional[bool] = True  # по умолчанию открытая (витрина)
 
 class DreamUpdate(BaseModel):
     dream: Optional[str] = None
@@ -1405,8 +1405,8 @@ def update_profile(body: ProfileUpdateBody):
                 else:
                     if stored != body.current_password:
                         raise HTTPException(status_code=400, detail="Неверный текущий пароль")
-                if len(body.new_password) < 6:
-                    raise HTTPException(status_code=400, detail="Новый пароль не менее 6 символов")
+                if len(body.new_password) < 4:
+                    raise HTTPException(status_code=400, detail="Новый пароль не менее 4 символов")
                 updates.append("password_hash = %s")
                 params.append(bcrypt.hash(_bcrypt_password(body.new_password)))
             if body.telegram is not None:
@@ -2115,6 +2115,8 @@ def cancel_buddy_request(request_id: int, user_id: int):
 @app.post("/register")
 def register_user(user: UserRegister):
     """Регистрация: name, surname, phone, city; пароль хешируется bcrypt."""
+    if not (user.password or "").strip() or len(user.password) < 4:
+        raise HTTPException(status_code=400, detail="Пароль — минимум 4 символа")
     conn = None
     try:
         conn = get_db_connection()
@@ -3235,7 +3237,7 @@ def create_dream(body: DreamCreate):
     if not (body.dream and body.dream.strip()):
         raise HTTPException(status_code=400, detail="Текст мечты не может быть пустым")
     status_id = body.status_id if body.status_id is not None else 1
-    is_public = body.is_public if body.is_public is not None else False
+    is_public = body.is_public if body.is_public is not None else True
     conn = None
     try:
         conn = get_db_connection()
