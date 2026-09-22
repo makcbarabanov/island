@@ -1065,29 +1065,41 @@
         .showcase-filter-link { color:#888; text-decoration:none; }
         .showcase-filter-link:hover { color:#4CAF50; }
         .showcase-filter-link.active { color:#333; font-weight:600; }
-        .showcase-breadcrumbs-row { display: flex; align-items: center; flex-wrap: nowrap; gap: 2px; white-space: nowrap; }
-        .showcase-breadcrumbs-row-p { flex-shrink: 0; max-width: 100%; overflow: hidden; }
-        .showcase-breadcrumbs-row-p .showcase-filter-link { font-size: 12px; }
+        .showcase-breadcrumbs-row {
+            display: flex;
+            align-items: center;
+            flex-wrap: nowrap;
+            gap: 0;
+            white-space: nowrap;
+        }
         .showcase-breadcrumbs-row-p .showcase-p { color: #4CAF50; font-weight: 600; }
         #app-showcase-breadcrumbs {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 4px;
-            margin-bottom: 8px;
-            font-size: 12px;
-            line-height: 1.25;
-            min-height: 2.6em; /* две короткие строки: Все/Избранные + Помог/… */
+            display: flex;
+            flex-direction: row;
+            flex-wrap: nowrap;
+            align-items: center;
+            gap: 0;
+            margin-bottom: 6px;
+            font-size: 11px;
+            line-height: 1.2;
+            letter-spacing: -0.02em;
+            min-height: 1.35em;
+            max-height: 1.35em;
+            overflow: hidden;
             box-sizing: border-box;
+            white-space: nowrap;
         }
-        @media (min-width: 769px) {
-            #app-showcase-breadcrumbs { flex-direction: row; flex-wrap: nowrap; align-items: center; gap: 4px; min-height: 1.4em; }
-            .showcase-sep-rows { display: inline !important; }
+        #app-showcase-breadcrumbs .showcase-filter-link,
+        #app-showcase-breadcrumbs .app-showcase-title {
+            font-size: 11px;
+            letter-spacing: -0.02em;
         }
+        #app-showcase-breadcrumbs .showcase-sep { margin: 0 1px; color: #ccc; user-select: none; }
+        #app-showcase-breadcrumbs .showcase-sep-rows { display: inline !important; margin: 0 1px; }
         @media (max-width: 768px) {
-            #app-showcase-breadcrumbs { flex-direction: column; align-items: flex-start; gap: 2px; }
-            .showcase-breadcrumbs-row-p .showcase-filter-link { font-size: 11px; }
-            .showcase-sep { margin: 0 2px; }
-            .showcase-sep-rows { display: none !important; }
+            #app-showcase-breadcrumbs,
+            #app-showcase-breadcrumbs .showcase-filter-link,
+            #app-showcase-breadcrumbs .app-showcase-title { font-size: 10px; }
         }
         .app-showcase-title.active { color:#333; font-weight:700; }
         .showcase-sep { margin:0 4px; color:#ccc; user-select:none; }
@@ -1922,17 +1934,17 @@
             </nav>
             <div id="app-showcase-breadcrumbs" class="app-showcase-breadcrumbs hidden" style="display:none;">
                 <div class="showcase-breadcrumbs-row">
-                    <a href="#" id="app-showcase-title" class="app-showcase-title" style="font-weight:600;color:#000;text-decoration:none;">Все (<span class="showcase-count" data-count="all">0</span>)</a>
+                    <a href="#" id="app-showcase-title" class="app-showcase-title" style="font-weight:600;color:#000;text-decoration:none;">Все(<span class="showcase-count" data-count="all">0</span>)</a>
                     <span class="showcase-sep">·</span>
-                    <a href="#" class="showcase-filter-link" data-filter="favorites">Избранные (<span class="showcase-count" data-count="favorites">0</span>)</a>
+                    <a href="#" class="showcase-filter-link" data-filter="favorites">Избранные(<span class="showcase-count" data-count="favorites">0</span>)</a>
                 </div>
-                <span class="showcase-sep showcase-sep-rows" style="display:none;">·</span>
+                <span class="showcase-sep showcase-sep-rows">·</span>
                 <div class="showcase-breadcrumbs-row showcase-breadcrumbs-row-p">
-                    <a href="#" class="showcase-filter-link" data-filter="helped"><span class="showcase-p">П</span>омог (<span class="showcase-count" data-count="helped">0</span>)</a>
+                    <a href="#" class="showcase-filter-link" data-filter="helped"><span class="showcase-p">П</span>омог(<span class="showcase-count" data-count="helped">0</span>)</a>
                     <span class="showcase-sep">·</span>
-                    <a href="#" class="showcase-filter-link" data-filter="helping"><span class="showcase-p">П</span>омогаю (<span class="showcase-count" data-count="helping">0</span>)</a>
+                    <a href="#" class="showcase-filter-link" data-filter="helping"><span class="showcase-p">П</span>омогаю(<span class="showcase-count" data-count="helping">0</span>)</a>
                     <span class="showcase-sep">·</span>
-                    <a href="#" class="showcase-filter-link" data-filter="in_progress"><span class="showcase-p">П</span>омогают (<span class="showcase-count" data-count="in_progress">0</span>)</a>
+                    <a href="#" class="showcase-filter-link" data-filter="in_progress"><span class="showcase-p">П</span>омогают(<span class="showcase-count" data-count="in_progress">0</span>)</a>
                 </div>
             </div>
             </div>
@@ -2713,7 +2725,7 @@
                         </div>
                     </div>
                     <button type="button" class="app-footer-logout" id="app-footer-logout" title="Выйти" onclick="logout()">Выйти</button>
-                    <span class="app-version" aria-hidden="true">396</span>
+                    <span class="app-version" aria-hidden="true">397</span>
                 </div>
             </footer>
         </div>
