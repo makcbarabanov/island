@@ -85,6 +85,35 @@
     els.stage.style.width = stageW + "px";
     els.stage.style.height = Math.round(designH * scale) + "px";
     els.stage.style.minHeight = "";
+    fitScreen2Layout();
+  }
+
+  /**
+   * Экран 2: подрезать высоту превью видео под visible viewport,
+   * чтобы кнопка «к Мечтам!» оставалась на экране телефона.
+   */
+  function fitScreen2Layout() {
+    if (state.screen !== 2 || !els.card || !els.body) return;
+    const wrap = document.getElementById("tim-video-wrap");
+    if (!wrap) return;
+    const stageW = Math.min(window.innerWidth || 430, 430);
+    const scale = stageW / designW || 1;
+    const vv = window.visualViewport;
+    const viewH = (vv && vv.height) || window.innerHeight || 0;
+    const viewTop = (vv && vv.offsetTop) || 0;
+    const cardTop = els.card.getBoundingClientRect().top;
+    const btn = els.body.querySelector('[data-act="invite-next"]');
+    let btnH = 64;
+    if (btn) {
+      const br = btn.getBoundingClientRect();
+      if (br.height > 0) btnH = br.height;
+    }
+    const gap = 24;
+    const safe = 12;
+    const availCss = viewH - (cardTop - viewTop) - btnH - gap - safe;
+    const availDesign = Math.floor(availCss / scale);
+    const maxH = Math.max(280, Math.min(900, availDesign));
+    wrap.style.maxHeight = maxH + "px";
   }
 
   function apiBase() {
@@ -379,7 +408,6 @@
             escapeHtml(cfg.placeholderLabel || "Ролик скоро будет здесь") +
             "</button>") +
         "</div>" +
-        '<p class="tim-video-cta-hint">Дальше — большая кнопка «к Мечтам!»</p>' +
         btn("к Мечтам!", {
           act: "invite-next",
           noarrow: true,
@@ -1077,7 +1105,11 @@
       });
     });
     if (state.screen === 1) bindCitySuggest();
-    if (state.screen === 2) bindVideoScreen();
+    if (state.screen === 2) {
+      bindVideoScreen();
+      setTimeout(fitScreen2Layout, 0);
+      setTimeout(fitScreen2Layout, 120);
+    }
     if (state.screen === 3 || state.screen === 7) bindVitrine();
     if (state.screen === 4 || state.screen === "login") bindAccountChecks();
     if (state.screen === 5) bindSocialInputs();
