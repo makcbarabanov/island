@@ -6,6 +6,27 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <title>Личный кабинет ОСТРОВ</title>
+    <script>
+      /* Корень сайта: без аккаунта → Тим; с аккаунтом без сессии → вход; с savedUser → кабинет */
+      (function () {
+        try {
+          var path = location.pathname || "/";
+          if (path !== "/" && path !== "/index.html") return;
+          var q = location.search || "";
+          if (/[?&](force_tim|stay)=1\b/.test(q)) return;
+          var savedRaw = localStorage.getItem("savedUser");
+          if (savedRaw) {
+            var u = JSON.parse(savedRaw);
+            if (u && u.id) return;
+          }
+          if (localStorage.getItem("island_registered") === "1") {
+            try { sessionStorage.setItem("island_open_login", "1"); } catch (e1) {}
+            return;
+          }
+          location.replace("/tim/");
+        } catch (e) {}
+      })();
+    </script>
     <meta name="theme-color" content="#08afc2">
     <link rel="manifest" href="/manifest.webmanifest">
     <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
@@ -2723,7 +2744,7 @@
                         </div>
                     </div>
                     <button type="button" class="app-footer-logout" id="app-footer-logout" title="Выйти" onclick="logout()">Выйти</button>
-                    <span class="app-version" aria-hidden="true">400</span>
+                    <span class="app-version" aria-hidden="true">405</span>
                 </div>
             </footer>
         </div>
@@ -3163,6 +3184,8 @@
                     if (currentUser && currentUser.buddy_avatar_path) currentUser.buddy_avatar_url = buildMediaUrl(currentUser.buddy_avatar_path, currentUser.buddy_avatar_rev || '');
                     if (currentUser && currentUser.avatar_path) currentUser.avatar_url = buildMediaUrl(currentUser.avatar_path, currentUser.avatar_rev || '');
                     try { localStorage.setItem('savedUser', JSON.stringify(currentUser)); } catch (e) {}
+                    try { localStorage.setItem('island_registered', '1'); } catch (e) {}
+                    try { localStorage.removeItem('tim_onboarding_v1'); } catch (e) {}
                     showProfile();
                 } catch (error) {
                     errorDiv.innerText = 'Не удалось подключиться к серверу.';
@@ -4157,13 +4180,13 @@
                 stepsViewIsBuddy = false;
                 document.getElementById('steps-block').classList.remove('hidden');
                 document.getElementById('menu-my-steps').classList.add('active');
-                loadSteps(currentUser ? currentUser.id : 0);
+                loadSteps(currentUser ? currentUser.id : 0, false, { includeDeleted: getStepsFilterActive()[0] === 'deleted' });
             } else if (section === 'steps-buddy') {
                 lastCabinetSection = 'steps-buddy';
                 stepsViewIsBuddy = true;
                 document.getElementById('steps-block').classList.remove('hidden');
                 document.getElementById('menu-steps-buddy').classList.add('active');
-                loadSteps(getSelectedSubjectId() || 0, true);
+                loadSteps(getSelectedSubjectId() || 0, true, { includeDeleted: getStepsFilterActive()[0] === 'deleted' });
             } else if (section === 'reports') {
                 lastCabinetSection = 'reports';
                 if (currentUser) lastStepsForDiary = { userId: currentUser.id, isBuddy: false };
@@ -5513,7 +5536,7 @@
         var stepsViewUserId = null;
         /** Чьи шаги сейчас в фокусе: для дневника (GET /steps/events) тот же владелец, что и мечты. */
         var lastStepsForDiary = { userId: 0, isBuddy: false };
-        async function loadSteps(userId, isBuddy) {
+        async function loadSteps(userId, isBuddy, opts) {
             var listEl = document.getElementById('steps-list');
             var emptyEl = document.getElementById('steps-empty');
             var errEl = document.getElementById('steps-error');
@@ -5528,6 +5551,7 @@
             if (!currentUser) return;
             var uid = userId == null ? 0 : Number(userId);
             stepsViewUserId = uid;
+            var includeDeleted = !!(opts && opts.includeDeleted);
             if (!uid) {
                 lastStepsForDiary = { userId: 0, isBuddy: false };
                 stepsFlatCache = [];
@@ -5537,7 +5561,9 @@
             }
             if (titleEl) titleEl.textContent = isBuddy ? ('Шаги бадди: ' + ((currentUser.buddy_name || '').trim() || 'Бадди')) : 'Все шаги';
             try {
-                var res = await fetch(API_BASE_URL + '/dreams?user_id=' + uid, { cache: 'no-store' });
+                var url = API_BASE_URL + '/dreams?user_id=' + uid;
+                if (includeDeleted) url += '&include_deleted=true';
+                var res = await fetch(url, { cache: 'no-store' });
                 if (res.status === 401) { clearSessionAndShowLogin('Сессия истекла. Войдите снова.'); return; }
                 if (!res.ok) { errEl.textContent = 'Ошибка загрузки'; errEl.classList.remove('hidden'); return; }
                 var data = await res.json();
@@ -6608,8 +6634,16 @@
             if (!wrap) return;
             wrap.querySelectorAll('.dreams-filter-btn').forEach(function(btn) {
                 btn.addEventListener('click', function() {
+                    var prev = getStepsFilterActive()[0];
                     wrap.querySelectorAll('.dreams-filter-btn').forEach(function(x) { x.classList.remove('active'); });
                     btn.classList.add('active');
+                    var next = btn.dataset.filter || 'current';
+                    var uid = stepsViewUserId || (currentUser && currentUser.id) || 0;
+                    // «Удал.» — отдельный тяжёлый запрос; уход с неё — снова лёгкий кабинет
+                    if (next === 'deleted' || prev === 'deleted') {
+                        loadSteps(uid, !!stepsViewIsBuddy, { includeDeleted: next === 'deleted' });
+                        return;
+                    }
                     if (stepsFlatCache.length) renderStepsList(getStepsFilterActive(), stepsViewIsBuddy);
                 });
             });
@@ -12289,6 +12323,14 @@ var res = await fetch(API_BASE_URL + '/dreams/' + dreamId + '?' + dreamApiUserPa
             if (!saved) {
                 document.body.classList.add('landing-visible');
                 document.body.classList.remove('profile-visible');
+                var needLogin = false;
+                try {
+                    needLogin = sessionStorage.getItem('island_open_login') === '1'
+                        || localStorage.getItem('island_registered') === '1'
+                        || /[?&]login=1\b/.test(location.search || '');
+                    sessionStorage.removeItem('island_open_login');
+                } catch (e2) {}
+                if (needLogin && typeof showLoginForm === 'function') showLoginForm();
                 return;
             }
             try {
@@ -12296,6 +12338,11 @@ var res = await fetch(API_BASE_URL + '/dreams/' + dreamId + '?' + dreamApiUserPa
                 if (!currentUser || !currentUser.id) {
                     document.body.classList.add('landing-visible');
                     document.body.classList.remove('profile-visible');
+                    try {
+                        if (localStorage.getItem('island_registered') === '1' && typeof showLoginForm === 'function') {
+                            showLoginForm();
+                        }
+                    } catch (eInvalid) {}
                     return;
                 }
                 // Актуализацию профиля не блокируем: показываем кабинет сразу, а /users/me тянем фоном.
@@ -12330,9 +12377,27 @@ var res = await fetch(API_BASE_URL + '/dreams/' + dreamId + '?' + dreamApiUserPa
         })();
     </script>
     <script>
-      if ("serviceWorker" in navigator) {
-        navigator.serviceWorker.register("/sw.js").catch(function () {});
-      }
+      (function () {
+        if (!("serviceWorker" in navigator)) return;
+        var refreshing = false;
+        navigator.serviceWorker.addEventListener("controllerchange", function () {
+          // Новый SW взял контроль — один авто-reload на свежий фронт
+          if (refreshing) return;
+          refreshing = true;
+          location.reload();
+        });
+        function pokeUpdate(reg) {
+          if (reg && reg.update) reg.update().catch(function () {});
+        }
+        navigator.serviceWorker.register("/sw.js").then(function (reg) {
+          pokeUpdate(reg);
+          document.addEventListener("visibilitychange", function () {
+            if (document.visibilityState === "visible") pokeUpdate(reg);
+          });
+          // Подстраховка: периодическая проверка обновления SW
+          setInterval(function () { pokeUpdate(reg); }, 15 * 60 * 1000);
+        }).catch(function () {});
+      })();
     </script>
 </body>
 </html>

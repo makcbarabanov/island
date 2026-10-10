@@ -6,6 +6,10 @@
   const A = window.TIM_ASSETS;
   const PWA_KEY = "tim_pwa_offer_done";
   const CONTACTS_DRAFT_KEY = "tim_contact_channels";
+  /** Черновик знакомства с Тимом (экран + поля), чтобы продолжить после ухода */
+  const ONBOARD_KEY = "tim_onboarding_v1";
+  /** На этом устройстве уже есть аккаунт Острова → корень ведёт на вход, не на Тима */
+  const REGISTERED_KEY = "island_registered";
 
   const state = {
     screen: 1,
@@ -123,6 +127,90 @@
 
   function lkUrl() {
     return "/index.html";
+  }
+
+  function loginUrl() {
+    return "/index.html?login=1";
+  }
+
+  function markRegistered() {
+    try {
+      localStorage.setItem(REGISTERED_KEY, "1");
+    } catch (_) {}
+  }
+
+  function isRegisteredDevice() {
+    try {
+      return localStorage.getItem(REGISTERED_KEY) === "1";
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function clearOnboarding() {
+    try {
+      localStorage.removeItem(ONBOARD_KEY);
+    } catch (_) {}
+  }
+
+  function persistOnboarding() {
+    try {
+      // login / финал не храним как «продолжить знакомство»
+      if (state.screen === "login" || state.screen === 6 || state.screen === "pwa" || state.screen === 9) {
+        return;
+      }
+      localStorage.setItem(
+        ONBOARD_KEY,
+        JSON.stringify({
+          screen: state.screen,
+          name: state.name,
+          city: state.city,
+          surname: state.surname,
+          patronymic: state.patronymic,
+          phone: state.phone,
+          dialCode: state.dialCode,
+          dreamText: state.dreamText,
+          dreamBasket: state.dreamBasket,
+          pendingDreamSave: !!state.pendingDreamSave,
+          pendingDreams: state.pendingDreams,
+          videoWatched: !!state.videoWatched,
+          at: Date.now(),
+        })
+      );
+    } catch (_) {}
+  }
+
+  function loadOnboarding() {
+    try {
+      const raw = localStorage.getItem(ONBOARD_KEY);
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      if (!data || typeof data !== "object") return null;
+      return data;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function applyOnboarding(data) {
+    if (!data) return;
+    if (data.name != null) state.name = String(data.name || "");
+    if (data.city != null) state.city = String(data.city || "");
+    if (data.surname != null) state.surname = String(data.surname || "");
+    if (data.patronymic != null) state.patronymic = String(data.patronymic || "");
+    if (data.phone != null) state.phone = String(data.phone || "");
+    if (data.dialCode != null) state.dialCode = String(data.dialCode || "+7");
+    if (data.dreamText != null) state.dreamText = String(data.dreamText || "");
+    if (Array.isArray(data.dreamBasket)) state.dreamBasket = data.dreamBasket.slice();
+    state.pendingDreamSave = !!data.pendingDreamSave;
+    state.pendingDreams = Array.isArray(data.pendingDreams) ? data.pendingDreams.slice() : null;
+    state.videoWatched = !!data.videoWatched;
+  }
+
+  function goToLk() {
+    markRegistered();
+    clearOnboarding();
+    window.location.href = lkUrl();
   }
 
   function readSavedUser() {
@@ -301,6 +389,7 @@
     setError("");
     applyScene(screen);
     renderCard();
+    persistOnboarding();
   }
 
   function btn(label, opts) {
@@ -434,9 +523,9 @@
       html =
         '<div class="success-actions">' +
         btn("Добавить ещё мечту", { act: "again-dream", soft: true, noarrow: true }) +
-        btn("Посмотреть мои мечты", { href: lkUrl(), soft: true, noarrow: true }) +
+        btn("Посмотреть мои мечты", { act: "go-lk", soft: true, noarrow: true }) +
         btn("Посмотреть видеоинструкции", { act: "video-soon", soft: true, noarrow: true }) +
-        btn("Перейти в приложение", { href: lkUrl() }) +
+        btn("Перейти в приложение", { act: "go-lk" }) +
         "</div>";
     } else if (s === "login") {
       html =
@@ -1113,6 +1202,25 @@
     if (state.screen === 3 || state.screen === 7) bindVitrine();
     if (state.screen === 4 || state.screen === "login") bindAccountChecks();
     if (state.screen === 5) bindSocialInputs();
+    bindOnboardingDraftPersist();
+  }
+
+  /** Пишем черновик знакомства при вводе, не только при смене экрана */
+  function bindOnboardingDraftPersist() {
+    if (state.screen === "login" || state.screen === 6 || state.screen === "pwa" || state.screen === 9) {
+      return;
+    }
+    els.body.querySelectorAll("input, textarea").forEach(function (input) {
+      input.addEventListener("change", function () {
+        if (state.screen === 1 || state.screen === "fio") readHelloFields();
+        else if (state.screen === 4) readRegFields();
+        else if (state.screen === 3 || state.screen === 7) {
+          const draftEl = document.getElementById("f-dream");
+          if (draftEl) state.dreamText = draftEl.value;
+        }
+        persistOnboarding();
+      });
+    });
   }
 
   function bindAccountChecks() {
@@ -1442,9 +1550,9 @@
       await doPwaInstall();
       return;
     }
-    if (act === "pwa-browser" || act === "pwa-later") {
+    if (act === "pwa-browser" || act === "pwa-later" || act === "go-lk") {
       markPwaDone();
-      window.location.href = lkUrl();
+      goToLk();
       return;
     }
     if (act === "dream-hint") {
@@ -1728,6 +1836,7 @@
       });
       if (!loginRes.ok) throw new Error(user.detail || "Аккаунт создан, войди вручную");
       saveUser(user);
+      markRegistered();
       state.busy = false;
       // Соцсети — следующий экран на той же обложке
       go(5);
@@ -1760,6 +1869,8 @@
       });
       if (!res.ok) throw new Error(typeof user.detail === "string" ? user.detail : "Не удалось войти");
       saveUser(user);
+      markRegistered();
+      clearOnboarding();
       state.name = user.name || state.name;
       state.city = user.city || state.city;
       state.busy = false;
@@ -1853,10 +1964,16 @@
       go("login");
     });
 
+    const force = /force=1/.test(location.search || "");
     const saved = readSavedUser();
-    if (saved && !/force=1/.test(location.search || "")) {
-      // Возвращающийся: Tim не встаёт между человеком и ЛК
+    if (saved && !force) {
+      // Сессия есть → сразу ЛК
       window.location.replace(lkUrl());
+      return;
+    }
+    if (!saved && isRegisteredDevice() && !force) {
+      // Аккаунт на устройстве есть, сессии нет → окно входа
+      window.location.replace(loginUrl());
       return;
     }
     if (saved) {
@@ -1871,6 +1988,15 @@
       const raw = screenParam[1];
       if (raw === "login" || raw === "fio" || raw === "pwa") go(raw);
       else go(parseInt(raw, 10));
+      return;
+    }
+    const draft = loadOnboarding();
+    if (draft && draft.screen != null && draft.screen !== "login") {
+      applyOnboarding(draft);
+      const s = draft.screen;
+      if (s === "fio" || s === "pwa") go(s);
+      else if (typeof s === "number" || /^\d+$/.test(String(s))) go(parseInt(s, 10));
+      else go(1);
       return;
     }
     go(1);
