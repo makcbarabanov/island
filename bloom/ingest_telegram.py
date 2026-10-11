@@ -38,7 +38,7 @@ BLOOM_ENV = BLOOM / ".env"
 LOG = logging.getLogger("bloom.ingest")
 ALLOWED_UPDATES = ["message", "edited_message", "callback_query"]
 _STOP = False
-# После N неудачных reconnect подряд — exit, systemd Restart=on-failure
+# После N неудачных reconnect подряд — exit; systemd Restart=always поднимает снова
 _MAX_RECONNECT_FAILS = 3
 
 
@@ -117,14 +117,26 @@ def admin_chat_id() -> int | None:
 
 def _try_admin_console(conn, row: dict[str, Any]) -> bool:
     """
-    Read-only пульт в личке админа. True = обработано (не писать в журнал марафона).
+    Пульт в личке админа (по Telegram user_id). True = обработано (не в журнал марафона).
     """
     text = (row.get("text") or "").strip()
     if not text:
         return False
+
+    admin_id = admin_chat_id()
+    tg_uid = row.get("telegram_user_id")
+    # Право управления — только user_id Макса (не username)
+    if admin_id is None or tg_uid is None or int(tg_uid) != int(admin_id):
+        return False
+
     try:
         from admin_console import handle_admin_command, reply_admin_text
         from bridge_review import admin_chat_id as admin_chat_id_str
+        from runtime_control import (
+            ingest_stop,
+            schedule_ingest_restart_after_reply,
+            set_full_stopped,
+        )
     except Exception:
         LOG.exception("admin_console import failed")
         return False
@@ -135,8 +147,8 @@ def _try_admin_console(conn, row: dict[str, Any]) -> bool:
 
     try:
         with conn.cursor() as cur:
-            reply = handle_admin_command(cur, text)
-        # SELECT-only — откатываем на всякий случай, без commit побочных эффектов
+            result = handle_admin_command(cur, text)
+        # SELECT-only в командах статуса — откат на всякий случай
         conn.rollback()
     except Exception:
         LOG.exception("admin_console handler failed")
@@ -146,17 +158,36 @@ def _try_admin_console(conn, row: dict[str, Any]) -> bool:
             pass
         return True  # всё равно не пишем в журнал марафона
 
-    if reply is None:
+    if result is None:
         return False
 
     try:
-        result = reply_admin_text(token, admin_chat_id_str(), reply)
-        if not result.get("ok"):
-            LOG.error("admin_console reply failed: %s", result)
+        send_result = reply_admin_text(token, admin_chat_id_str(), result.reply)
+        if not send_result.get("ok"):
+            LOG.error("admin_console reply failed: %s", send_result)
         else:
-            LOG.info("admin_console replied kind_chars=%s", len(reply))
+            LOG.info(
+                "admin_console replied chars=%s action=%s",
+                len(result.reply),
+                result.action,
+            )
     except Exception:
         LOG.exception("admin_console send failed")
+
+    # Побочные действия после ответа (рестарт/стоп изнутри ingest)
+    if result.action == "ingest_restart":
+        try:
+            schedule_ingest_restart_after_reply()
+            LOG.info("admin_console scheduled ingest restart")
+        except Exception:
+            LOG.exception("admin_console ingest_restart schedule failed")
+    elif result.action == "full_stop":
+        try:
+            set_full_stopped(True, by="confirm_full_stop")
+            ok, detail = ingest_stop()
+            LOG.info("admin_console full_stop ingest_stop ok=%s detail=%s", ok, detail)
+        except Exception:
+            LOG.exception("admin_console full_stop failed")
     return True
 
 
@@ -213,8 +244,27 @@ def row_from_update(update: dict[str, Any]) -> dict[str, Any] | None:
     }
 
 
+# Импорт истории когда-то писал синтетические update_id ~8999xxxxxx.
+# MAX() по ним даёт offset выше реальных Telegram update_id → getUpdates пустой навсегда.
+_SYNTHETIC_UPDATE_ID_MIN = 8_000_000_000
+
+
 def fetch_max_update_id(cur) -> int | None:
-    cur.execute("SELECT MAX(update_id) FROM telegram_chat_events")
+    """
+    Макс. live Bot API update_id для getUpdates offset.
+
+    Исключаем:
+      update_id < 0          — исторический импорт из Telegram Desktop export
+      update_id >= 8e9       — старый битый синтетический импорт (8999…)
+    """
+    cur.execute(
+        """
+        SELECT MAX(update_id) FROM telegram_chat_events
+        WHERE update_id > 0
+          AND update_id < %s
+        """,
+        (_SYNTHETIC_UPDATE_ID_MIN,),
+    )
     row = cur.fetchone()
     if not row or row[0] is None:
         return None

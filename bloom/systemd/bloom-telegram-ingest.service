@@ -7,8 +7,11 @@ Wants=xray-bloom.service
 Type=simple
 WorkingDirectory=/home/makc/Apps/island
 ExecStart=/home/makc/Apps/island/venv/bin/python3 /home/makc/Apps/island/bloom/ingest_telegram.py
-Restart=on-failure
+# Журнал чата не должен гаснуть: временный SSL/БД exit и даже exit 0 — снова поднять listener.
+# Явная остановка только через systemctl --user stop (этапы /confirm_full_stop позже).
+Restart=always
 RestartSec=5
+StartLimitIntervalSec=0
 Environment=PYTHONUNBUFFERED=1
 # Логи в journald + файл
 StandardOutput=append:/home/makc/Apps/island/logs/bloom_ingest.log

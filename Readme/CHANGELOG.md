@@ -2,6 +2,13 @@
 
 Старые пункты могут ссылаться на прежний монолитный `Readme/Readme.md`; актуальная структура — корневой [README.md](../README.md), [PROJECT.md](PROJECT.md), [RUNBOOK.md](RUNBOOK.md).
 
+## 2026-10-11 — Bloom: ingest не гаснет, импорт истории, команды управления
+
+- Ingest: `Restart=always` + offset только из live `update_id > 0` (без синтетики `8999…` и без отрицательных id импорта)
+- Импорт Telegram Desktop export → `telegram_chat_events` с `update_id = -message_id` (идемпотентно, не ломает getUpdates)
+- Личка Макса: `/help` `/status` `/admin_pause` `/admin_start` `/ingest_restart` `/full_stop` (+ `/confirm_full_stop`)
+- Пауза администрирования не останавливает ingest и журнал (`runtime_state.json`)
+
 ## 2026-10-10 — Корень сайта → Тим / вход / кабинет (v405)
 
 - Первый визит на `/` без аккаунта → `/tim/` (знакомство с Тимом)

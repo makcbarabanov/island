@@ -1,8 +1,10 @@
 """
-Read-only тестовый пульт Bloom в личке админа.
+Пульт Bloom в личке админа (BLOOM_ADMIN_CHAT_ID = Telegram user_id Макса).
 
-Команды только для BLOOM_ADMIN_CHAT_ID. Не публикует, не закрывает день,
-не пишет approvals / SSOT. «дай отчёт» = control-логика digest (как 12:00).
+Управление: /help /status /admin_pause /admin_start /ingest_restart /full_stop …
+Тестовый просмотр (без публикации): «дай отчёт за …», «покажи активных», …
+
+Инвариант: пауза администрирования НЕ останавливает ingest и журнал.
 """
 from __future__ import annotations
 
@@ -17,36 +19,36 @@ from bridge_participants import (
     USER_ID_TO_LABEL,
     active_user_ids,
 )
-from cycle_allowlist import normalize_telegram_handle
-from digest_core import TZ, fetch_day_steps, fetch_users
+from cycle_allowlist import get_allowlist_user_ids, normalize_telegram_handle
+from digest_core import TZ, fetch_day_steps, fetch_users, marathon_cycle
 
 MSK = ZoneInfo("Europe/Moscow")
 
 TEST_PREFIX = "🧪 ТЕСТОВЫЙ ПРОСМОТР — НЕ ОПУБЛИКОВАНО"
 
-HELP_TEXT = """Bloom — тестовый пульт (только личка)
+HELP_TEXT = """🤖 Управление Bloom
 
-покажи активных
-— список активных участников текущего марафона
+/help — эта справка
+/status — состояние Bloom
+/admin_pause — приостановить публичное администрирование марафона
+/admin_start — возобновить публичное администрирование
+/ingest_restart — перезапустить приём сообщений Telegram
+/full_stop — запросить полную остановку Bloom
 
-дай отчёт за 06.09
-— тестовая сводка за дату (явка = отчёты в чате марафона)
-
-дай статистику 1 за 06.09
-— подробности по участнику №1 за дату
-
-help / помощь / хелп
-— показать эту подсказку
-
-Явка считается по сообщениям-отчётам в марафоне, не по галочкам в приложении.
-Ничего из пульта не публикуется в марафон и не меняет БД."""
+Пауза администрирования не останавливает наблюдение за чатом и ведение журнала."""
 
 
 @dataclass(frozen=True)
 class AdminCommand:
-    kind: str  # help | active | report | stats
+    kind: str
     target_date: date | None = None
-    participant_ref: str | None = None  # "1" or "@user"
+    participant_ref: str | None = None
+
+
+@dataclass(frozen=True)
+class AdminResult:
+    reply: str
+    action: str | None = None  # ingest_restart | full_stop | None
 
 
 _RE_REPORT = re.compile(
@@ -59,24 +61,64 @@ _RE_STATS = re.compile(
 )
 _RE_ACTIVE = re.compile(r"^покажи\s+активных\s*$", re.IGNORECASE)
 _RE_HELP = re.compile(r"^(help|помощь|хелп)\s*$", re.IGNORECASE)
+_RE_STATUS = re.compile(r"^status\s*$", re.IGNORECASE)
+_RE_ADMIN_PAUSE = re.compile(r"^admin_pause\s*$", re.IGNORECASE)
+_RE_ADMIN_START = re.compile(r"^admin_start\s*$", re.IGNORECASE)
+_RE_INGEST_RESTART = re.compile(r"^ingest_restart\s*$", re.IGNORECASE)
+_RE_FULL_STOP = re.compile(r"^full_stop\s*$", re.IGNORECASE)
+_RE_CONFIRM_FULL_STOP = re.compile(r"^confirm_full_stop\s*$", re.IGNORECASE)
+_RE_AMBIGUOUS_STOP = re.compile(
+    r"^(?:пожалуйста[,!]?\s*)?(?:"
+    r"останови\s+bloom|"
+    r"выключи\s+bloom|"
+    r"поставь\s+bloom\s+на\s+паузу|"
+    r"пауза\s+bloom|"
+    r"остановись|"
+    r"выключись"
+    r")\s*[.!]?\s*$",
+    re.IGNORECASE,
+)
+
+AMBIGUOUS_STOP_REPLY = (
+    "Что именно сделать:\n"
+    "• поставить администрирование на паузу — /admin_pause\n"
+    "• полностью остановить Bloom (включая наблюдение за чатом) — /full_stop\n\n"
+    "Без уточнения наблюдение за чатом не выключаю."
+)
 
 
 def parse_admin_command(text: str, *, now: datetime | None = None) -> AdminCommand | None:
     raw = (text or "").strip()
     if not raw:
         return None
-    # убрать @bloom… в начале, если Max написал как бот-команду
     if raw.startswith("/"):
         raw = raw.lstrip("/").split("@", 1)[0].strip()
 
     if _RE_HELP.match(raw):
         return AdminCommand("help")
+    if _RE_STATUS.match(raw):
+        return AdminCommand("status")
+    if _RE_ADMIN_PAUSE.match(raw):
+        return AdminCommand("admin_pause")
+    if _RE_ADMIN_START.match(raw):
+        return AdminCommand("admin_start")
+    if _RE_INGEST_RESTART.match(raw):
+        return AdminCommand("ingest_restart")
+    if _RE_FULL_STOP.match(raw):
+        return AdminCommand("full_stop")
+    if _RE_CONFIRM_FULL_STOP.match(raw):
+        return AdminCommand("confirm_full_stop")
+    if _RE_AMBIGUOUS_STOP.match(raw):
+        return AdminCommand("ambiguous_stop")
     if _RE_ACTIVE.match(raw):
         return AdminCommand("active")
 
     m = _RE_REPORT.match(raw)
     if m:
-        return AdminCommand("report", target_date=_parse_date_parts(m.group(1), m.group(2), m.group(3), now=now))
+        return AdminCommand(
+            "report",
+            target_date=_parse_date_parts(m.group(1), m.group(2), m.group(3), now=now),
+        )
 
     m = _RE_STATS.match(raw)
     if m:
@@ -103,7 +145,6 @@ def _parse_date_parts(
 
 
 def stable_active_roster(as_of: date | None = None) -> list[int]:
-    """Те же участники, что digest allowlist; номера = порядок sorted(id)."""
     d = as_of or datetime.now(TZ).date()
     return sorted(active_user_ids(d))
 
@@ -124,7 +165,6 @@ def resolve_participant_ref(ref: str, *, as_of: date | None = None) -> int | Non
 
 
 def render_control_preview(cur, target_date: date) -> str:
-    """Control-сводка как у 12:00 (тот же build_digest_message), без публикации."""
     from send_digest import build_digest_message
 
     body, _snapshot, _diagnostics = build_digest_message(
@@ -151,7 +191,6 @@ def format_active_list(cur, *, as_of: date | None = None) -> str:
 
 
 def _timeliness_label(report_date: date, sent_at_iso: str | None) -> str | None:
-    """Дедлайн: 12:00 MSK следующего дня. None — нет sent_at."""
     if not sent_at_iso:
         return None
     sent = datetime.fromisoformat(sent_at_iso.replace("Z", "+00:00"))
@@ -239,7 +278,9 @@ def format_user_stats(cur, user_id: int, target_date: date) -> str:
 
     if submitted:
         mid = (rep or {}).get("source_message_id")
-        lines.append(f"отчёт: сдан (чат марафона" + (f", msg {mid}" if mid else "") + ")")
+        lines.append(
+            "отчёт: сдан (чат марафона" + (f", msg {mid}" if mid else "") + ")"
+        )
         timing = _timeliness_label(target_date, (rep or {}).get("sent_at"))
         if timing:
             lines.append(timing)
@@ -249,37 +290,152 @@ def format_user_stats(cur, user_id: int, target_date: date) -> str:
     return "\n".join(lines)
 
 
-def handle_admin_command(cur, text: str, *, now: datetime | None = None) -> str | None:
+def format_status(cur, *, now: datetime | None = None) -> str:
+    from runtime_control import ingest_is_active, load_state
+
+    local = (now or datetime.now(TZ)).astimezone(TZ)
+    st = load_state()
+    admin_paused = bool(st.get("admin_paused")) or bool(st.get("full_stopped"))
+    full_stopped = bool(st.get("full_stopped"))
+    ingest_ok = ingest_is_active()
+
+    cur.execute(
+        """
+        SELECT message_id, username, message_date, left(coalesce(text, ''), 40) AS t
+        FROM telegram_chat_events
+        ORDER BY message_date DESC NULLS LAST, id DESC
+        LIMIT 1
+        """
+    )
+    last = cur.fetchone()
+    if last:
+        md = last[2]
+        if md is not None:
+            if getattr(md, "tzinfo", None) is None:
+                md_s = str(md)
+            else:
+                md_s = md.astimezone(MSK).strftime("%Y-%m-%d %H:%M:%S %Z")
+        else:
+            md_s = "—"
+        last_line = f"msg {last[0]} @{last[1] or '—'} · {md_s}"
+    else:
+        last_line = "нет событий"
+
+    cycle = marathon_cycle(local.date())
+    allow = get_allowlist_user_ids(local.date())
+    n_active = len(allow) if allow is not None else len(active_user_ids(local.date()))
+
+    if full_stopped:
+        admin_label = "полная остановка"
+        evening = "выкл"
+        control = "выкл"
+    elif admin_paused:
+        admin_label = "пауза"
+        evening = "выкл"
+        control = "выкл"
+    else:
+        admin_label = "активно"
+        evening = "вкл"
+        control = "вкл"
+
+    ingest_label = "работает" if ingest_ok else "НЕ работает"
+
+    lines = [
+        "🤖 Статус Bloom",
+        f"👀 наблюдение/ingest: {ingest_label}",
+        f"последнее событие: {last_line}",
+        f"📣 администрирование: {admin_label}",
+        f"вечерняя сверка 23:59: {evening}",
+        f"контрольная 12:00: {control}",
+        f"цикл: {cycle.get('label')} · день {cycle.get('cycle_day') or '—'}",
+        f"активных участников: {n_active}",
+    ]
+    return "\n".join(lines)
+
+
+def handle_admin_command(cur, text: str, *, now: datetime | None = None) -> AdminResult | None:
     """
-    Обработать текст из админ-лички. None — не команда пульта (молчать).
-    Read-only: только SELECT через digest/fetch.
+    Обработать текст из админ-лички. None — не команда пульта.
     """
     cmd = parse_admin_command(text, now=now)
     if cmd is None:
         return None
+
     if cmd.kind == "help":
-        return HELP_TEXT
+        return AdminResult(HELP_TEXT)
+    if cmd.kind == "status":
+        return AdminResult(format_status(cur, now=now))
+    if cmd.kind == "ambiguous_stop":
+        return AdminResult(AMBIGUOUS_STOP_REPLY)
+    if cmd.kind == "admin_pause":
+        from runtime_control import set_admin_paused
+
+        set_admin_paused(True, by="admin_pause")
+        return AdminResult(
+            "📣 Администрирование поставлено на паузу.\n"
+            "👀 Чат продолжаю видеть и журналировать."
+        )
+    if cmd.kind == "admin_start":
+        from runtime_control import ingest_is_active, load_state, set_admin_paused
+
+        st = load_state()
+        if st.get("full_stopped"):
+            return AdminResult(
+                "⛔ Сейчас full_stop. Сначала нужен ручной подъём ingest "
+                "(systemctl --user start bloom-telegram-ingest), "
+                "потом снова /admin_start.\n"
+                "Полностью остановленный Bloom через Telegram сам себя не поднимет."
+            )
+        if not ingest_is_active():
+            return AdminResult(
+                "❌ Ingest не работает — администрирование не включаю.\n"
+                "Сначала /ingest_restart или проверь сервис, потом /admin_start."
+            )
+        set_admin_paused(False, by="admin_start")
+        return AdminResult(
+            "📣 Администрирование снова активно.\n"
+            "👀 Наблюдение за чатом без изменений."
+        )
+    if cmd.kind == "ingest_restart":
+        return AdminResult(
+            "🔄 Перезапускаю приём сообщений (ingest)…\n"
+            "📣 Состояние администрирования не меняю.",
+            action="ingest_restart",
+        )
+    if cmd.kind == "full_stop":
+        return AdminResult(
+            "⚠️ ПОЛНАЯ ОСТАНОВКА выключит в том числе наблюдение за чатом "
+            "и запись новых сообщений. Bloom перестанет видеть происходящее.\n\n"
+            "Поднять полностью остановленный Bloom одной Telegram-командой "
+            "может быть уже невозможно — нужен доступ к серверу.\n\n"
+            "Для подтверждения отправь: /confirm_full_stop"
+        )
+    if cmd.kind == "confirm_full_stop":
+        return AdminResult(
+            "🛑 Полная остановка: останавливаю ingest и публичное администрирование.\n"
+            "Чтобы снова увидеть чат — нужен ручной start на сервере.",
+            action="full_stop",
+        )
     if cmd.kind == "active":
-        return format_active_list(cur, as_of=(now or datetime.now(TZ)).astimezone(TZ).date())
+        return AdminResult(format_active_list(cur, as_of=(now or datetime.now(TZ)).astimezone(TZ).date()))
     if cmd.kind == "report":
         assert cmd.target_date is not None
-        return render_control_preview(cur, cmd.target_date)
+        return AdminResult(render_control_preview(cur, cmd.target_date))
     if cmd.kind == "stats":
         assert cmd.target_date is not None and cmd.participant_ref is not None
         uid = resolve_participant_ref(cmd.participant_ref, as_of=cmd.target_date)
         if uid is None:
-            return (
+            return AdminResult(
                 f"Не нашёл участника «{cmd.participant_ref}».\n"
                 "Сначала: покажи активных"
             )
-        return format_user_stats(cur, uid, cmd.target_date)
+        return AdminResult(format_user_stats(cur, uid, cmd.target_date))
     return None
 
 
 def reply_admin_text(token: str, chat_id: str, text: str) -> dict[str, Any]:
     from telegram_client import send_telegram_message
 
-    # Telegram limit ~4096; режем с пометкой
     body = text
     if len(body) > 4000:
         body = body[:3900] + "\n\n…(обрезано)"

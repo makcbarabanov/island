@@ -1,5 +1,6 @@
 .env
 bloom/.env
+bloom/runtime_state.json
 __pycache__/
 examples/
 media/

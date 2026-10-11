@@ -294,6 +294,21 @@ def main() -> int:
             print("(dry-run: добавь --send для отправки)")
         return 0
 
+    # Пауза администрирования: digest считается, в чат не публикуем; ingest не трогаем
+    try:
+        from runtime_control import is_admin_paused
+
+        if is_admin_paused():
+            print("SKIP send: администрирование на паузе (runtime_state)")
+            _log_diagnostics(
+                {**diagnostics, "skipped": True, "skip_reason": "admin_paused"},
+                target_date=target_date,
+                sent=False,
+            )
+            return 0
+    except Exception as e:
+        print(f"WARN runtime_control: {e}", file=sys.stderr)
+
     token = (os.getenv("TELEGRAM_BOT_TOKEN") or "").strip()
     chat_id = (os.getenv("MARATHON_CHAT_ID") or "").strip()
     if not token or not chat_id:
