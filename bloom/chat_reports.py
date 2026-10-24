@@ -12,7 +12,7 @@ from datetime import date, datetime, timedelta, time
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from bridge_parse import extract_report_date, is_likely_final_report
+from bridge_parse import extract_report_dates, is_likely_final_report
 from bridge_participants import TELEGRAM_USERNAME_TO_USER_ID
 
 MSK = ZoneInfo("Europe/Moscow")
@@ -20,11 +20,8 @@ MSK = ZoneInfo("Europe/Moscow")
 # Дедлайн дневной явки: 12:00 MSK следующего дня после target_date
 _DAILY_DEADLINE_HOUR = 12
 
-_TODAY_HINT = re.compile(
-    r"отч[её]т\s+за\s+сегодня|и\s+отч[её]т\s+за\s+сегодня|отч[её]т\s+за\s+сегодня",
-    re.IGNORECASE,
-)
-_YESTERDAY_HINT = re.compile(r"отч[её]т\s+за\s+вчера", re.IGNORECASE)
+_TODAY_HINT = re.compile(r"отч[её]т\s+(?:за\s+)?сегодня", re.IGNORECASE)
+_YESTERDAY_HINT = re.compile(r"отч[её]т\s+(?:за\s+)?вчера", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
@@ -47,19 +44,27 @@ def window_start(target_date: date) -> datetime:
     return datetime.combine(target_date, time(0, 0), tzinfo=MSK)
 
 
+def resolve_attendance_dates(
+    text: str, *, message_date: datetime
+) -> list[date]:
+    """Даты отчёта из текста (все явные) или сегодня/вчера относительно сообщения (MSK)."""
+    local = message_date.astimezone(MSK)
+    explicit = extract_report_dates(text, message_date=local)
+    if explicit:
+        return explicit
+    if _YESTERDAY_HINT.search(text or ""):
+        return [local.date() - timedelta(days=1)]
+    if _TODAY_HINT.search(text or ""):
+        return [local.date()]
+    return []
+
+
 def resolve_attendance_date(
     text: str, *, message_date: datetime
 ) -> date | None:
-    """Дата отчёта из текста или сегодня/вчера относительно времени сообщения (MSK)."""
-    local = message_date.astimezone(MSK)
-    explicit = extract_report_date(text, message_date=local)
-    if explicit is not None:
-        return explicit
-    if _YESTERDAY_HINT.search(text or ""):
-        return local.date() - timedelta(days=1)
-    if _TODAY_HINT.search(text or ""):
-        return local.date()
-    return None
+    """Первая дата отчёта (совместимость); предпочтительнее resolve_attendance_dates."""
+    dates = resolve_attendance_dates(text, message_date=message_date)
+    return dates[0] if dates else None
 
 
 def username_to_user_id(username: str | None) -> int | None:
@@ -110,8 +115,8 @@ def fetch_chat_report_hits(
             continue
         if participant_ids is not None and uid not in participant_ids:
             continue
-        rd = resolve_attendance_date(text or "", message_date=message_date)
-        if rd != target_date:
+        rds = resolve_attendance_dates(text or "", message_date=message_date)
+        if target_date not in rds:
             continue
         local = message_date.astimezone(MSK)
         late = local > deadline

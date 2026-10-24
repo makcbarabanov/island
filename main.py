@@ -141,6 +141,20 @@ def _setup_app_logging() -> logging.Logger:
 
 app_logger = _setup_app_logging()
 _HTML_NO_CACHE = {"Cache-Control": "no-cache, must-revalidate"}
+_SW_NO_CACHE = {
+    "Cache-Control": "no-cache, no-store, must-revalidate",
+    "Service-Worker-Allowed": "/",
+}
+
+
+def _app_frontend_version() -> str:
+    """Номер из `.app-version` в index.html — для версии PWA cache / sw.js."""
+    try:
+        html = (Path(__file__).parent / "index.html").read_text(encoding="utf-8")
+        m = re.search(r'class="app-version"[^>]*>(\d+)<', html)
+        return m.group(1) if m else "0"
+    except Exception:
+        return "0"
 
 @app.get("/landing", include_in_schema=False)
 def landing_root_redirect():
@@ -789,8 +803,11 @@ def _purge_success_step_events() -> None:
         _return_conn(conn)
 
 
-def _load_steps(cur, dream_ids):
+def _load_steps(cur, dream_ids, *, include_deleted: bool = False):
     """Загружает шаги по списку dream_id. Возвращает dict dream_id -> list of step dict.
+
+    По умолчанию только deleted=false (лёгкий кабинет). include_deleted=True —
+    все шаги, включая soft-deleted (для вкладки «Удал.»).
 
     Раньше при ProgrammingError на «широком» SELECT (нет plan_amount/fact_amount или др.)
     срабатывал fallback без deadline — в ЛК все шаги без дат. Теперь перебираем запросы
@@ -799,13 +816,26 @@ def _load_steps(cur, dream_ids):
     out = {}
     if not dream_ids:
         return out
+    deleted_sql = "" if include_deleted else " AND COALESCE(deleted, false) = false"
     queries = [
-        "SELECT dream_id, id, title, completed, sort_order, deadline, start_time, end_time, series_id, series_index, series_total, deleted, plan_amount, fact_amount, waived FROM dreams_steps WHERE dream_id = ANY(%s) ORDER BY dream_id, sort_order, id",
-        "SELECT dream_id, id, title, completed, sort_order, deadline, start_time, end_time, series_id, series_index, series_total, deleted, plan_amount, fact_amount FROM dreams_steps WHERE dream_id = ANY(%s) ORDER BY dream_id, sort_order, id",
-        "SELECT dream_id, id, title, completed, sort_order, deadline, start_time, end_time, series_id, series_index, series_total, deleted FROM dreams_steps WHERE dream_id = ANY(%s) ORDER BY dream_id, sort_order, id",
-        "SELECT dream_id, id, title, completed, sort_order, deadline, start_time, end_time, deleted FROM dreams_steps WHERE dream_id = ANY(%s) ORDER BY dream_id, sort_order, id",
-        "SELECT dream_id, id, title, completed, sort_order, deadline, start_time, end_time FROM dreams_steps WHERE dream_id = ANY(%s) ORDER BY dream_id, sort_order, id",
-        "SELECT dream_id, id, title, completed, sort_order, deadline FROM dreams_steps WHERE dream_id = ANY(%s) ORDER BY dream_id, sort_order, id",
+        "SELECT dream_id, id, title, completed, sort_order, deadline, start_time, end_time, series_id, series_index, series_total, deleted, plan_amount, fact_amount, waived FROM dreams_steps WHERE dream_id = ANY(%s)"
+        + deleted_sql
+        + " ORDER BY dream_id, sort_order, id",
+        "SELECT dream_id, id, title, completed, sort_order, deadline, start_time, end_time, series_id, series_index, series_total, deleted, plan_amount, fact_amount FROM dreams_steps WHERE dream_id = ANY(%s)"
+        + deleted_sql
+        + " ORDER BY dream_id, sort_order, id",
+        "SELECT dream_id, id, title, completed, sort_order, deadline, start_time, end_time, series_id, series_index, series_total, deleted FROM dreams_steps WHERE dream_id = ANY(%s)"
+        + deleted_sql
+        + " ORDER BY dream_id, sort_order, id",
+        "SELECT dream_id, id, title, completed, sort_order, deadline, start_time, end_time, deleted FROM dreams_steps WHERE dream_id = ANY(%s)"
+        + deleted_sql
+        + " ORDER BY dream_id, sort_order, id",
+        "SELECT dream_id, id, title, completed, sort_order, deadline, start_time, end_time FROM dreams_steps WHERE dream_id = ANY(%s)"
+        + deleted_sql
+        + " ORDER BY dream_id, sort_order, id",
+        "SELECT dream_id, id, title, completed, sort_order, deadline FROM dreams_steps WHERE dream_id = ANY(%s)"
+        + deleted_sql
+        + " ORDER BY dream_id, sort_order, id",
     ]
     for sql in queries:
         try:
@@ -825,7 +855,9 @@ def _load_steps(cur, dream_ids):
     # Схема без deadline (крайне старая): только названия
     try:
         cur.execute(
-            "SELECT dream_id, id, title, completed, sort_order FROM dreams_steps WHERE dream_id = ANY(%s) ORDER BY dream_id, sort_order, id",
+            "SELECT dream_id, id, title, completed, sort_order FROM dreams_steps WHERE dream_id = ANY(%s)"
+            + deleted_sql
+            + " ORDER BY dream_id, sort_order, id",
             (dream_ids,),
         )
         for s in cur.fetchall():
@@ -1125,12 +1157,18 @@ def pwa_manifest():
     )
 
 
-@app.get("/sw.js", response_class=FileResponse)
+@app.get("/sw.js")
 def pwa_service_worker():
-    return FileResponse(
-        Path(__file__).parent / "sw.js",
+    """SW с версией CACHE = island-pwa-v{N} из .app-version — меняется при каждом бампе версии."""
+    from fastapi.responses import Response
+
+    ver = _app_frontend_version()
+    raw = (Path(__file__).parent / "sw.js").read_text(encoding="utf-8")
+    body = raw.replace("__ISLAND_APP_VERSION__", ver)
+    return Response(
+        content=body,
         media_type="application/javascript; charset=utf-8",
-        headers={"Cache-Control": "no-cache", "Service-Worker-Allowed": "/"},
+        headers=_SW_NO_CACHE,
     )
 
 
@@ -3077,8 +3115,13 @@ def record_dream_help_intent(dream_id: int, body: ShowcaseActionBody):
 
 # --- Эндпоинт 2: ПОЛУЧЕНИЕ МЕЧТ ПОЛЬЗОВАТЕЛЯ ---
 @app.get("/dreams")
-def get_dreams(user_id: int, viewer_id: Optional[int] = None):
-    """Список мечт пользователя user_id. viewer_id: посторонний зритель — только при can_read по user_buddy_links (или legacy buddy_id)."""
+def get_dreams(
+    user_id: int,
+    viewer_id: Optional[int] = None,
+    include_deleted: bool = False,
+):
+    """Список мечт пользователя user_id. viewer_id: посторонний зритель — только при can_read по user_buddy_links (или legacy buddy_id).
+    include_deleted: по умолчанию False — в payload только шаги deleted=false; True — также soft-deleted (вкладка «Удал.»)."""
     conn = None
     try:
         conn = get_db_connection()
@@ -3156,7 +3199,7 @@ def get_dreams(user_id: int, viewer_id: Optional[int] = None):
                     pass
                 return {"dreams": [], "dreams_fulfilled_count": 0, "dreams_fulfilled_times": 0, "dreams_fulfilled_by_me": dreams_fulfilled_by_me}
             dream_ids = [r["id"] for r in dreams_rows]
-            steps_by_dream = _load_steps(cur, dream_ids)
+            steps_by_dream = _load_steps(cur, dream_ids, include_deleted=bool(include_deleted))
             dream_ids_books = [r["id"] for r in dreams_rows if r.get("rule_code") == "books_reading"]
             books_by_dream = _load_books(cur, dream_ids_books) if dream_ids_books else {}
             result = [_build_dream_item(row, steps_by_dream, books_by_dream) for row in dreams_rows]

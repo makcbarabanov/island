@@ -30,8 +30,9 @@ class AdminConsoleParseTests(unittest.TestCase):
             cmd = parse_admin_command(t, now=NOW)
             self.assertIsNotNone(cmd)
             self.assertEqual(cmd.kind, "help")
-        self.assertIn("покажи активных", HELP_TEXT)
-        self.assertIn("дай отчёт", HELP_TEXT)
+        self.assertIn("/status", HELP_TEXT)
+        self.assertIn("/admin_pause", HELP_TEXT)
+        self.assertIn("не останавливает наблюдение", HELP_TEXT)
 
     def test_active(self):
         cmd = parse_admin_command("покажи активных", now=NOW)

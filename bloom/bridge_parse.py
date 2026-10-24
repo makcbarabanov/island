@@ -19,16 +19,43 @@ PARSER_VERSION = "v1-hybrid"
 
 _STATUS = frozenset({"done", "not_done", "not_mentioned", "uncertain"})
 
-_DATE_PATTERNS = [
-    re.compile(
-        r"отч[её]т\s*за\s*(\d{1,2})[./](\d{1,2})(?:[./](\d{2,4}))?",
-        re.IGNORECASE,
-    ),
-    re.compile(
-        r"отч[её]т\s+(\d{1,2})[./](\d{1,2})(?:[./](\d{2,4}))?",
-        re.IGNORECASE,
-    ),
-]
+# Числовая дата: «Отчёт за 02.10.2026», «Отчёт 02. 10.2026», «Отчет за 2.10»
+_DATE_NUMERIC = re.compile(
+    r"отч[её]т\s*(?:за\s*)?(\d{1,2})\s*[./]\s*(\d{1,2})(?:\s*[./]\s*(\d{2,4}))?",
+    re.IGNORECASE,
+)
+_MONTH_NAME_TO_NUM = {
+    "января": 1,
+    "январь": 1,
+    "февраля": 2,
+    "февраль": 2,
+    "марта": 3,
+    "март": 3,
+    "апреля": 4,
+    "апрель": 4,
+    "мая": 5,
+    "май": 5,
+    "июня": 6,
+    "июнь": 6,
+    "июля": 7,
+    "июль": 7,
+    "августа": 8,
+    "август": 8,
+    "сентября": 9,
+    "сентябрь": 9,
+    "октября": 10,
+    "октябрь": 10,
+    "ноября": 11,
+    "ноябрь": 11,
+    "декабря": 12,
+    "декабрь": 12,
+}
+_MONTH_ALT = "|".join(_MONTH_NAME_TO_NUM.keys())
+# «Отчёт за 2 октября», «Отчёт 02 октября 2026»
+_DATE_MONTH_NAME = re.compile(
+    rf"отч[её]т\s*(?:за\s*)?(\d{{1,2}})\s+({_MONTH_ALT})(?:\s+(\d{{4}}))?",
+    re.IGNORECASE,
+)
 
 _FINAL_HINT = re.compile(r"отч[её]т", re.IGNORECASE)
 
@@ -116,28 +143,50 @@ def detect_format_family(text: str) -> str:
     return "unknown"
 
 
-def extract_report_date(text: str, *, message_date: datetime | None = None) -> date | None:
-    for pat in _DATE_PATTERNS:
-        m = pat.search(text or "")
-        if not m:
-            continue
-        day = int(m.group(1))
-        month = int(m.group(2))
-        year_raw = m.group(3)
-        if year_raw:
-            year = int(year_raw)
-            if year < 100:
-                year += 2000
-        elif message_date is not None:
-            year = message_date.year
-            # если msg в январе, а отчёт 31.12 — редкий кейс; для Sep ok
-        else:
-            year = date.today().year
+def _year_from_match(
+    year_raw: str | None, *, message_date: datetime | None
+) -> int:
+    if year_raw:
+        year = int(year_raw)
+        if year < 100:
+            year += 2000
+        return year
+    if message_date is not None:
+        return message_date.year
+    return date.today().year
+
+
+def extract_report_dates(
+    text: str, *, message_date: datetime | None = None
+) -> list[date]:
+    """Все явные даты отчёта в тексте (порядок появления, без дублей)."""
+    found: list[date] = []
+    seen: set[date] = set()
+    raw = text or ""
+
+    def _add(day: int, month: int, year_raw: str | None) -> None:
+        year = _year_from_match(year_raw, message_date=message_date)
         try:
-            return date(year, month, day)
+            d = date(year, month, day)
         except ValueError:
+            return
+        if d not in seen:
+            seen.add(d)
+            found.append(d)
+
+    for m in _DATE_NUMERIC.finditer(raw):
+        _add(int(m.group(1)), int(m.group(2)), m.group(3))
+    for m in _DATE_MONTH_NAME.finditer(raw):
+        month = _MONTH_NAME_TO_NUM.get((m.group(2) or "").casefold())
+        if month is None:
             continue
-    return None
+        _add(int(m.group(1)), month, m.group(3))
+    return found
+
+
+def extract_report_date(text: str, *, message_date: datetime | None = None) -> date | None:
+    dates = extract_report_dates(text, message_date=message_date)
+    return dates[0] if dates else None
 
 
 def is_likely_final_report(text: str) -> bool:

@@ -6,9 +6,9 @@ Bloom digest — расчёт вечерней сводки по явному ta
 не галочки в приложении. См. chat_reports.py.
 
 Участники (разные множества):
-  marathon_participant_ids — есть шаги в цикле 1–21 текущего месяца target_date;
-  scheduled_today_ids      — есть шаги с deadline = target_date;
-  report_expected_ids      — scheduled_today_ids (отчёт ожидается за target_date).
+  marathon_participant_ids — allowlist месяца (или legacy: шаги в цикле 1–21);
+  digest_roster_ids / N     — = marathon_participant_ids (явка X/N без пересечения с шагами);
+  scheduled_today_ids      — есть шаги с deadline = target_date (для % привычек).
 """
 from __future__ import annotations
 
@@ -152,11 +152,9 @@ def build_digest_payload(
     """
     marathon = marathon_cycle(target_date)
     scheduled_today_ids = {uid for uid, steps in steps_by_user.items() if steps}
-    # digest: только allowlist-участники с заданиями на день
-    digest_scheduled_ids = {
-        uid for uid in scheduled_today_ids if uid in marathon_participant_ids
-    }
-    report_expected_ids = set(digest_scheduled_ids)
+    # N в «сдали X/N» = весь allowlist/марафон-ростер, без пересечения с шагами в Острове
+    digest_roster_ids = set(marathon_participant_ids)
+    report_expected_ids = set(digest_roster_ids)
 
     per_user: dict[int, UserDigest] = {}
     relevant_ids = marathon_participant_ids | scheduled_today_ids
@@ -175,13 +173,13 @@ def build_digest_payload(
             done=sum(1 for s in steps if s.completed),
             report_submitted=submitted,
             report_source=(rep or {}).get("send_method") if submitted else None,
-            active_today=uid in digest_scheduled_ids,
+            active_today=uid in digest_roster_ids,
             marathon_member=uid in marathon_participant_ids,
         )
         per_user[uid] = ud
 
     active_users = [
-        per_user[uid] for uid in sorted(digest_scheduled_ids) if uid in per_user
+        per_user[uid] for uid in sorted(digest_roster_ids) if uid in per_user
     ]
     reported_count = sum(1 for u in active_users if u.report_submitted)
 
@@ -199,7 +197,7 @@ def build_digest_payload(
                 user_id=uid,
                 name=users[uid]["name"],
                 marathon_member=True,
-                active_today=False,
+                active_today=True,
             )
         participants.append(
             {
@@ -218,9 +216,9 @@ def build_digest_payload(
         )
 
     today = {
-        "active": len(digest_scheduled_ids),
+        "active": len(digest_roster_ids),
         "reported": reported_count,
-        "missing": len(digest_scheduled_ids) - reported_count,
+        "missing": len(digest_roster_ids) - reported_count,
         "group_done": group_done,
         "group_total": group_total,
         "group_pct": group_pct,
@@ -230,7 +228,7 @@ def build_digest_payload(
         )
         if active_users
         else 0.0,
-        "scheduled_today_ids": sorted(digest_scheduled_ids),
+        "scheduled_today_ids": sorted(digest_roster_ids),
         "report_expected_ids": sorted(report_expected_ids),
         "allowlist_user_ids": sorted(marathon_participant_ids),
     }
@@ -247,7 +245,7 @@ def build_digest_payload(
         "target_date": target_date.isoformat(),
         "marathon_day": marathon.get("cycle_day"),
         "marathon_participant_user_ids": sorted(marathon_participant_ids),
-        "scheduled_today_user_ids": sorted(digest_scheduled_ids),
+        "scheduled_today_user_ids": sorted(digest_roster_ids),
         "report_expected_user_ids": sorted(report_expected_ids),
         "allowlist_user_ids": sorted(marathon_participant_ids),
         "per_user": {str(uid): per_user[uid].to_dict() for uid in sorted(per_user)},
