@@ -51,7 +51,13 @@
 | `price`           | NUMERIC(12,2) / VARCHAR(50) | Цена (руб.). В миграции — NUMERIC; в некоторых БД — VARCHAR. В API отдаётся числом. |
 | `title`           | VARCHAR(500)  | Краткий заголовок. Добавлен в mig_001; в API текст мечты берётся из `dream`, не из `title`. |
 | `description`     | TEXT          | Расширенное описание. В API не используется. |
-| `image_url`       | TEXT          | Ссылка на изображение. В API не используется. |
+| `image_url`       | TEXT NULL     | Внутренний путь фото в непубличном `private_media/dreams/`. Клиент получает только защищённый URL `GET /dreams/{id}/photo`. |
+| `product_url`     | TEXT NULL     | Необязательная внешняя ссылка `http/https`. |
+| `measure_enabled` | BOOLEAN NOT NULL DEFAULT false | Использовать измеримый результат вместо прогресса по шагам. |
+| `measure_unit`    | VARCHAR(50) NULL | Единица измерения результата. |
+| `measure_initial` | NUMERIC NULL  | Зафиксированная начальная точка. |
+| `measure_current` | NUMERIC NULL  | Текущее фактическое значение. |
+| `measure_target`  | NUMERIC NULL  | Целевое значение. |
 | `is_public`       | BOOLEAN DEFAULT true | Приватность: true = мечта открытая (попадает в витрину), false = приватная (анонимная, не в витрине). По умолчанию все открытые. Миграция mig_011. |
 | `progress`        | INT DEFAULT 0 | Прогресс (0–100 или иная шкала). В API не используется. |
 | `deadline`        | DATE          | Дедлайн (дата, до которой нужно осуществить). В БД и API — `YYYY-MM-DD`; в ЛК (`index.html`) в списках и текстовых полях модалки шага показывается и вводится сокращённо `dd.mm.yy`. |
@@ -60,7 +66,7 @@
 | `rule_code`       | VARCHAR(100) NULL | Код правила из `steps_rules.rule_code` (например, `books_reading`, `diary_journal` — служебная мечта для свободных записей дневника). Если задан, к мечте применяется спецлогика (книги, финцель и т.д.). Миграция mig_books_module. |
 | `settings`        | JSONB NULL    | Настройки мечты по правилу: для книг — `{"minutes_per_day": 15}`; для финцели — параметры анкеты (срок, «равные/разные», число внесения в месяц, при разных — суммы по месяцам или формула). Миграция mig_books_module. |
 
-**Примечание:** Колонки `status` и `category` (VARCHAR) после mig_006/mig_006b удалены; вместо них используются `status_id` и `category_id`. Колонка `is_public` гарантируется миграцией mig_011 (ADD COLUMN IF NOT EXISTS, по умолчанию true).
+**Примечание:** Колонки `status` и `category` (VARCHAR) после mig_006/mig_006b удалены; вместо них используются `status_id` и `category_id`. Колонка `is_public` гарантируется миграцией mig_011 (ADD COLUMN IF NOT EXISTS, по умолчанию true). Фото, ссылка и измеримые поля добавляются идемпотентной миграцией `_sql/mig_dreams_measure_photo_link.sql`.
 
 ---
 

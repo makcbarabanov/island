@@ -15,4 +15,5 @@ services:
       - ./sites/landing:/app/sites/landing:ro
       - ./sites/tim:/app/sites/tim:ro
       - ./media:/app/media
+      - ./private_media:/app/private_media
       - ./logs:/app/logs

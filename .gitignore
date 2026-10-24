@@ -4,6 +4,8 @@ bloom/runtime_state.json
 __pycache__/
 examples/
 media/
+private_media/*
+!private_media/.gitkeep
 
 # Cursor/VS Code: локальный settings.json из шаблона (.vscode/apply-cursor-env.sh)
 .vscode/settings.json

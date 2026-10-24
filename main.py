@@ -4,19 +4,25 @@ import time
 import calendar
 import logging
 import importlib.util
+import base64
+import hashlib
+import hmac
+import uuid
 from logging.handlers import RotatingFileHandler
 from collections import defaultdict, deque
 from datetime import datetime, date, timedelta, timezone
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 import re
 from threading import Lock
+from urllib.parse import urlparse
 import psycopg2
 from psycopg2 import OperationalError
 from psycopg2 import pool
 from psycopg2.extras import RealDictCursor, Json, execute_values
 from fastapi import FastAPI, HTTPException, File, UploadFile, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, RedirectResponse, JSONResponse, PlainTextResponse
+from fastapi.responses import FileResponse, RedirectResponse, JSONResponse, PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import Optional, List, Tuple
@@ -95,6 +101,116 @@ def _bcrypt_password(password: str) -> str:
 # 1. Загружаем секреты из файла .env
 load_dotenv()
 
+# Узкая защищённая сессия: закрытые фото, видимость мечт и управление связями бадди.
+SESSION_COOKIE_NAME = "island_session"
+SESSION_TTL_SECONDS = 30 * 24 * 60 * 60
+
+
+def _session_secret() -> bytes:
+    secret = (os.getenv("SESSION_SECRET") or "").strip()
+    if len(secret) < 32:
+        raise HTTPException(status_code=503, detail="Защищённая сессия не настроена")
+    return secret.encode("utf-8")
+
+
+def _session_token(user_id: int, *, expires_at: Optional[int] = None) -> str:
+    expires = int(expires_at or (time.time() + SESSION_TTL_SECONDS))
+    payload = f"v1:{int(user_id)}:{expires}".encode("ascii")
+    signature = hmac.new(_session_secret(), payload, hashlib.sha256).digest()
+    sig = base64.urlsafe_b64encode(signature).decode("ascii").rstrip("=")
+    return payload.decode("ascii") + ":" + sig
+
+
+def _session_user_id(request: Request, *, required: bool = True) -> Optional[int]:
+    raw = (request.cookies.get(SESSION_COOKIE_NAME) or "").strip()
+    if not raw:
+        if required:
+            raise HTTPException(status_code=401, detail="Войдите заново для защищённого действия")
+        return None
+    try:
+        version, user_raw, expires_raw, signature = raw.split(":", 3)
+        payload = f"{version}:{user_raw}:{expires_raw}".encode("ascii")
+        expected = hmac.new(_session_secret(), payload, hashlib.sha256).digest()
+        actual = base64.urlsafe_b64decode(signature + "=" * (-len(signature) % 4))
+        if version != "v1" or not hmac.compare_digest(actual, expected):
+            raise ValueError("bad signature")
+        if int(expires_raw) < int(time.time()):
+            raise ValueError("expired")
+        user_id = int(user_raw)
+        if user_id <= 0:
+            raise ValueError("bad user")
+        return user_id
+    except HTTPException:
+        raise
+    except Exception:
+        if required:
+            raise HTTPException(status_code=401, detail="Сессия истекла. Войдите заново")
+        return None
+
+
+def _set_session_cookie(response: Response, user_id: int) -> None:
+    response.set_cookie(
+        key=SESSION_COOKIE_NAME,
+        value=_session_token(user_id),
+        max_age=SESSION_TTL_SECONDS,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        path="/",
+    )
+
+
+def _require_session_user(request: Request, claimed_user_id: Optional[int] = None) -> int:
+    actor_id = int(_session_user_id(request, required=True) or 0)
+    if claimed_user_id is not None and actor_id != int(claimed_user_id):
+        raise HTTPException(status_code=403, detail="Сессия не соответствует пользователю")
+    return actor_id
+
+
+def _normalize_product_url(value: Optional[str]) -> Optional[str]:
+    raw = (value or "").strip()
+    if not raw:
+        return None
+    if len(raw) > 2048:
+        raise HTTPException(status_code=400, detail="Ссылка слишком длинная")
+    parsed = urlparse(raw)
+    if parsed.scheme not in ("http", "https") or not parsed.netloc:
+        raise HTTPException(status_code=400, detail="Ссылка должна начинаться с http:// или https://")
+    return raw
+
+
+def _measure_decimal(value) -> Optional[Decimal]:
+    if value is None or value == "":
+        return None
+    try:
+        result = Decimal(str(value))
+    except (InvalidOperation, ValueError, TypeError):
+        raise HTTPException(status_code=400, detail="Некорректное числовое значение")
+    if not result.is_finite():
+        raise HTTPException(status_code=400, detail="Числовое значение должно быть конечным")
+    return result
+
+
+def _measured_progress(initial, current, target) -> float:
+    start = _measure_decimal(initial)
+    now = _measure_decimal(current)
+    goal = _measure_decimal(target)
+    if start is None or now is None or goal is None:
+        return 0.0
+    if goal == start:
+        return 100.0 if now == goal else 0.0
+    pct = ((now - start) / (goal - start)) * Decimal("100")
+    return float(max(Decimal("0"), min(Decimal("100"), pct)))
+
+
+def _step_progress(steps: list[dict]) -> float:
+    active = [s for s in (steps or []) if not s.get("deleted")]
+    if not active:
+        return 0.0
+    done = sum(1 for s in active if s.get("completed"))
+    return float((Decimal(done) / Decimal(len(active))) * Decimal("100"))
+
+
 # 2. Создаем Диспетчера
 app = FastAPI()
 ENABLE_SPECIAL_BOOKS_IN_SCHEDULE = False
@@ -165,6 +281,9 @@ def landing_root_redirect():
 MEDIA_DIR = BASE_DIR / "media"
 AVATARS_DIR = MEDIA_DIR / "avatars"
 AVATARS_DIR.mkdir(parents=True, exist_ok=True)
+PRIVATE_MEDIA_DIR = BASE_DIR / "private_media"
+DREAM_PHOTOS_DIR = PRIVATE_MEDIA_DIR / "dreams"
+DREAM_PHOTOS_DIR.mkdir(parents=True, exist_ok=True)
 EXAMPLES_DIR = BASE_DIR / "examples"
 app.mount("/media", StaticFiles(directory=str(MEDIA_DIR)), name="media")
 if EXAMPLES_DIR.is_dir():
@@ -426,6 +545,11 @@ class DreamCreate(BaseModel):
     deadline: Optional[str] = None  # YYYY-MM-DD
     price: Optional[float] = None  # рубли
     is_public: Optional[bool] = True  # по умолчанию открытая (витрина)
+    product_url: Optional[str] = None
+    measure_enabled: Optional[bool] = False
+    measure_unit: Optional[str] = None
+    measure_current: Optional[Decimal] = None
+    measure_target: Optional[Decimal] = None
 
 class DreamUpdate(BaseModel):
     dream: Optional[str] = None
@@ -436,6 +560,12 @@ class DreamUpdate(BaseModel):
     is_public: Optional[bool] = None
     rule_code: Optional[str] = None   # например 'books_reading'
     settings: Optional[dict] = None  # например {"minutes_per_day": 15}
+    product_url: Optional[str] = None
+    measure_enabled: Optional[bool] = None
+    measure_unit: Optional[str] = None
+    measure_initial: Optional[Decimal] = None
+    measure_current: Optional[Decimal] = None
+    measure_target: Optional[Decimal] = None
 
 class StepCreate(BaseModel):
     title: str
@@ -1184,7 +1314,7 @@ def temp_page():
 
 # --- Эндпоинт 1: АВТОРИЗАЦИЯ ---
 @app.post("/login")
-def login_user(user_login: UserLogin):
+def login_user(user_login: UserLogin, response: Response):
     """
     Эндпоинт для авторизации.
     Ищет по телефону, проверяет пароль через bcrypt, отдаёт full_name (name + surname).
@@ -1255,6 +1385,7 @@ def login_user(user_login: UserLogin):
                 result["vk"] = user_data.get("vk")
             _touch_user_last_seen(cur, user_data["id"])
             conn.commit()
+            _set_session_cookie(response, user_data["id"])
             return result
     except HTTPException:
         raise
@@ -1262,6 +1393,18 @@ def login_user(user_login: UserLogin):
         raise HTTPException(status_code=500, detail=f"Ошибка сервера: {str(e)}")
     finally:
         _return_conn(conn)
+
+
+@app.post("/logout")
+def logout_user(response: Response):
+    response.delete_cookie(
+        SESSION_COOKIE_NAME,
+        path="/",
+        secure=True,
+        httponly=True,
+        samesite="lax",
+    )
+    return {"ok": True}
 
 
 @app.get("/landing_stats")
@@ -1772,8 +1915,9 @@ def get_access_grants(user_id: int):
 
 
 @app.patch("/users/me/buddy-links")
-def update_buddy_link(body: BuddyLinkUpdateBody, user_id: int):
+def update_buddy_link(body: BuddyLinkUpdateBody, user_id: int, request: Request):
     """Обновить can_write для связи viewer→subject. can_read всегда true у активного бадди."""
+    _require_session_user(request, user_id)
     if body.viewer_id == body.subject_id:
         raise HTTPException(status_code=400, detail="Нельзя менять доступ для себя")
     if body.subject_id != user_id:
@@ -1820,8 +1964,9 @@ def update_buddy_link(body: BuddyLinkUpdateBody, user_id: int):
 
 
 @app.delete("/users/me/buddy-links")
-def revoke_buddy_link(user_id: int, other_user_id: int):
+def revoke_buddy_link(user_id: int, other_user_id: int, request: Request):
     """Разорвать связь с бадди в обе стороны (status=revoked). Только участник пары."""
+    _require_session_user(request, user_id)
     if other_user_id == user_id:
         raise HTTPException(status_code=400, detail="Нельзя удалить себя")
     conn = None
@@ -2031,8 +2176,9 @@ def list_buddy_requests(user_id: int):
 
 
 @app.post("/buddy_requests")
-def create_buddy_request(body: BuddyRequestCreate, user_id: int):
+def create_buddy_request(body: BuddyRequestCreate, user_id: int, request: Request):
     """Отправить запрос в бадди. user_id — отправитель (from_user_id), body.to_user_id — кому."""
+    _require_session_user(request, user_id)
     if body.to_user_id == user_id:
         raise HTTPException(status_code=400, detail="Нельзя отправить запрос себе")
     conn = None
@@ -2074,8 +2220,9 @@ def create_buddy_request(body: BuddyRequestCreate, user_id: int):
 
 
 @app.patch("/buddy_requests/{request_id}")
-def update_buddy_request(request_id: int, body: BuddyRequestUpdate, user_id: int):
+def update_buddy_request(request_id: int, body: BuddyRequestUpdate, user_id: int, request: Request):
     """Принять или отклонить входящий запрос. Только тот, кому пришёл запрос (to_user_id), может менять статус."""
+    _require_session_user(request, user_id)
     if body.status not in ("accepted", "declined"):
         raise HTTPException(status_code=400, detail="status должен быть accepted или declined")
     conn = None
@@ -2123,8 +2270,9 @@ def update_buddy_request(request_id: int, body: BuddyRequestUpdate, user_id: int
 
 
 @app.delete("/buddy_requests/{request_id}")
-def cancel_buddy_request(request_id: int, user_id: int):
+def cancel_buddy_request(request_id: int, user_id: int, request: Request):
     """Отменить исходящий запрос. Только отправитель (from_user_id) может отменить."""
+    _require_session_user(request, user_id)
     conn = None
     try:
         conn = get_db_connection()
@@ -2151,7 +2299,7 @@ def cancel_buddy_request(request_id: int, user_id: int):
 
 # --- Эндпоинт: РЕГИСТРАЦИЯ ---
 @app.post("/register")
-def register_user(user: UserRegister):
+def register_user(user: UserRegister, response: Response):
     """Регистрация: name, surname, phone, city; пароль хешируется bcrypt."""
     if not (user.password or "").strip() or len(user.password) < 4:
         raise HTTPException(status_code=400, detail="Пароль — минимум 4 символа")
@@ -2174,6 +2322,7 @@ def register_user(user: UserRegister):
             user_id = row[0] if isinstance(row, tuple) else row["id"]
             _touch_user_last_seen(cur, user_id)
         conn.commit()
+        _set_session_cookie(response, user_id)
         return {"id": user_id}
     except HTTPException:
         raise
@@ -2246,12 +2395,37 @@ def _build_dream_item(row, steps_by_dream, books_by_dream=None):
     category_obj = None
     if row.get("category_id") and row.get("category_code"):
         category_obj = {"id": row.get("category_id"), "code": row.get("category_code"), "label_ru": row.get("category_label"), "icon": row.get("category_icon")}
+    measure_enabled = bool(row.get("measure_enabled"))
+    if measure_enabled:
+        progress = _measured_progress(
+            row.get("measure_initial"),
+            row.get("measure_current"),
+            row.get("measure_target"),
+        )
+        progress_source = "measure"
+    else:
+        progress = _step_progress(steps)
+        progress_source = "steps"
+
+    def _number_out(value):
+        if value is None:
+            return None
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None
+
+    has_photo = bool((row.get("image_url") or "").strip())
+    photo_url = f"/dreams/{dream_id}/photo" if has_photo else None
     return {
         "id": dream_id,
         "title": title,
         "dream": dream_text,
         "description": "",
-        "image_url": None,
+        "image_url": photo_url,
+        "photo_url": photo_url,
+        "has_photo": has_photo,
+        "product_url": row.get("product_url"),
         "status": row.get("status_code") or "planned",
         "status_id": row.get("status_id"),
         "status_obj": status_obj,
@@ -2260,12 +2434,180 @@ def _build_dream_item(row, steps_by_dream, books_by_dream=None):
         "category_obj": category_obj,
         "price": price,
         "is_public": row.get("is_public") if row.get("is_public") is not None else True,
-        "progress": 0,
+        "measure_enabled": measure_enabled,
+        "measure_unit": row.get("measure_unit"),
+        "measure_initial": _number_out(row.get("measure_initial")),
+        "measure_current": _number_out(row.get("measure_current")),
+        "measure_target": _number_out(row.get("measure_target")),
+        "progress": round(progress, 2),
+        "progress_source": progress_source,
+        "favorites_count": int(row.get("favorites_count") or 0),
         "steps": steps,
         "rule_code": row.get("rule_code"),
         "settings": row.get("settings"),
         "books": books,
     }
+
+
+DREAM_PHOTO_EXTENSIONS = frozenset((".jpg", ".jpeg", ".png", ".webp"))
+DREAM_PHOTO_MAX_BYTES = 20 * 1024 * 1024
+
+
+def _dream_photo_extension(content: bytes, original_name: str) -> str:
+    requested = Path(original_name or "").suffix.lower()
+    if requested not in DREAM_PHOTO_EXTENSIONS:
+        raise HTTPException(status_code=400, detail="Разрешены только jpg, png и webp")
+    if content.startswith(b"\xff\xd8\xff"):
+        detected = ".jpg"
+    elif content.startswith(b"\x89PNG\r\n\x1a\n"):
+        detected = ".png"
+    elif len(content) >= 12 and content[:4] == b"RIFF" and content[8:12] == b"WEBP":
+        detected = ".webp"
+    else:
+        raise HTTPException(status_code=400, detail="Файл не является поддерживаемым изображением")
+    normalized_requested = ".jpg" if requested == ".jpeg" else requested
+    if normalized_requested != detected:
+        raise HTTPException(status_code=400, detail="Расширение файла не соответствует изображению")
+    return detected
+
+
+def _dream_photo_file(stored_path: Optional[str]) -> Optional[Path]:
+    raw = (stored_path or "").strip().replace("\\", "/")
+    if not raw.startswith("dreams/"):
+        return None
+    name = raw.split("/", 1)[1]
+    if not name or name != Path(name).name:
+        return None
+    return DREAM_PHOTOS_DIR / name
+
+
+@app.get("/dreams/{dream_id}/photo", response_class=FileResponse)
+def get_dream_photo(dream_id: int, request: Request):
+    """Фото открытой мечты доступно публично; закрытой — владельцу или бадди с can_read."""
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                "SELECT user_id, is_public, image_url FROM dreams WHERE id = %s",
+                (dream_id,),
+            )
+            dream = cur.fetchone()
+            if not dream or not dream.get("image_url"):
+                raise HTTPException(status_code=404, detail="Фото не найдено")
+            is_public = dream.get("is_public") is not False
+            if not is_public:
+                actor_id = _session_user_id(request, required=True)
+                if not _can_view_lk(cur, int(actor_id), int(dream["user_id"])):
+                    raise HTTPException(status_code=403, detail="Нет доступа к закрытой мечте")
+            path = _dream_photo_file(dream.get("image_url"))
+            if path is None or not path.is_file():
+                raise HTTPException(status_code=404, detail="Фото не найдено")
+            # Один и тот же URL может стать закрытым; не оставляем публичную копию
+            # в браузере/прокси после смены видимости.
+            headers = {"Cache-Control": "private, no-store, max-age=0"}
+            return FileResponse(path, headers=headers)
+    finally:
+        _return_conn(conn)
+
+
+@app.post("/dreams/{dream_id}/photo")
+def upload_dream_photo(
+    dream_id: int,
+    request: Request,
+    file: UploadFile = File(...),
+):
+    """Загрузить/заменить фото. Только владелец или бадди с can_write по защищённой сессии."""
+    actor_id = _require_session_user(request)
+    content = file.file.read(DREAM_PHOTO_MAX_BYTES + 1)
+    if not content:
+        raise HTTPException(status_code=400, detail="Файл пуст")
+    if len(content) > DREAM_PHOTO_MAX_BYTES:
+        raise HTTPException(status_code=400, detail="Фото должно быть не больше 20 МБ")
+    ext = _dream_photo_extension(content, file.filename or "")
+    new_name = f"{dream_id}-{uuid.uuid4().hex}{ext}"
+    new_path = DREAM_PHOTOS_DIR / new_name
+    temp_path = DREAM_PHOTOS_DIR / (new_name + ".tmp")
+    conn = None
+    old_path = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT user_id, image_url FROM dreams WHERE id = %s", (dream_id,))
+            dream = cur.fetchone()
+            if not dream:
+                raise HTTPException(status_code=404, detail="Мечта не найдена")
+            if not _can_edit_lk(cur, actor_id, int(dream["user_id"])):
+                raise HTTPException(status_code=403, detail="Нет права менять фото этой мечты")
+            old_path = _dream_photo_file(dream.get("image_url"))
+            temp_path.write_bytes(content)
+            temp_path.replace(new_path)
+            cur.execute(
+                "UPDATE dreams SET image_url = %s WHERE id = %s",
+                (f"dreams/{new_name}", dream_id),
+            )
+            conn.commit()
+        if old_path and old_path != new_path:
+            try:
+                old_path.unlink(missing_ok=True)
+            except OSError:
+                app_logger.warning("Не удалось удалить предыдущий файл фото мечты %s", dream_id)
+        return {
+            "ok": True,
+            "has_photo": True,
+            "image_url": f"/dreams/{dream_id}/photo",
+            "photo_url": f"/dreams/{dream_id}/photo",
+        }
+    except HTTPException:
+        if conn:
+            conn.rollback()
+        new_path.unlink(missing_ok=True)
+        temp_path.unlink(missing_ok=True)
+        raise
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        new_path.unlink(missing_ok=True)
+        temp_path.unlink(missing_ok=True)
+        raise HTTPException(status_code=500, detail=f"Не удалось сохранить фото: {str(e)}")
+    finally:
+        _return_conn(conn)
+
+
+@app.delete("/dreams/{dream_id}/photo")
+def delete_dream_photo(dream_id: int, request: Request):
+    """Удалить фото мечты. Только владелец или бадди с can_write."""
+    actor_id = _require_session_user(request)
+    conn = None
+    photo_path = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT user_id, image_url FROM dreams WHERE id = %s", (dream_id,))
+            dream = cur.fetchone()
+            if not dream:
+                raise HTTPException(status_code=404, detail="Мечта не найдена")
+            if not _can_edit_lk(cur, actor_id, int(dream["user_id"])):
+                raise HTTPException(status_code=403, detail="Нет права удалять фото этой мечты")
+            photo_path = _dream_photo_file(dream.get("image_url"))
+            cur.execute("UPDATE dreams SET image_url = NULL WHERE id = %s", (dream_id,))
+            conn.commit()
+        if photo_path:
+            try:
+                photo_path.unlink(missing_ok=True)
+            except OSError:
+                app_logger.warning("Не удалось удалить файл фото мечты %s", dream_id)
+        return {"ok": True, "has_photo": False, "image_url": None, "photo_url": None}
+    except HTTPException:
+        if conn:
+            conn.rollback()
+        raise
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        raise HTTPException(status_code=500, detail=f"Не удалось удалить фото: {str(e)}")
+    finally:
+        _return_conn(conn)
 
 
 @app.get("/dreams/showcase/counts")
@@ -3133,7 +3475,9 @@ def get_dreams(
             try:
                 cur.execute("""
                     SELECT d.id, d.dream, d.deadline, d.price, d.status_id, d.category_id, d.is_public,
-                           d.rule_code, d.settings,
+                           d.rule_code, d.settings, d.image_url, d.product_url,
+                           d.measure_enabled, d.measure_unit, d.measure_initial, d.measure_current, d.measure_target,
+                           (SELECT COUNT(*) FROM user_dream_favorites f WHERE f.dream_id = d.id) AS favorites_count,
                            s.code AS status_code, s.label_ru AS status_label, s.icon AS status_icon,
                            c.code AS category_code, c.label_ru AS category_label, c.icon AS category_icon
                     FROM dreams d
@@ -3275,27 +3619,49 @@ def get_schedule(user_id: int, date_from: Optional[str] = None, date_to: Optiona
 
 
 @app.post("/dreams")
-def create_dream(body: DreamCreate):
+def create_dream(body: DreamCreate, request: Request):
     """Добавить мечту. Обязательно: user_id, dream. Опционально: status_id (по умолчанию 1), category_id, deadline (YYYY-MM-DD)."""
     if not (body.dream and body.dream.strip()):
         raise HTTPException(status_code=400, detail="Текст мечты не может быть пустым")
+    if len(body.dream.strip()) > 500:
+        raise HTTPException(status_code=400, detail="Текст мечты — не более 500 символов")
     status_id = body.status_id if body.status_id is not None else 1
     is_public = body.is_public if body.is_public is not None else True
+    if not is_public:
+        _require_session_user(request, body.user_id)
+    product_url = _normalize_product_url(body.product_url)
+    measure_enabled = bool(body.measure_enabled)
+    measure_unit = (body.measure_unit or "").strip() or None
+    if measure_unit and len(measure_unit) > 50:
+        raise HTTPException(status_code=400, detail="Единица измерения — не более 50 символов")
+    measure_current = _measure_decimal(body.measure_current)
+    measure_target = _measure_decimal(body.measure_target)
+    if measure_enabled and (not measure_unit or measure_current is None or measure_target is None):
+        raise HTTPException(
+            status_code=400,
+            detail="Для измеримого результата укажите единицу, «Сейчас» и «Хочу»",
+        )
+    measure_initial = measure_current if measure_enabled else None
     conn = None
     try:
         conn = get_db_connection()
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             try:
-                if body.deadline:
-                    cur.execute(
-                        "INSERT INTO dreams (user_id, dream, status_id, category_id, date, deadline, price, is_public) VALUES (%s, %s, %s, %s, CURRENT_DATE, %s, %s, %s) RETURNING id, dream, deadline",
-                        (body.user_id, body.dream.strip(), status_id, body.category_id, body.deadline, body.price, is_public),
-                    )
-                else:
-                    cur.execute(
-                        "INSERT INTO dreams (user_id, dream, status_id, category_id, date, price, is_public) VALUES (%s, %s, %s, %s, CURRENT_DATE, %s, %s) RETURNING id, dream, deadline",
-                        (body.user_id, body.dream.strip(), status_id, body.category_id, body.price, is_public),
-                    )
+                cur.execute(
+                    """INSERT INTO dreams (
+                           user_id, dream, status_id, category_id, date, deadline, price, is_public,
+                           product_url, measure_enabled, measure_unit, measure_initial, measure_current, measure_target
+                       ) VALUES (
+                           %s, %s, %s, %s, CURRENT_DATE, %s, %s, %s,
+                           %s, %s, %s, %s, %s, %s
+                       ) RETURNING id, dream, deadline""",
+                    (
+                        body.user_id, body.dream.strip(), status_id, body.category_id,
+                        body.deadline or None, body.price, is_public,
+                        product_url, measure_enabled, measure_unit, measure_initial,
+                        measure_current, measure_target,
+                    ),
+                )
             except psycopg2.ProgrammingError:
                 conn.rollback()
                 code = _STATUS_ID_TO_CODE.get(status_id, "planned")
@@ -3333,29 +3699,85 @@ def create_dream(body: DreamCreate):
 _STATUS_ID_TO_CODE = {1: "planned", 2: "in_progress", 3: "done"}
 
 @app.patch("/dreams/{dream_id}")
-def update_dream(dream_id: int, body: DreamUpdate, user_id: int):
-    """Обновить мечту (текст, статус, дедлайн). Только если мечта принадлежит user_id."""
+def update_dream(
+    dream_id: int,
+    body: DreamUpdate,
+    user_id: int,
+    request: Request,
+    viewer_id: Optional[int] = None,
+):
+    """Обновить мечту владельцем или бадди с can_write. Видимость требует защищённую сессию."""
     conn = None
     try:
         conn = get_db_connection()
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("SELECT id FROM dreams WHERE id = %s AND user_id = %s", (dream_id, user_id))
-            if not cur.fetchone():
-                raise HTTPException(status_code=404, detail="Мечта не найдена или не ваша")
-            old_status_id = None
-            try:
-                cur.execute("SELECT status_id FROM dreams WHERE id = %s", (dream_id,))
-                r = cur.fetchone()
-                if r:
-                    old_status_id = r.get("status_id")
-            except psycopg2.ProgrammingError:
-                pass
-            # Используем только переданные клиентом поля (чтобы category_id=null сохранялось)
+            owner_id = _resolve_editor_and_check_dream(cur, dream_id, user_id, viewer_id)
+            editor_id = viewer_id if viewer_id is not None else user_id
+            cur.execute(
+                """SELECT status_id, measure_enabled, measure_unit, measure_initial,
+                          measure_current, measure_target
+                   FROM dreams WHERE id = %s""",
+                (dream_id,),
+            )
+            existing = cur.fetchone() or {}
+            old_status_id = existing.get("status_id")
             payload = body.model_dump(exclude_unset=True)
+
+            if "is_public" in payload:
+                actor_id = _require_session_user(request, editor_id)
+                if not _can_edit_lk(cur, actor_id, owner_id):
+                    raise HTTPException(status_code=403, detail="Нет права менять видимость этой мечты")
+
+            if "dream" in payload and payload["dream"] is not None:
+                text = payload["dream"].strip()
+                if not text:
+                    raise HTTPException(status_code=400, detail="Текст мечты не может быть пустым")
+                if len(text) > 500:
+                    raise HTTPException(status_code=400, detail="Текст мечты — не более 500 символов")
+                payload["dream"] = text
+
+            if "product_url" in payload:
+                payload["product_url"] = _normalize_product_url(payload.get("product_url"))
+
+            if payload.get("measure_enabled") is False:
+                for preserved_field in (
+                    "measure_unit",
+                    "measure_initial",
+                    "measure_current",
+                    "measure_target",
+                ):
+                    payload.pop(preserved_field, None)
+            if "measure_unit" in payload:
+                unit = (payload.get("measure_unit") or "").strip() or None
+                if unit and len(unit) > 50:
+                    raise HTTPException(status_code=400, detail="Единица измерения — не более 50 символов")
+                payload["measure_unit"] = unit
+            for key in ("measure_initial", "measure_current", "measure_target"):
+                if key in payload:
+                    payload[key] = _measure_decimal(payload.get(key))
+
+            final_enabled = bool(payload.get("measure_enabled", existing.get("measure_enabled")))
+            final_unit = payload.get("measure_unit", existing.get("measure_unit"))
+            final_current = payload.get("measure_current", existing.get("measure_current"))
+            final_target = payload.get("measure_target", existing.get("measure_target"))
+            final_initial = payload.get("measure_initial", existing.get("measure_initial"))
+            if final_enabled and final_initial is None:
+                final_initial = _measure_decimal(final_current)
+                payload["measure_initial"] = final_initial
+            if final_enabled and (
+                not (final_unit or "").strip()
+                or _measure_decimal(final_current) is None
+                or _measure_decimal(final_target) is None
+            ):
+                raise HTTPException(
+                    status_code=400,
+                    detail="Для измеримого результата укажите единицу, «Сейчас» и «Хочу»",
+                )
+
             updates, vals = [], []
             if "dream" in payload and payload["dream"] is not None:
                 updates.append("dream = %s")
-                vals.append(payload["dream"].strip())
+                vals.append(payload["dream"])
             if "status_id" in payload:
                 updates.append("status_id = %s")
                 vals.append(payload["status_id"])
@@ -3377,61 +3799,24 @@ def update_dream(dream_id: int, body: DreamUpdate, user_id: int):
             if "settings" in payload:
                 updates.append("settings = %s")
                 vals.append(Json(payload["settings"]) if payload["settings"] is not None else None)
+            for field in (
+                "product_url",
+                "measure_enabled",
+                "measure_unit",
+                "measure_initial",
+                "measure_current",
+                "measure_target",
+            ):
+                if field in payload:
+                    updates.append(field + " = %s")
+                    vals.append(payload[field])
             if not updates:
                 return {"ok": True}
             vals.append(dream_id)
-            try:
-                cur.execute(
-                    "UPDATE dreams SET " + ", ".join(updates) + " WHERE id = %s",
-                    vals,
-                )
-            except psycopg2.ProgrammingError:
-                conn.rollback()
-                # Повтор без category_id (если колонки нет в старой схеме)
-                updates_old, vals_old = [], []
-                if "dream" in payload and payload["dream"] is not None:
-                    updates_old.append("dream = %s")
-                    vals_old.append(payload["dream"].strip())
-                if "status_id" in payload:
-                    updates_old.append("status_id = %s")
-                    vals_old.append(payload["status_id"])
-                if "deadline" in payload:
-                    updates_old.append("deadline = %s")
-                    vals_old.append(payload["deadline"] if payload["deadline"] else None)
-                if "price" in payload:
-                    updates_old.append("price = %s")
-                    vals_old.append(payload["price"])
-                if "is_public" in payload:
-                    updates_old.append("is_public = %s")
-                    vals_old.append(payload["is_public"])
-                if updates_old:
-                    vals_old.append(dream_id)
-                    try:
-                        cur.execute(
-                            "UPDATE dreams SET " + ", ".join(updates_old) + " WHERE id = %s",
-                            vals_old,
-                        )
-                    except psycopg2.ProgrammingError:
-                        conn.rollback()
-                        updates_old2, vals_old2 = [], []
-                        if "dream" in payload and payload["dream"] is not None:
-                            updates_old2.append("dream = %s")
-                            vals_old2.append(payload["dream"].strip())
-                        if "deadline" in payload:
-                            updates_old2.append("deadline = %s")
-                            vals_old2.append(payload["deadline"] if payload["deadline"] else None)
-                        if "price" in payload:
-                            updates_old2.append("price = %s")
-                            vals_old2.append(payload["price"])
-                        if "is_public" in payload:
-                            updates_old2.append("is_public = %s")
-                            vals_old2.append(payload["is_public"])
-                        if updates_old2:
-                            vals_old2.append(dream_id)
-                            cur.execute(
-                                "UPDATE dreams SET " + ", ".join(updates_old2) + " WHERE id = %s",
-                                vals_old2,
-                            )
+            cur.execute(
+                "UPDATE dreams SET " + ", ".join(updates) + " WHERE id = %s",
+                vals,
+            )
             conn.commit()
             # При переходе мечты в статус «выполнено» (3) — одна запись в dreams_log (единый источник для лендинга и кабинета)
             if payload.get("status_id") == 3 and old_status_id != 3:
@@ -3457,13 +3842,22 @@ def update_dream(dream_id: int, body: DreamUpdate, user_id: int):
 def delete_dream(dream_id: int, user_id: int, viewer_id: Optional[int] = None):
     """Удалить мечту. Разрешено владельцу или бадди с buddy_trust=true (viewer_id=кто удаляет)."""
     conn = None
+    photo_path = None
     try:
         conn = get_db_connection()
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             _resolve_editor_and_check_dream(cur, dream_id, user_id, viewer_id)
+            cur.execute("SELECT image_url FROM dreams WHERE id = %s", (dream_id,))
+            dream = cur.fetchone()
+            photo_path = _dream_photo_file(dream.get("image_url")) if dream else None
             cur.execute("DELETE FROM dreams_steps WHERE dream_id = %s", (dream_id,))
             cur.execute("DELETE FROM dreams WHERE id = %s", (dream_id,))
             conn.commit()
+            if photo_path:
+                try:
+                    photo_path.unlink(missing_ok=True)
+                except OSError:
+                    app_logger.warning("Не удалось удалить файл фото мечты %s", dream_id)
             return {"ok": True}
     except HTTPException:
         raise

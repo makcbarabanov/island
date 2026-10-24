@@ -8,6 +8,12 @@
 
 ---
 
+## mig_dreams_measure_photo_link (Мечты v406)
+
+Файл: `_sql/mig_dreams_measure_photo_link.sql` — идемпотентно добавляет в `dreams` защищённый внутренний путь фото, внешнюю ссылку и поля измеримого результата: `measure_enabled`, `measure_unit`, `measure_initial`, `measure_current`, `measure_target`.
+
+---
+
 ## fix_merge_users_68_into_128 (данные, не схема)
 
 Файл: `_sql/fix_merge_users_68_into_128.sql` — дубликат София Авраменко: перенос `username` `Sofiya_Avram` и мечт с id 68 на id 128, удаление 68.  
