@@ -1387,11 +1387,14 @@
         .dream-photo-preview img { width: 100%; height: 100%; object-fit: cover; }
         .dream-photo-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
         .dream-photo-actions label, .dream-photo-actions button { width: auto; padding: 7px 10px; margin: 0; border: 1px solid #cfd6df; border-radius: 8px; background: #fff; color: #344054; font-size: 12px; cursor: pointer; }
-        .dream-measure-toggle { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 14px; color: #344054; cursor: pointer; }
+        .modal .dream-measure-toggle { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; padding: 10px 12px; border: 1px solid #e1e7e2; border-radius: 10px; background: #f7f9f7; font-size: 14px; font-weight: 600; color: #344054; cursor: pointer; box-sizing: border-box; }
+        .modal .dream-measure-toggle input[type="checkbox"] { width: 20px; height: 20px; flex: 0 0 20px; margin: 0; cursor: pointer; accent-color: var(--island-accent); }
         .dream-measure-fields { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 8px; margin-top: 8px; padding: 11px; border-radius: 10px; background: #f7f9f7; }
         .dream-measure-fields.hidden { display: none; }
+        .dream-measure-fields > div { min-width: 0; }
         .dream-measure-fields label { display: block; font-size: 11px; color: #667085; margin-bottom: 4px; }
-        .dream-measure-fields input { width: 100%; box-sizing: border-box; padding: 8px; }
+        .dream-measure-fields input[type="text"],
+        .dream-measure-fields input[type="number"] { width: 100%; min-width: 0; margin: 0; box-sizing: border-box; padding: 8px; }
         .dream-initial-fix { display: inline-block; margin-top: 7px; font-size: 12px; color: #2e7d32; }
         .dream-photo-hero { position: relative; height: 210px; margin: -16px -16px 14px; overflow: hidden; background: #edf0ec; border-radius: 14px 14px 0 0; }
         .dream-photo-hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -1749,6 +1752,63 @@
             .dreams-table { font-size: 13px; display: table; width: 100%; }
             .dreams-table th, .dreams-table td { padding: 8px 6px; }
             .modal { max-width: 100%; margin: 10px; padding: 16px; max-height: 85vh; }
+            #modal-new-dream,
+            #modal-edit-dream {
+                inset: 0;
+                align-items: stretch;
+                justify-content: stretch;
+                overflow: hidden;
+                background: var(--island-surface);
+            }
+            #modal-new-dream > .dream-editor-modal,
+            #modal-edit-dream > .dream-editor-modal {
+                display: flex;
+                flex-direction: column;
+                width: 100%;
+                height: 100%;
+                height: 100dvh;
+                min-width: 0;
+                max-width: none;
+                max-height: none;
+                margin: 0;
+                padding: 0;
+                overflow: hidden;
+                border: 0;
+                border-radius: 0;
+                box-shadow: none;
+            }
+            .dream-editor-scroll {
+                flex: 1 1 auto;
+                min-height: 0;
+                overflow-y: auto;
+                overscroll-behavior: contain;
+                -webkit-overflow-scrolling: touch;
+                padding: calc(18px + env(safe-area-inset-top)) 16px 20px;
+                box-sizing: border-box;
+            }
+            #modal-new-dream .modal-actions,
+            #modal-edit-dream .modal-actions {
+                flex: 0 0 auto;
+                display: grid;
+                gap: 8px;
+                margin: 0;
+                padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+                border-top: 1px solid #e1e7e2;
+                background: var(--island-surface);
+                box-shadow: 0 -4px 16px rgba(31,54,38,0.08);
+            }
+            #modal-new-dream .modal-actions { grid-template-columns: 1fr 1.35fr; }
+            #modal-edit-dream .modal-actions { grid-template-columns: 1fr 1fr 1.25fr; }
+            #modal-new-dream .modal-actions button,
+            #modal-edit-dream .modal-actions button {
+                width: 100%;
+                min-width: 0;
+                margin: 0;
+                padding: 10px 8px;
+            }
+            .modal .dream-measure-toggle { margin-top: 16px; }
+            .dream-measure-fields { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 1fr); gap: 7px; padding: 10px; }
+            .dream-measure-fields label { min-height: 14px; margin: 0 0 5px; white-space: nowrap; }
             .modal-add-step .modal-add-step-date { font-size: 13px; }
             .modal-actions { flex-wrap: wrap; }
             .modal-actions button { min-height: 44px; }
@@ -2420,7 +2480,8 @@
             </div>
             <!-- Модальное окно: новая мечта -->
             <div id="modal-new-dream" class="modal-overlay hidden">
-                <div class="modal">
+                <div class="modal dream-editor-modal">
+                    <div class="dream-editor-scroll">
                     <h3>Мечта</h3>
                     <label for="new-dream-text">Опишите мечту</label>
                     <textarea id="new-dream-text" class="dream-text" placeholder="Опишите мечту" rows="5" maxlength="500"></textarea>
@@ -2439,9 +2500,9 @@
                         <label for="new-dream-product-url">Ссылка</label>
                         <input type="url" id="new-dream-product-url" placeholder="https://…" inputmode="url">
                     </div>
-                    <label class="dream-measure-toggle"><input type="checkbox" id="new-dream-measure-enabled"> Измерить результат</label>
+                    <label class="dream-measure-toggle" for="new-dream-measure-enabled"><span>Измерить результат</span><input type="checkbox" id="new-dream-measure-enabled" aria-controls="new-dream-measure-fields" aria-expanded="false"></label>
                     <div id="new-dream-measure-fields" class="dream-measure-fields hidden">
-                        <div><label for="new-dream-measure-unit">Ед. изм.</label><input type="text" id="new-dream-measure-unit" maxlength="50" placeholder="км, кг, ₽"></div>
+                        <div><label for="new-dream-measure-unit">Ед. изм.</label><input type="text" id="new-dream-measure-unit" maxlength="50" placeholder="кг, ₽, шт." list="dream-measure-unit-options" autocomplete="off"></div>
                         <div><label for="new-dream-measure-current">Сейчас</label><input type="number" id="new-dream-measure-current" step="any"></div>
                         <div><label for="new-dream-measure-target">Хочу</label><input type="number" id="new-dream-measure-target" step="any"></div>
                     </div>
@@ -2468,6 +2529,7 @@
                         <div class="modal-dream-visibility-option active" data-private="0" role="button" tabindex="0" aria-pressed="true"><span class="opt-icon">👁️</span><span class="opt-title">Открытая мечта</span><span class="opt-desc">Попадает в витрину</span></div>
                     </div>
                     <p class="modal-hint" style="margin-top:10px;font-size:12px;color:#666;">Нажмите «Добавить» один раз и дождитесь обновления списка.</p>
+                    </div>
                     <div class="modal-actions">
                         <button type="button" class="secondary" onclick="closeNewDreamModal()">Отмена</button>
                         <button type="button" id="btn-submit-new-dream" onclick="submitNewDream()">Добавить</button>
@@ -2476,7 +2538,8 @@
             </div>
             <!-- Модальное окно: редактирование мечты -->
             <div id="modal-edit-dream" class="modal-overlay hidden">
-                <div class="modal">
+                <div class="modal dream-editor-modal">
+                    <div class="dream-editor-scroll">
                     <h3>Редактировать мечту</h3>
                     <input type="hidden" id="edit-dream-id" value="">
                     <label for="edit-dream-text">Опишите мечту</label>
@@ -2496,9 +2559,9 @@
                         <label for="edit-dream-product-url">Ссылка</label>
                         <input type="url" id="edit-dream-product-url" placeholder="https://…" inputmode="url">
                     </div>
-                    <label class="dream-measure-toggle"><input type="checkbox" id="edit-dream-measure-enabled"> Измерить результат</label>
+                    <label class="dream-measure-toggle" for="edit-dream-measure-enabled"><span>Измерить результат</span><input type="checkbox" id="edit-dream-measure-enabled" aria-controls="edit-dream-measure-fields" aria-expanded="false"></label>
                     <div id="edit-dream-measure-fields" class="dream-measure-fields hidden">
-                        <div><label for="edit-dream-measure-unit">Ед. изм.</label><input type="text" id="edit-dream-measure-unit" maxlength="50" placeholder="км, кг, ₽"></div>
+                        <div><label for="edit-dream-measure-unit">Ед. изм.</label><input type="text" id="edit-dream-measure-unit" maxlength="50" placeholder="кг, ₽, шт." list="dream-measure-unit-options" autocomplete="off"></div>
                         <div><label for="edit-dream-measure-current">Сейчас</label><input type="number" id="edit-dream-measure-current" step="any"></div>
                         <div><label for="edit-dream-measure-target">Хочу</label><input type="number" id="edit-dream-measure-target" step="any"></div>
                     </div>
@@ -2526,6 +2589,7 @@
                         <div class="modal-dream-visibility-option" data-private="0" role="button" tabindex="0" aria-pressed="false"><span class="opt-icon">👁️</span><span class="opt-title">Открытая мечта</span><span class="opt-desc">Попадает в витрину</span></div>
                     </div>
                     <div id="edit-dream-error" class="error hidden" style="margin-top:10px;"></div>
+                    </div>
                     <div class="modal-actions">
                         <button type="button" class="secondary" onclick="closeEditDreamModal()">Отмена</button>
                         <button type="button" id="btn-delete-dream" class="btn-danger" onclick="deleteDreamFromModal()">Удалить</button>
@@ -2533,6 +2597,21 @@
                     </div>
                 </div>
             </div>
+            <datalist id="dream-measure-unit-options">
+                <option value="кг"></option>
+                <option value="₽"></option>
+                <option value="шт."></option>
+                <option value="км"></option>
+                <option value="м"></option>
+                <option value="м²"></option>
+                <option value="м³"></option>
+                <option value="л"></option>
+                <option value="%"></option>
+                <option value="мин."></option>
+                <option value="ч."></option>
+                <option value="стр."></option>
+                <option value="раз"></option>
+            </datalist>
             <div id="modal-fix-dream-initial" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="fix-dream-initial-title">
                 <div class="modal">
                     <h3 id="fix-dream-initial-title">Исправить начальную точку</h3>
@@ -2839,7 +2918,7 @@
                         </div>
                     </div>
                     <button type="button" class="app-footer-logout" id="app-footer-logout" title="Выйти" onclick="logout()">Выйти</button>
-                    <span class="app-version" aria-hidden="true">406</span>
+                    <span class="app-version" aria-hidden="true">407</span>
                 </div>
             </footer>
         </div>
@@ -9958,6 +10037,8 @@
         function setDreamMeasureFields(prefix, enabled) {
             var fields = document.getElementById(prefix + '-dream-measure-fields');
             if (fields) fields.classList.toggle('hidden', !enabled);
+            var checkbox = document.getElementById(prefix + '-dream-measure-enabled');
+            if (checkbox) checkbox.setAttribute('aria-expanded', enabled ? 'true' : 'false');
         }
         function setDreamPhotoPreview(prefix, src, hasPhoto) {
             var preview = document.getElementById(prefix + '-dream-photo-preview');

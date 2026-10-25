@@ -2,11 +2,14 @@ import os
 import time
 import unittest
 from decimal import Decimal
+from pathlib import Path
 
 from fastapi import HTTPException
 from starlette.requests import Request
 
 import main
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def request_with_cookie(value: str = "") -> Request:
@@ -91,6 +94,30 @@ class DreamPhotoValidationTests(unittest.TestCase):
             main._dream_photo_extension(b"<svg></svg>", "x.svg")
         with self.assertRaises(HTTPException):
             main._dream_photo_extension(b"\x89PNG\r\n\x1a\nrest", "x.jpg")
+
+
+class DreamMobileFormMarkupTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.html = (ROOT / "index.html").read_text(encoding="utf-8")
+
+    def test_dream_forms_use_full_screen_scroll_shell_and_fixed_actions(self):
+        self.assertEqual(self.html.count('class="modal dream-editor-modal"'), 2)
+        self.assertEqual(self.html.count('class="dream-editor-scroll"'), 2)
+        self.assertIn("height: 100dvh;", self.html)
+        self.assertIn("#modal-new-dream .modal-actions", self.html)
+        self.assertIn("#modal-edit-dream .modal-actions", self.html)
+
+    def test_measure_toggle_and_three_column_fields_are_grouped(self):
+        self.assertEqual(self.html.count('class="dream-measure-toggle"'), 2)
+        self.assertIn("grid-template-columns: minmax(0, 1.15fr)", self.html)
+        self.assertIn('.dream-measure-toggle input[type="checkbox"]', self.html)
+
+    def test_measure_unit_supports_manual_input_and_native_suggestions(self):
+        self.assertIn('id="dream-measure-unit-options"', self.html)
+        self.assertEqual(self.html.count('list="dream-measure-unit-options"'), 2)
+        for unit in ("кг", "₽", "шт.", "км", "м²", "м³"):
+            self.assertIn(f'<option value="{unit}"></option>', self.html)
 
 
 if __name__ == "__main__":
