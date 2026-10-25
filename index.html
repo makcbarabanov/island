@@ -1399,9 +1399,26 @@
         .dream-photo-hero { position: relative; height: 210px; margin: -16px -16px 14px; overflow: hidden; background: #edf0ec; border-radius: 14px 14px 0 0; }
         .dream-photo-hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
         .dream-favorite-count { position: absolute; right: 10px; bottom: 10px; display: inline-flex; align-items: center; gap: 4px; padding: 5px 9px; border-radius: 999px; background: rgba(255,255,255,.9); color: #d95065; font-size: 12px; font-weight: 700; }
-        .dream-card-title-row { display: flex; align-items: flex-start; gap: 10px; }
-        .dream-card-title-row .card-dream-text { flex: 1; margin: 0; }
-        .dream-card-deadline { white-space: nowrap; color: #6b7280; font-size: 12px; }
+        .dream-card-title-row { display: block; }
+        .dream-card-title-row .card-dream-text { margin: 0; }
+        .dream-title-deadline { font-weight: 600; }
+        .dream-steps-block { margin-top: 14px; }
+        .dream-steps-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; min-width: 0; }
+        .dream-steps-head .card-steps-title { margin: 0; color: #243028; font-size: 14px; font-weight: 700; }
+        .dream-steps-count { margin-left: auto; color: #8a948c; font-size: 12px; white-space: nowrap; }
+        .dream-step-add { width: auto; flex: 0 0 auto; margin: 0; min-height: 32px; padding: 6px 10px; border: 1px solid #d7e6d8; border-radius: 999px; background: #fff; color: #2e7d32; font-size: 13px; font-weight: 700; cursor: pointer; }
+        .dream-step-page { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .dream-step-page--single { grid-template-columns: 1fr; }
+        .dream-step-page .step-compact-series-row { min-width: 0; margin: 0; padding: 8px; border: 1px solid #e6ece6; border-radius: 12px; background: #fff; box-sizing: border-box; }
+        .dream-step-nav { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 8px; }
+        .dream-step-nav button { width: 28px; height: 28px; margin: 0; min-height: 0; padding: 0; border: 1px solid #d7ddd7; border-radius: 50%; background: #fff; color: #48604e; cursor: pointer; }
+        .dream-steps-empty { margin-top: 14px; padding: 16px 14px 14px; border: 1px solid #e4ebe4; border-radius: 14px; background: #fbfcfb; text-align: center; }
+        .dream-steps-empty-mark { color: #7d8b80; font-size: 18px; line-height: 1; }
+        .dream-steps-empty-title { margin-top: 6px; color: #2e9b4a; font-size: 15px; font-weight: 700; }
+        .dream-steps-empty p { margin: 8px auto 12px; max-width: 260px; color: #667085; font-size: 13px; line-height: 1.35; }
+        .dream-steps-empty-btn { width: 100%; margin: 0; min-height: 44px; padding: 10px 14px; border: 0; border-radius: 999px; background: #2e9b4a; color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; }
+        .dream-steps-empty--quiet { padding: 10px 0 0; border: 0; background: transparent; text-align: left; }
+        .dream-steps-empty--quiet p { margin: 0; max-width: none; }
         .dream-result-row { display: flex; justify-content: space-between; gap: 10px; margin-top: 6px; color: #667085; font-size: 12px; }
         .dream-progress-track { height: 7px; margin-top: 8px; border-radius: 999px; background: #e5e7eb; overflow: hidden; }
         .dream-progress-fill { height: 100%; border-radius: inherit; background: #55a86b; }
@@ -2918,7 +2935,7 @@
                         </div>
                     </div>
                     <button type="button" class="app-footer-logout" id="app-footer-logout" title="Выйти" onclick="logout()">Выйти</button>
-                    <span class="app-version" aria-hidden="true">407</span>
+                    <span class="app-version" aria-hidden="true">408</span>
                 </div>
             </footer>
         </div>
@@ -7108,7 +7125,6 @@
             }
             dreams.forEach(function(d) {
                 var text = (d.title || d.dream || '').trim() || '—';
-                var deadline = formatDeadlineDisplay((d.deadline || '').toString().slice(0, 10) || '');
                 var dreamId = d.id;
                 var categoryIcon = (d.category_obj && (d.category_obj.icon || '').trim()) || '';
                 var categoryLabel = (d.category_obj && (d.category_obj.label_ru || d.category_obj.code || '').trim()) || '';
@@ -7127,8 +7143,7 @@
                     var eyeIcon = isPublic ? '👁️' : '🙈';
                     var stepsEditableHtml = buildDreamStepPagerHtml(dreamId, steps, titleCounterMap, { canManage: true, isReadOnly: false, compactSeries: true });
                     var cardOwnerId = (dreamEditContext.ownerId != null && dreamEditContext.ownerId !== 0) ? dreamEditContext.ownerId : (currentUser && currentUser.id) || '';
-                    var addRowBuddyCard = '<div class="add-step-row" data-dream-id="' + dreamId + '"><button type="button" class="link add-step-btn">+ Добавить шаг</button></div>';
-                    card.innerHTML = buildDreamPhotoHeroHtml(d) + '<div class="dream-card-title-row"><div class="card-dream-text">' + escapeHtml(text) + '</div><span class="dream-card-deadline">' + escapeHtml(deadline) + '</span></div>' + buildDreamCardProgressHtml(d) + buildDreamProductLinkHtml(d) + '<div class="card-row2"><span class="card-price">' + escapeHtml(price) + ' руб.</span><div class="card-actions"><button type="button" class="dream-eye" data-dream-id="' + dreamId + '" data-public="' + (isPublic ? '1' : '0') + '" data-owner-id="' + cardOwnerId + '">' + eyeIcon + '</button>' + buildStatusPickerHtml(dreamId, statusId) + '<button type="button" class="dream-edit-btn" title="Редактирование">✏️</button></div></div><div class="card-steps">' + addRowBuddyCard + stepsEditableHtml + addRowBuddyCard + '</div>';
+                    card.innerHTML = buildDreamPhotoHeroHtml(d) + '<div class="dream-card-title-row"><div class="card-dream-text">' + buildDreamCardTitleHtml(text, (d.deadline || '').toString().slice(0, 10)) + '</div></div>' + buildDreamCardProgressHtml(d) + buildDreamProductLinkHtml(d) + '<div class="card-row2"><span class="card-price">' + escapeHtml(price) + ' руб.</span><div class="card-actions"><button type="button" class="dream-eye" data-dream-id="' + dreamId + '" data-public="' + (isPublic ? '1' : '0') + '" data-owner-id="' + cardOwnerId + '">' + eyeIcon + '</button>' + buildStatusPickerHtml(dreamId, statusId) + '<button type="button" class="dream-edit-btn" title="Редактирование">✏️</button></div></div><div class="card-steps">' + stepsEditableHtml + '</div>';
                     card.querySelector('.dream-edit-btn').addEventListener('click', function(ev) { ev.stopPropagation(); openEditDreamModal(d); });
                     card.querySelector('.dream-eye').addEventListener('click', function(ev) { ev.preventDefault(); ev.stopPropagation(); var oid = this.getAttribute('data-owner-id'); saveDreamPrivacy(dreamId, this.getAttribute('data-public') !== '1', oid ? parseInt(oid, 10) : undefined); });
                     var picker = card.querySelector('.status-picker');
@@ -7156,7 +7171,7 @@
                         }
                     });
                 } else {
-                    card.innerHTML = buildDreamPhotoHeroHtml(d) + '<div class="dream-card-title-row"><div class="card-dream-text">' + escapeHtml(text) + '</div><span class="dream-card-deadline">' + escapeHtml(deadline) + '</span></div>' + buildDreamCardProgressHtml(d) + buildDreamProductLinkHtml(d) + '<div class="card-row2"><span class="card-price">' + escapeHtml(price) + ' руб.</span></div><div class="card-steps">' + readOnlyPagerHtml + '</div>';
+                    card.innerHTML = buildDreamPhotoHeroHtml(d) + '<div class="dream-card-title-row"><div class="card-dream-text">' + buildDreamCardTitleHtml(text, (d.deadline || '').toString().slice(0, 10)) + '</div></div>' + buildDreamCardProgressHtml(d) + buildDreamProductLinkHtml(d) + '<div class="card-row2"><span class="card-price">' + escapeHtml(price) + ' руб.</span></div><div class="card-steps">' + readOnlyPagerHtml + '</div>';
                     wireDreamStepPager(card.querySelector('.dream-step-pager'));
                 }
                 track.appendChild(card);
@@ -7793,6 +7808,43 @@
             var m = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
             if (m) return m[3] + '.' + m[2] + '.' + m[1].slice(-2);
             return raw;
+        }
+        function calendarDaysUntilIso(iso) {
+            var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
+            if (!m) return null;
+            var target = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+            var now = new Date();
+            var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            return Math.round((target.getTime() - today.getTime()) / 86400000);
+        }
+        function ruDayWord(n) {
+            var abs = Math.abs(Number(n) || 0);
+            var n100 = abs % 100;
+            var n10 = abs % 10;
+            if (n100 >= 11 && n100 <= 14) return 'дней';
+            if (n10 === 1) return 'день';
+            if (n10 >= 2 && n10 <= 4) return 'дня';
+            return 'дней';
+        }
+        function dreamTextAlreadyHasDeadline(text, iso) {
+            var display = formatDeadlineDisplay(iso);
+            var full = iso.slice(8, 10) + '.' + iso.slice(5, 7) + '.' + iso.slice(0, 4);
+            var hay = (text || '').toLowerCase();
+            return hay.indexOf(String(display).toLowerCase()) !== -1 || hay.indexOf(full) !== -1 || hay.indexOf(iso) !== -1;
+        }
+        function dreamDeadlineTitleSuffix(text, deadlineRaw) {
+            var iso = (deadlineRaw || '').toString().slice(0, 10);
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return '';
+            if (dreamTextAlreadyHasDeadline(text, iso)) return '';
+            var display = formatDeadlineDisplay(iso);
+            var days = calendarDaysUntilIso(iso);
+            if (days > 0) return ' за ' + days + ' ' + ruDayWord(days) + ' к ' + display;
+            return ' к ' + display;
+        }
+        function buildDreamCardTitleHtml(text, deadlineRaw) {
+            var base = (text || '').trim() || '—';
+            var suffix = dreamDeadlineTitleSuffix(base, deadlineRaw);
+            return escapeHtml(base) + (suffix ? '<span class="dream-title-deadline">' + escapeHtml(suffix) + '</span>' : '');
         }
         function formatTimeHM(s) {
             var raw = (s || '').toString().trim();
@@ -9609,17 +9661,30 @@
             return '<a class="dream-product-link" href="' + escapeAttr(d.product_url) + '" target="_blank" rel="noopener noreferrer">Ссылка на мечту ↗</a>';
         }
         function buildDreamStepPagerHtml(dreamId, steps, titleCounterMap, opts) {
-            var pageSize = 2;
-            var pages = [];
-            for (var i = 0; i < steps.length; i += pageSize) {
-                pages.push(steps.slice(i, i + pageSize));
+            opts = opts || {};
+            var visible = (steps || []).filter(function(s) { return s && !s.deleted; });
+            var canAdd = opts.canManage !== false && !opts.isReadOnly;
+            if (!visible.length) {
+                if (!canAdd) return '<div class="dream-steps-empty dream-steps-empty--quiet"><p>Шагов пока нет</p></div>';
+                return '<div class="dream-steps-empty"><div class="dream-steps-empty-mark" aria-hidden="true">👣</div><div class="dream-steps-empty-title">Первые шаги к мечте</div><p>Каждая большая мечта начинается с маленького шага</p><button type="button" class="dream-steps-empty-btn add-step-btn">Сделать шаг к мечте</button></div>';
             }
-            if (!pages.length) pages.push([]);
+            var done = visible.filter(function(s) { return s.completed; }).length;
+            var series = buildDreamCompactSeriesData(visible, dreamId);
+            var pages = [];
+            for (var i = 0; i < series.length; i += 2) pages.push(series.slice(i, i + 2));
+            var showNav = pages.length > 1;
             var pagesHtml = pages.map(function(page, idx) {
-                return '<div class="dream-step-page' + (idx ? ' hidden' : '') + '" data-step-page="' + idx + '">' + buildDreamStepsCompactHtml(dreamId, page, titleCounterMap, opts) + '</div>';
+                var pageSteps = [];
+                page.forEach(function(group) { pageSteps = pageSteps.concat(group.steps); });
+                return '<div class="dream-step-page' + (page.length === 1 ? ' dream-step-page--single' : '') + (idx ? ' hidden' : '') + '" data-step-page="' + idx + '">' + buildDreamStepsCompactHtml(dreamId, pageSteps, titleCounterMap, opts) + '</div>';
             }).join('');
-            var dots = pages.map(function(_, idx) { return '<span class="dream-step-dot' + (idx ? '' : ' active') + '" data-step-dot="' + idx + '"></span>'; }).join('');
-            return '<div class="dream-step-pager" data-page="0"><div class="dream-step-pager-head"><span class="card-steps-title">Шаги</span><span class="dream-step-pager-controls"><button type="button" data-step-dir="-1" aria-label="Предыдущие шаги">‹</button><span class="dream-step-dots">' + dots + '</span><button type="button" data-step-dir="1" aria-label="Следующие шаги">›</button></span></div><div class="steps-list" data-dream-id="' + dreamId + '">' + pagesHtml + '</div></div>';
+            var nav = '';
+            if (showNav) {
+                var dots = pages.map(function(_, idx) { return '<span class="dream-step-dot' + (idx ? '' : ' active') + '" data-step-dot="' + idx + '"></span>'; }).join('');
+                nav = '<div class="dream-step-nav"><button type="button" data-step-dir="-1" aria-label="Предыдущие шаги">‹</button><span class="dream-step-dots">' + dots + '</span><button type="button" data-step-dir="1" aria-label="Следующие шаги">›</button></div>';
+            }
+            var addBtn = canAdd ? '<button type="button" class="dream-step-add add-step-btn">+ Шаг</button>' : '';
+            return '<div class="dream-steps-block"><div class="dream-steps-head"><span class="card-steps-title">Шаги к мечте</span><span class="dream-steps-count">' + done + ' из ' + visible.length + ' выполнено</span>' + addBtn + '</div><div class="dream-step-pager" data-page="0"><div class="steps-list" data-dream-id="' + dreamId + '">' + pagesHtml + '</div>' + nav + '</div></div>';
         }
         function wireDreamStepPager(root) {
             if (!root) return;
@@ -9814,7 +9879,6 @@
             dreams.forEach(function(d) {
                 var text = typeof d === 'string' ? d : (d.title || d.dream || '').trim() || '—';
                 var statusId = d.status_id != null ? d.status_id : (d.status_obj && d.status_obj.id) || 1;
-                var deadline = formatDeadlineDisplay((d.deadline || '').toString().slice(0, 10) || '');
                 var dreamId = d.id;
                 var categoryIcon = (d.category_obj && (d.category_obj.icon || '').trim()) || '';
                 var categoryLabel = (d.category_obj && (d.category_obj.label_ru || d.category_obj.code || '').trim()) || '';
@@ -9830,8 +9894,7 @@
                 card.className = 'dreams-mobile-card';
                 card.dataset.dreamId = dreamId;
                 var mobileOwnerId = (dreamEditContext.ownerId != null && dreamEditContext.ownerId !== 0) ? dreamEditContext.ownerId : (currentUser && currentUser.id) || '';
-                var addRowDreamSwipe = '<div class="add-step-row" data-dream-id="' + dreamId + '"><button type="button" class="link add-step-btn">+ Добавить шаг</button></div>';
-                card.innerHTML = buildDreamPhotoHeroHtml(d) + '<div class="dream-card-title-row"><div class="card-dream-text">' + escapeHtml(text) + '</div><span class="dream-card-deadline">' + escapeHtml(deadline) + '</span></div>' + buildDreamCardProgressHtml(d) + buildDreamProductLinkHtml(d) + '<div class="card-row2"><span class="card-price">' + escapeHtml(price) + ' руб.</span><div class="card-actions"><button type="button" class="dream-eye" data-dream-id="' + dreamId + '" data-public="' + (isPublic ? '1' : '0') + '" data-owner-id="' + mobileOwnerId + '" aria-label="Приватность">' + eyeIcon + '</button>' + buildStatusPickerHtml(dreamId, statusId) + '<button type="button" class="dream-edit-btn" title="Редактирование">✏️</button></div></div><div class="card-steps">' + addRowDreamSwipe + stepPagerHtml + addRowDreamSwipe + '</div>';
+                card.innerHTML = buildDreamPhotoHeroHtml(d) + '<div class="dream-card-title-row"><div class="card-dream-text">' + buildDreamCardTitleHtml(text, (d.deadline || '').toString().slice(0, 10)) + '</div></div>' + buildDreamCardProgressHtml(d) + buildDreamProductLinkHtml(d) + '<div class="card-row2"><span class="card-price">' + escapeHtml(price) + ' руб.</span><div class="card-actions"><button type="button" class="dream-eye" data-dream-id="' + dreamId + '" data-public="' + (isPublic ? '1' : '0') + '" data-owner-id="' + mobileOwnerId + '" aria-label="Приватность">' + eyeIcon + '</button>' + buildStatusPickerHtml(dreamId, statusId) + '<button type="button" class="dream-edit-btn" title="Редактирование">✏️</button></div></div><div class="card-steps">' + stepPagerHtml + '</div>';
                 track.appendChild(card);
                 card.querySelector('.dream-edit-btn').addEventListener('click', function(ev) { ev.stopPropagation(); openEditDreamModal(d); });
                 var eyeBtn = card.querySelector('.dream-eye');

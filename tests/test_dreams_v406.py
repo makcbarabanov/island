@@ -119,6 +119,16 @@ class DreamMobileFormMarkupTests(unittest.TestCase):
         for unit in ("кг", "₽", "шт.", "км", "м²", "м³"):
             self.assertIn(f'<option value="{unit}"></option>', self.html)
 
+    def test_mobile_card_puts_deadline_into_title_and_simplifies_steps(self):
+        self.assertIn("function dreamDeadlineTitleSuffix", self.html)
+        self.assertIn("Первые шаги к мечте", self.html)
+        self.assertIn("Сделать шаг к мечте", self.html)
+        self.assertIn("Шаги к мечте", self.html)
+        self.assertIn("+ Шаг", self.html)
+        self.assertNotIn("dream-card-deadline", self.html)
+        self.assertNotIn("addRowDreamSwipe + stepPagerHtml + addRowDreamSwipe", self.html)
+        self.assertNotIn("if (!pages.length) pages.push([]);", self.html)
+
 
 if __name__ == "__main__":
     unittest.main()
