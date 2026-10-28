@@ -1865,7 +1865,7 @@
             #buddy-block #buddy-mobile-swipe.hidden { display: block !important; }
             .dreams-mobile-viewport { overflow: hidden; width: 100%; touch-action: pan-y; -webkit-overflow-scrolling: touch; }
             .dreams-mobile-track { display: flex; flex-wrap: nowrap; transition: transform 0.25s ease-out; will-change: transform; }
-            .dreams-mobile-card { flex: 0 0 100%; width: 100%; min-width: 100%; box-sizing: border-box; padding: 16px; min-height: 55vh; max-height: 72vh; overflow-y: auto; background: #fff; border: 1px solid #e2e7e2; border-radius: 14px; margin: 0; box-shadow: 0 8px 24px rgba(31,54,38,0.08); }
+            .dreams-mobile-card { flex: 0 0 100%; width: 100%; min-width: 100%; height: 100%; min-height: 0; max-height: none; box-sizing: border-box; padding: 16px; overflow: hidden; display: flex; flex-direction: column; background: #fff; border: 1px solid #e2e7e2; border-radius: 14px; margin: 0; box-shadow: 0 8px 24px rgba(31,54,38,0.08); }
             .dreams-mobile-card-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; color: #666; text-align: center; }
             .dreams-mobile-card .card-dream-text { font-weight: 600; color: #222; line-height: 1.4; margin-bottom: 12px; word-break: break-word; }
             .dreams-mobile-card .card-row2 { display: flex; flex-wrap: nowrap; align-items: center; gap: 6px 10px; font-size: 13px; color: #555; margin-top: 8px; }
@@ -1918,6 +1918,159 @@
             /* Футер: на мобиле на всю ширину */
             .app-footer { display: block; width: 100%; left: 0; transform: none; border-radius: 0; }
             .dreams-mobile-card { margin: 0; }
+            /* Карточка мечты: один экран между хедером и футером, блок шагов одной высоты */
+            body.profile-visible:has(#dreams-block:not(.hidden):not(.dreams-mobile-list-view)),
+            body.profile-visible:has(#buddy-block:not(.hidden):not(.dreams-mobile-list-view)) {
+                margin: 0;
+                height: 100dvh;
+                overflow: hidden;
+            }
+            body.profile-visible:has(#dreams-block:not(.hidden):not(.dreams-mobile-list-view)) .container,
+            body.profile-visible:has(#buddy-block:not(.hidden):not(.dreams-mobile-list-view)) .container {
+                padding-top: 0;
+                padding-bottom: 0;
+            }
+            #profile-view:has(#dreams-block:not(.hidden):not(.dreams-mobile-list-view)),
+            #profile-view:has(#buddy-block:not(.hidden):not(.dreams-mobile-list-view)) {
+                min-height: 0;
+                height: 100dvh;
+                overflow: hidden;
+            }
+            #profile-view:has(#dreams-block:not(.hidden):not(.dreams-mobile-list-view)) .app-content,
+            #profile-view:has(#buddy-block:not(.hidden):not(.dreams-mobile-list-view)) .app-content {
+                overflow: hidden;
+                padding-bottom: 0;
+            }
+            #dreams-block:not(.hidden):not(.dreams-mobile-list-view),
+            #buddy-block:not(.hidden):not(.dreams-mobile-list-view) {
+                height: 100%;
+                min-height: 0;
+                display: flex;
+                flex-direction: column;
+            }
+            #dreams-block:not(.dreams-mobile-list-view) .dreams-mobile-viewport,
+            #buddy-block:not(.dreams-mobile-list-view) .dreams-mobile-viewport {
+                flex: 1 1 auto;
+                height: calc(100dvh - var(--app-sticky-h, 140px) - 48px - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 8px);
+                min-height: 0;
+            }
+            #dreams-block:not(.dreams-mobile-list-view) .dreams-mobile-track,
+            #buddy-block:not(.dreams-mobile-list-view) .dreams-mobile-track { height: 100%; }
+            .dreams-mobile-card > .dream-photo-hero {
+                flex: 1 1 88px;
+                height: auto;
+                min-height: 0;
+                max-height: 140px;
+                margin: -16px -16px 8px;
+            }
+            .dreams-mobile-card > .dream-card-title-row { flex: 0 1 auto; min-height: 0; }
+            .dreams-mobile-card .card-dream-text {
+                display: -webkit-box;
+                -webkit-box-orient: vertical;
+                -webkit-line-clamp: 3;
+                overflow: hidden;
+                margin-bottom: 8px;
+            }
+            .dreams-mobile-card > .dream-progress-track { margin-top: auto; flex: 0 0 auto; }
+            .dreams-mobile-card > .dream-result-row,
+            .dreams-mobile-card > .dream-measure-form,
+            .dreams-mobile-card > .dream-product-link,
+            .dreams-mobile-card > .card-row2 { flex: 0 0 auto; }
+            .dreams-mobile-card > .card-steps {
+                flex: 0 0 188px;
+                height: 188px;
+                min-height: 188px;
+                max-height: 188px;
+                margin-top: 8px;
+                padding-top: 8px;
+                overflow: visible;
+                display: flex;
+                flex-direction: column;
+                box-sizing: border-box;
+            }
+            .dreams-mobile-card .dream-steps-block,
+            .dreams-mobile-card .card-steps > .dream-steps-empty {
+                flex: 1 1 auto;
+                min-height: 0;
+                height: 100%;
+                margin-top: 0;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                box-sizing: border-box;
+                overflow: visible;
+            }
+            .dreams-mobile-card .card-steps > .dream-steps-empty { overflow: hidden; }
+            .dreams-mobile-card .card-steps > .dream-steps-empty { padding: 6px 10px 8px; }
+            .dreams-mobile-card .card-steps > .dream-steps-empty p { margin: 4px auto 8px; }
+            .dreams-mobile-card .card-steps > .dream-steps-empty .dream-steps-empty-btn { min-height: 40px; padding: 8px 12px; }
+            .dreams-mobile-card .dream-steps-head { flex: 0 0 32px; height: 32px; margin-bottom: 6px; overflow: hidden; }
+            .dreams-mobile-card .dream-step-pager {
+                position: relative;
+                flex: 1 1 auto;
+                min-height: 0;
+                display: flex;
+                flex-direction: column;
+                padding-bottom: 34px;
+                box-sizing: border-box;
+            }
+            .dreams-mobile-card .dream-step-pager .steps-list { flex: 1 1 auto; min-height: 0; height: 100%; }
+            .dreams-mobile-card .dream-step-nav {
+                position: absolute;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                height: 28px;
+                margin: 0;
+            }
+            .dreams-mobile-card .dream-step-page:not(.hidden) {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+                align-items: stretch;
+                height: 100%;
+                min-height: 0;
+                box-sizing: border-box;
+            }
+            .dreams-mobile-card .dream-step-page .step-compact-series-row {
+                height: 100%;
+                min-height: 0;
+                min-width: 0;
+                overflow: visible;
+                display: flex;
+            }
+            .dreams-mobile-card .step-compact-series-row .step-unified-inner {
+                flex: 1 1 auto;
+                min-width: 0;
+                min-height: 0;
+                height: 100%;
+                align-items: flex-start;
+            }
+            .dreams-mobile-card .step-compact-series-row .step-main-col {
+                min-width: 0;
+                overflow: hidden;
+                max-height: 100%;
+            }
+            .dreams-mobile-card .step-compact-series-row .step-title-wrap { display: block; min-width: 0; overflow: hidden; }
+            .dreams-mobile-card .step-compact-series-row .step-title-text {
+                display: -webkit-box;
+                -webkit-box-orient: vertical;
+                -webkit-line-clamp: 3;
+                overflow: hidden;
+                word-break: break-word;
+            }
+            .dreams-mobile-card .step-compact-series-row .step-mobile-menu { top: auto; bottom: calc(100% + 4px); }
+        }
+        @media (max-width: 768px) and (max-height: 700px) {
+            .dreams-mobile-card > .card-steps {
+                flex-basis: 156px;
+                height: 156px;
+                min-height: 156px;
+                max-height: 156px;
+            }
+            .dreams-mobile-card .step-compact-series-row .step-title-text { -webkit-line-clamp: 2; }
+            .dreams-mobile-card .card-dream-text { -webkit-line-clamp: 2; }
+            .dreams-mobile-card > .dream-photo-hero { max-height: 96px; }
         }
         /* Десктоп: мобильный блок скрыт */
         .dreams-mobile-swipe { display: none; }
@@ -2941,7 +3094,7 @@
                         </div>
                     </div>
                     <button type="button" class="app-footer-logout" id="app-footer-logout" title="Выйти" onclick="logout()">Выйти</button>
-                    <span class="app-version" aria-hidden="true">409</span>
+                    <span class="app-version" aria-hidden="true">410</span>
                 </div>
             </footer>
         </div>
@@ -7212,7 +7365,9 @@
             if (sticky && spacer) {
                 var h = sticky.offsetHeight;
                 /* небольшой запас, чтобы первая карточка витрины не заезжала под липкий хедер */
-                spacer.style.height = (h > 0 ? h + 8 : 180) + 'px';
+                var spacerH = h > 0 ? h + 8 : 180;
+                spacer.style.height = spacerH + 'px';
+                document.documentElement.style.setProperty('--app-sticky-h', spacerH + 'px');
             }
         }
         document.getElementById('menu-my-dreams').addEventListener('click', function(e) { e.preventDefault(); headerView = 'me'; applyHeaderView(); switchMenu('dreams'); });
@@ -9278,7 +9433,7 @@
             }
             var inlineTime = buildStepTimeInlineHtml(s);
             var titleWithBooks = displayTitle + buildLinkedBooksTextSuffix(s);
-            var main = '<span class="step-title-wrap">' + inlineTime + seriesPrefix + '<span class="step-title-text">' + escapeHtml(titleWithBooks) + '</span>' + seriesCount + badges + seriesRange + '</span>';
+            var main = '<span class="step-title-wrap">' + inlineTime + seriesPrefix + '<span class="step-title-text" title="' + escapeAttr(titleWithBooks) + '">' + escapeHtml(titleWithBooks) + '</span>' + seriesCount + badges + seriesRange + '</span>';
             var mobileMenu = '';
             if (!isReadOnly && canManage && mobileItems.length) {
                 mobileMenu = '<div class="step-mobile-menu-wrap">' +
