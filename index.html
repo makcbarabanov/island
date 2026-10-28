@@ -1397,7 +1397,7 @@
         .dream-measure-fields input[type="number"] { width: 100%; min-width: 0; margin: 0; box-sizing: border-box; padding: 8px; }
         .dream-initial-fix { display: inline-block; margin-top: 7px; font-size: 12px; color: #2e7d32; }
         .dream-photo-hero { position: relative; height: 210px; margin: -16px -16px 14px; overflow: hidden; background: #edf0ec; border-radius: 14px 14px 0 0; }
-        .dream-photo-hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .dream-photo-hero img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
         .dream-favorite-count { position: absolute; right: 8px; bottom: 8px; z-index: 2; display: inline-flex; align-items: center; gap: 4px; min-height: 28px; padding: 4px 9px; border-radius: 12px; background: rgba(32, 36, 34, .62); color: #fff; font-size: 13px; font-weight: 700; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
         .dream-photo-tools { position: absolute; top: 8px; left: 8px; right: 8px; z-index: 2; display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; pointer-events: none; }
         .dream-photo-cluster { pointer-events: auto; display: inline-flex; align-items: center; gap: 2px; max-width: calc(100% - 52px); padding: 3px; border-radius: 16px; background: rgba(32, 36, 34, .62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
@@ -1970,9 +1970,11 @@
             .dreams-mobile-card > .dream-photo-hero {
                 flex: 1 1 96px;
                 height: auto;
+                min-width: 0;
                 min-height: 96px;
                 max-height: none;
                 margin: -16px -16px 8px;
+                overflow: hidden;
             }
             .dreams-mobile-card > .dream-photo-hero.dream-photo-hero--empty {
                 flex: 0 0 108px;
@@ -3124,7 +3126,7 @@
                         </div>
                     </div>
                     <button type="button" class="app-footer-logout" id="app-footer-logout" title="Выйти" onclick="logout()">Выйти</button>
-                    <span class="app-version" aria-hidden="true">412</span>
+                    <span class="app-version" aria-hidden="true">413</span>
                 </div>
             </footer>
         </div>
