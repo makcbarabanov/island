@@ -1398,7 +1398,18 @@
         .dream-initial-fix { display: inline-block; margin-top: 7px; font-size: 12px; color: #2e7d32; }
         .dream-photo-hero { position: relative; height: 210px; margin: -16px -16px 14px; overflow: hidden; background: #edf0ec; border-radius: 14px 14px 0 0; }
         .dream-photo-hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
-        .dream-favorite-count { position: absolute; right: 10px; bottom: 10px; display: inline-flex; align-items: center; gap: 4px; padding: 5px 9px; border-radius: 999px; background: rgba(255,255,255,.9); color: #d95065; font-size: 12px; font-weight: 700; }
+        .dream-favorite-count { position: absolute; right: 8px; bottom: 8px; z-index: 2; display: inline-flex; align-items: center; gap: 4px; min-height: 28px; padding: 4px 9px; border-radius: 12px; background: rgba(32, 36, 34, .62); color: #fff; font-size: 13px; font-weight: 700; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+        .dream-photo-tools { position: absolute; top: 8px; left: 8px; right: 8px; z-index: 2; display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; pointer-events: none; }
+        .dream-photo-cluster { pointer-events: auto; display: inline-flex; align-items: center; gap: 2px; max-width: calc(100% - 52px); padding: 3px; border-radius: 16px; background: rgba(32, 36, 34, .62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+        .dream-photo-tool { pointer-events: auto; width: 40px; height: 40px; min-width: 40px; min-height: 40px; margin: 0; padding: 0; border: 0; border-radius: 13px; background: transparent; color: #fff; font-size: 18px; line-height: 1; box-shadow: none; display: inline-flex; align-items: center; justify-content: center; }
+        .dream-photo-tool:hover { opacity: 1; }
+        .dream-photo-tools > .dream-edit-btn.dream-photo-tool { background: rgba(32, 36, 34, .62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+        .dream-photo-tool.is-active { background: #2e7d32; }
+        .dream-photo-glyph { display: inline-block; filter: grayscale(1) brightness(1.35); line-height: 1; }
+        .dream-photo-tool.is-active .dream-photo-glyph { filter: none; }
+        .dream-card-price { margin: 2px 0 0; font-size: 13px; font-weight: 700; color: #243028; line-height: 1.2; }
+        .dream-photo-notice { position: fixed; left: 50%; bottom: calc(72px + env(safe-area-inset-bottom)); z-index: 80; transform: translateX(-50%) translateY(8px); max-width: calc(100% - 32px); padding: 10px 14px; border-radius: 12px; background: rgba(32, 36, 34, .92); color: #fff; font-size: 14px; font-weight: 600; line-height: 1.3; text-align: center; opacity: 0; pointer-events: none; transition: opacity .2s ease, transform .2s ease; }
+        .dream-photo-notice.is-on { opacity: 1; transform: translateX(-50%) translateY(0); }
         .dream-card-title-row { display: block; }
         .dream-card-title-row .card-dream-text { margin: 0; }
         .dream-title-deadline { font-weight: 600; }
@@ -1959,9 +1970,16 @@
             .dreams-mobile-card > .dream-photo-hero {
                 flex: 1 1 88px;
                 height: auto;
-                min-height: 0;
+                min-height: 96px;
                 max-height: 140px;
                 margin: -16px -16px 8px;
+            }
+            .dreams-mobile-card > .dream-photo-hero.dream-photo-hero--empty {
+                flex: 0 0 108px;
+                height: 108px;
+                min-height: 108px;
+                max-height: 108px;
+                background: #cfd4d0;
             }
             .dreams-mobile-card > .dream-card-title-row { flex: 0 1 auto; min-height: 0; }
             .dreams-mobile-card .card-dream-text {
@@ -1975,7 +1993,8 @@
             .dreams-mobile-card > .dream-result-row,
             .dreams-mobile-card > .dream-measure-form,
             .dreams-mobile-card > .dream-product-link,
-            .dreams-mobile-card > .card-row2 { flex: 0 0 auto; }
+            .dreams-mobile-card > .card-row2,
+            .dreams-mobile-card > .dream-card-price { flex: 0 0 auto; }
             .dreams-mobile-card > .card-steps {
                 flex: 0 0 188px;
                 height: 188px;
@@ -2070,7 +2089,16 @@
             }
             .dreams-mobile-card .step-compact-series-row .step-title-text { -webkit-line-clamp: 2; }
             .dreams-mobile-card .card-dream-text { -webkit-line-clamp: 2; }
-            .dreams-mobile-card > .dream-photo-hero { max-height: 96px; }
+            .dream-photo-tools { top: 4px; left: 4px; right: 4px; }
+            .dream-photo-tool { width: 32px; height: 32px; min-width: 32px; min-height: 32px; border-radius: 10px; font-size: 15px; }
+            .dreams-mobile-card .dream-favorite-count { right: 4px; bottom: 4px; min-height: 0; padding: 1px 7px; }
+            .dreams-mobile-card > .dream-photo-hero { min-height: 64px; max-height: 88px; }
+            .dreams-mobile-card > .dream-photo-hero.dream-photo-hero--empty {
+                flex-basis: 72px;
+                height: 72px;
+                min-height: 72px;
+                max-height: 72px;
+            }
         }
         /* Десктоп: мобильный блок скрыт */
         .dreams-mobile-swipe { display: none; }
@@ -3094,7 +3122,7 @@
                         </div>
                     </div>
                     <button type="button" class="app-footer-logout" id="app-footer-logout" title="Выйти" onclick="logout()">Выйти</button>
-                    <span class="app-version" aria-hidden="true">410</span>
+                    <span class="app-version" aria-hidden="true">411</span>
                 </div>
             </footer>
         </div>
@@ -7289,7 +7317,6 @@
                 var categoryLabel = (d.category_obj && (d.category_obj.label_ru || d.category_obj.code || '').trim()) || '';
                 var categoryDisplay = categoryIcon || categoryLabel || '—';
                 var categoryTitle = categoryLabel || 'Категория';
-                var price = d.price != null && d.price !== '' ? (Math.round(Number(d.price))).toLocaleString('ru-RU') : '—';
                 var steps = sortStepsByDeadline((d.steps || []).filter(function(s) { return !s.deleted; }));
                 var titleCounterMap = buildStepTitleCounterMap(steps);
                 var readOnlyPagerHtml = buildDreamStepPagerHtml(dreamId, steps, titleCounterMap, { canManage: false, isReadOnly: true, compactSeries: true });
@@ -7299,22 +7326,11 @@
                 if (editable) {
                     var statusId = d.status_id != null ? d.status_id : 1;
                     var isPublic = d.is_public !== false;
-                    var eyeIcon = isPublic ? '👁️' : '🙈';
                     var stepsEditableHtml = buildDreamStepPagerHtml(dreamId, steps, titleCounterMap, { canManage: true, isReadOnly: false, compactSeries: true });
                     var cardOwnerId = (dreamEditContext.ownerId != null && dreamEditContext.ownerId !== 0) ? dreamEditContext.ownerId : (currentUser && currentUser.id) || '';
-                    card.innerHTML = buildDreamPhotoHeroHtml(d) + '<div class="dream-card-title-row"><div class="card-dream-text">' + buildDreamCardTitleHtml(text, (d.deadline || '').toString().slice(0, 10)) + '</div></div>' + buildDreamCardProgressHtml(d, true) + buildDreamProductLinkHtml(d) + '<div class="card-row2"><span class="card-price">' + escapeHtml(price) + ' руб.</span><div class="card-actions"><button type="button" class="dream-eye" data-dream-id="' + dreamId + '" data-public="' + (isPublic ? '1' : '0') + '" data-owner-id="' + cardOwnerId + '">' + eyeIcon + '</button>' + buildStatusPickerHtml(dreamId, statusId) + '<button type="button" class="dream-edit-btn" title="Редактирование">✏️</button></div></div><div class="card-steps">' + stepsEditableHtml + '</div>';
+                    card.innerHTML = buildDreamPhotoHeroHtml(d, buildDreamPhotoControlsHtml(dreamId, statusId, isPublic, cardOwnerId)) + '<div class="dream-card-title-row"><div class="card-dream-text">' + buildDreamCardTitleHtml(text, (d.deadline || '').toString().slice(0, 10)) + '</div></div>' + buildDreamCardProgressHtml(d, true) + buildDreamProductLinkHtml(d) + buildDreamCardPriceHtml(d.price) + '<div class="card-steps">' + stepsEditableHtml + '</div>';
                     wireDreamMeasureUpdate(card);
-                    card.querySelector('.dream-edit-btn').addEventListener('click', function(ev) { ev.stopPropagation(); openEditDreamModal(d); });
-                    card.querySelector('.dream-eye').addEventListener('click', function(ev) { ev.preventDefault(); ev.stopPropagation(); var oid = this.getAttribute('data-owner-id'); saveDreamPrivacy(dreamId, this.getAttribute('data-public') !== '1', oid ? parseInt(oid, 10) : undefined); });
-                    var picker = card.querySelector('.status-picker');
-                    if (picker) {
-                        var currentSpan = picker.querySelector('.status-picker-current');
-                        var dropdown = picker.querySelector('.status-picker-dropdown');
-                        currentSpan.addEventListener('click', function(ev) { ev.stopPropagation(); dropdown.classList.toggle('open'); });
-                        picker.querySelectorAll('.status-picker-option').forEach(function(btn) {
-                            btn.addEventListener('click', function(ev) { ev.stopPropagation(); var id = parseInt(btn.dataset.statusId, 10); currentSpan.textContent = btn.dataset.statusIcon || ''; dropdown.classList.remove('open'); saveDreamStatus(dreamId, id); });
-                        });
-                    }
+                    wireDreamPhotoControls(card, dreamId, d);
                     var isFinCatCard = !!(d.category_obj && d.category_obj.code === 'finance');
                     card.querySelectorAll('.add-step-btn').forEach(function(btn) {
                         btn.addEventListener('click', function(ev) { ev.stopPropagation(); if (ENABLE_SPECIAL_STEPS_BOOKS_FINANCE && isFinCatCard) openAddStepFinanceModal(dreamId, d); else openAddStepModal(dreamId); });
@@ -7331,7 +7347,7 @@
                         }
                     });
                 } else {
-                    card.innerHTML = buildDreamPhotoHeroHtml(d) + '<div class="dream-card-title-row"><div class="card-dream-text">' + buildDreamCardTitleHtml(text, (d.deadline || '').toString().slice(0, 10)) + '</div></div>' + buildDreamCardProgressHtml(d, false) + buildDreamProductLinkHtml(d) + '<div class="card-row2"><span class="card-price">' + escapeHtml(price) + ' руб.</span></div><div class="card-steps">' + readOnlyPagerHtml + '</div>';
+                    card.innerHTML = buildDreamPhotoHeroHtml(d) + '<div class="dream-card-title-row"><div class="card-dream-text">' + buildDreamCardTitleHtml(text, (d.deadline || '').toString().slice(0, 10)) + '</div></div>' + buildDreamCardProgressHtml(d, false) + buildDreamProductLinkHtml(d) + buildDreamCardPriceHtml(d.price) + '<div class="card-steps">' + readOnlyPagerHtml + '</div>';
                     wireDreamStepPager(card.querySelector('.dream-step-pager'));
                 }
                 track.appendChild(card);
@@ -9864,10 +9880,64 @@
                 alert('Ошибка сети');
             }
         }
-        function buildDreamPhotoHeroHtml(d) {
-            if (!d || !d.has_photo || !d.image_url) return '';
-            var count = Number(d.favorites_count || 0);
-            return '<div class="dream-photo-hero"><img src="' + escapeAttr(API_BASE_URL + d.image_url) + '" alt="" loading="lazy"><span class="dream-favorite-count" aria-label="В избранном: ' + count + '">♥ ' + count + '</span></div>';
+        function buildDreamCardPriceHtml(raw) {
+            if (raw == null || raw === '') return '';
+            var n = Number(raw);
+            if (!isFinite(n)) return '';
+            return '<div class="dream-card-price">' + escapeHtml(Math.round(n).toLocaleString('ru-RU')) + ' руб.</div>';
+        }
+        function buildDreamPhotoControlsHtml(dreamId, statusId, isPublic, ownerId) {
+            var statuses = getStatusList().map(function(o) {
+                var on = Number(o.id) === Number(statusId);
+                return '<button type="button" class="dream-photo-tool dream-status-tool' + (on ? ' is-active' : '') + '" data-status-id="' + o.id + '" title="' + escapeAttr(o.label_ru || '') + '" aria-pressed="' + (on ? 'true' : 'false') + '"><span class="dream-photo-glyph">' + escapeHtml((o.icon || '').trim()) + '</span></button>';
+            }).join('');
+            var eyeTitle = isPublic ? 'Мечта видна в витрине' : 'Мечта скрыта из витрины';
+            return '<div class="dream-photo-tools"><div class="dream-photo-cluster"><button type="button" class="dream-eye dream-photo-tool' + (isPublic ? ' is-active' : '') + '" data-dream-id="' + dreamId + '" data-public="' + (isPublic ? '1' : '0') + '" data-owner-id="' + (ownerId == null ? '' : ownerId) + '" aria-label="Видимость мечты" title="' + eyeTitle + '"><span class="dream-photo-glyph">' + (isPublic ? '👁️' : '🙈') + '</span></button>' + statuses + '</div><button type="button" class="dream-edit-btn dream-photo-tool" title="Редактирование" aria-label="Редактирование"><span class="dream-photo-glyph">✏️</span></button></div>';
+        }
+        function buildDreamPhotoHeroHtml(d, controlsHtml) {
+            var hasPhoto = !!(d && d.has_photo && d.image_url);
+            if (!hasPhoto && !controlsHtml) return '';
+            var count = Number((d && d.favorites_count) || 0);
+            var photo = hasPhoto ? '<img src="' + escapeAttr(API_BASE_URL + d.image_url) + '" alt="" loading="lazy">' : '';
+            return '<div class="dream-photo-hero' + (hasPhoto ? '' : ' dream-photo-hero--empty') + '">' + photo + (controlsHtml || '') + '<span class="dream-favorite-count" aria-label="В избранном: ' + count + '">♥ ' + count + '</span></div>';
+        }
+        function wireDreamPhotoControls(card, dreamId, dream) {
+            var edit = card.querySelector('.dream-edit-btn');
+            if (edit) edit.addEventListener('click', function(ev) { ev.stopPropagation(); openEditDreamModal(dream); });
+            var eye = card.querySelector('.dream-eye');
+            if (eye) eye.addEventListener('click', function(ev) {
+                ev.preventDefault();
+                ev.stopPropagation();
+                var oid = this.getAttribute('data-owner-id');
+                saveDreamPrivacy(dreamId, this.getAttribute('data-public') !== '1', oid ? parseInt(oid, 10) : undefined);
+            });
+            card.querySelectorAll('.dream-status-tool').forEach(function(btn) {
+                btn.addEventListener('click', function(ev) {
+                    ev.stopPropagation();
+                    if (btn.classList.contains('is-active')) return;
+                    var id = parseInt(btn.getAttribute('data-status-id'), 10);
+                    card.querySelectorAll('.dream-status-tool').forEach(function(other) {
+                        var on = other === btn;
+                        other.classList.toggle('is-active', on);
+                        other.setAttribute('aria-pressed', on ? 'true' : 'false');
+                    });
+                    saveDreamStatus(dreamId, id);
+                });
+            });
+        }
+        function showDreamNotice(text) {
+            var el = document.getElementById('dream-photo-notice');
+            if (!el) {
+                el = document.createElement('div');
+                el.id = 'dream-photo-notice';
+                el.className = 'dream-photo-notice';
+                el.setAttribute('role', 'status');
+                document.body.appendChild(el);
+            }
+            el.textContent = text;
+            el.classList.add('is-on');
+            clearTimeout(showDreamNotice._t);
+            showDreamNotice._t = setTimeout(function() { el.classList.remove('is-on'); }, 3000);
         }
         function buildDreamProductLinkHtml(d) {
             if (!d || !d.product_url) return '';
@@ -10097,9 +10167,7 @@
                 var categoryLabel = (d.category_obj && (d.category_obj.label_ru || d.category_obj.code || '').trim()) || '';
                 var categoryDisplay = categoryIcon || categoryLabel || '—';
                 var categoryTitle = categoryLabel || 'Категория';
-                var price = d.price != null && d.price !== '' ? (Math.round(Number(d.price))).toLocaleString('ru-RU') : '—';
                 var isPublic = d.is_public !== false;
-                var eyeIcon = isPublic ? '👁️' : '🙈';
                 var steps = sortStepsByDeadline((d.steps || []).filter(function(s) { return !s.deleted; }));
                 var titleCounterMap = buildStepTitleCounterMap(steps);
                 var stepPagerHtml = buildDreamStepPagerHtml(dreamId, steps, titleCounterMap, { canManage: true, isReadOnly: false, compactSeries: true });
@@ -10107,32 +10175,10 @@
                 card.className = 'dreams-mobile-card';
                 card.dataset.dreamId = dreamId;
                 var mobileOwnerId = (dreamEditContext.ownerId != null && dreamEditContext.ownerId !== 0) ? dreamEditContext.ownerId : (currentUser && currentUser.id) || '';
-                card.innerHTML = buildDreamPhotoHeroHtml(d) + '<div class="dream-card-title-row"><div class="card-dream-text">' + buildDreamCardTitleHtml(text, (d.deadline || '').toString().slice(0, 10)) + '</div></div>' + buildDreamCardProgressHtml(d, true) + buildDreamProductLinkHtml(d) + '<div class="card-row2"><span class="card-price">' + escapeHtml(price) + ' руб.</span><div class="card-actions"><button type="button" class="dream-eye" data-dream-id="' + dreamId + '" data-public="' + (isPublic ? '1' : '0') + '" data-owner-id="' + mobileOwnerId + '" aria-label="Приватность">' + eyeIcon + '</button>' + buildStatusPickerHtml(dreamId, statusId) + '<button type="button" class="dream-edit-btn" title="Редактирование">✏️</button></div></div><div class="card-steps">' + stepPagerHtml + '</div>';
+                card.innerHTML = buildDreamPhotoHeroHtml(d, buildDreamPhotoControlsHtml(dreamId, statusId, isPublic, mobileOwnerId)) + '<div class="dream-card-title-row"><div class="card-dream-text">' + buildDreamCardTitleHtml(text, (d.deadline || '').toString().slice(0, 10)) + '</div></div>' + buildDreamCardProgressHtml(d, true) + buildDreamProductLinkHtml(d) + buildDreamCardPriceHtml(d.price) + '<div class="card-steps">' + stepPagerHtml + '</div>';
                 wireDreamMeasureUpdate(card);
                 track.appendChild(card);
-                card.querySelector('.dream-edit-btn').addEventListener('click', function(ev) { ev.stopPropagation(); openEditDreamModal(d); });
-                var eyeBtn = card.querySelector('.dream-eye');
-                eyeBtn.addEventListener('click', function(ev) {
-                    ev.preventDefault();
-                    ev.stopPropagation();
-                    var nowPublic = this.getAttribute('data-public') === '1';
-                    var oid = this.getAttribute('data-owner-id');
-                    saveDreamPrivacy(dreamId, !nowPublic, oid ? parseInt(oid, 10) : undefined);
-                });
-                var picker = card.querySelector('.status-picker');
-                var currentSpan = picker.querySelector('.status-picker-current');
-                var dropdown = picker.querySelector('.status-picker-dropdown');
-                currentSpan.addEventListener('click', function(ev) { ev.stopPropagation(); dropdown.classList.toggle('open'); });
-                picker.querySelectorAll('.status-picker-option').forEach(function(btn) {
-                    btn.addEventListener('click', function(ev) {
-                        ev.stopPropagation();
-                        var id = parseInt(btn.dataset.statusId, 10);
-                        var icon = btn.dataset.statusIcon || '';
-                        currentSpan.textContent = icon;
-                        dropdown.classList.remove('open');
-                        saveDreamStatus(dreamId, id);
-                    });
-                });
+                wireDreamPhotoControls(card, dreamId, d);
                 var isFinCatMobile = !!(d.category_obj && d.category_obj.code === 'finance');
                 card.querySelectorAll('.add-step-btn').forEach(function(btn) {
                     btn.addEventListener('click', function(ev) { ev.stopPropagation(); if (ENABLE_SPECIAL_STEPS_BOOKS_FINANCE && isFinCatMobile) openAddStepFinanceModal(dreamId, d); else openAddStepModal(dreamId); });
@@ -10703,25 +10749,32 @@
                 await refreshAfterDreamChange();
             }
         }
+        function paintDreamEye(btn, isPublic) {
+            var icon = isPublic ? '👁️' : '🙈';
+            var glyph = btn.querySelector('.dream-photo-glyph');
+            if (glyph) glyph.textContent = icon;
+            else btn.textContent = icon;
+            btn.setAttribute('data-public', isPublic ? '1' : '0');
+            btn.classList.toggle('is-active', !!isPublic);
+            if (btn.classList.contains('dream-photo-tool')) btn.title = isPublic ? 'Мечта видна в витрине' : 'Мечта скрыта из витрины';
+        }
         async function saveDreamPrivacy(dreamId, isPublic, ownerId) {
             var eyeButtons = document.querySelectorAll('.dream-eye[data-dream-id="' + dreamId + '"]');
-            var newIcon = isPublic ? '👁️' : '🙈';
-            var oldIcon = isPublic ? '🙈' : '👁️';
-            var oldPublic = isPublic ? '0' : '1';
-            eyeButtons.forEach(function(btn) { btn.textContent = newIcon; btn.setAttribute('data-public', isPublic ? '1' : '0'); });
+            eyeButtons.forEach(function(btn) { paintDreamEye(btn, isPublic); });
             var userId = (ownerId != null && ownerId !== 0) ? ownerId : (dreamEditContext.ownerId || (currentUser && currentUser.id));
-            if (userId == null || userId === 0) { eyeButtons.forEach(function(btn) { btn.textContent = oldIcon; btn.setAttribute('data-public', oldPublic); }); alert('Не указан владелец мечты'); return; }
+            if (userId == null || userId === 0) { eyeButtons.forEach(function(btn) { paintDreamEye(btn, !isPublic); }); alert('Не указан владелец мечты'); return; }
             try {
                 var res = await fetch(API_BASE_URL + '/dreams/' + dreamId + '?' + dreamApiUserParams(), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ is_public: isPublic }) });
                 if (!res.ok) {
                     var e = await res.json().catch(function() { return {}; });
-                    eyeButtons.forEach(function(btn) { btn.textContent = oldIcon; btn.setAttribute('data-public', oldPublic); });
+                    eyeButtons.forEach(function(btn) { paintDreamEye(btn, !isPublic); });
                     if (res.status === 401) { clearSessionAndShowLogin(e.detail || 'Войдите снова для изменения видимости.'); return; }
                     alert(e.detail || 'Ошибка');
                     return;
                 }
+                showDreamNotice(isPublic ? 'Мечта видна в витрине' : 'Мечта скрыта из витрины');
             } catch (e) {
-                eyeButtons.forEach(function(btn) { btn.textContent = oldIcon; btn.setAttribute('data-public', oldPublic); });
+                eyeButtons.forEach(function(btn) { paintDreamEye(btn, !isPublic); });
                 alert('Ошибка сети');
             }
         }
