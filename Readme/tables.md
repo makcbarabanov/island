@@ -85,6 +85,24 @@
 
 ---
 
+### 3b. `dream_measure_log`
+
+**Назначение:** журнал изменений количественного результата мечты. Каждая запись — одно сохранение фактического числа из карточки или формы. Прогресс шагов сюда не пишется. Миграция `_sql/mig_dream_measure_log.sql`.
+
+| Колонка | Тип | Описание |
+|---------|-----|----------|
+| `id` | BIGSERIAL PRIMARY KEY | Уникальный идентификатор записи. |
+| `dream_id` | INT NOT NULL | Мечта. REFERENCES `dreams(id)` ON DELETE CASCADE. |
+| `user_id` | INT NOT NULL | Кто внёс значение. REFERENCES `users(id)`. |
+| `old_value` | NUMERIC NULL | Значение до изменения. Пусто, если факта ещё не было. |
+| `new_value` | NUMERIC NOT NULL | Новое фактическое значение. |
+| `unit` | VARCHAR(50) NULL | Единица на момент записи. |
+| `created_at` | TIMESTAMPTZ NOT NULL DEFAULT NOW() | Когда значение сохранено. |
+
+Индекс: `idx_dream_measure_log_dream_created` на `(dream_id, created_at DESC)`.
+
+---
+
 ### 4. `dreams_steps`
 
 **Назначение:** Шаги к мечте (чек-лист). Каждая запись привязана к одной мечте (`dream_id`), имеет название, флаг «выполнено» и порядок сортировки. При удалении мечты шаги удаляются каскадно (ON DELETE CASCADE).

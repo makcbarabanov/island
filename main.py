@@ -203,6 +203,47 @@ def _measured_progress(initial, current, target) -> float:
     return float(max(Decimal("0"), min(Decimal("100"), pct)))
 
 
+def _measure_reached(initial, current, target) -> bool:
+    """Цель достигнута с учётом направления: рост и снижение считаются отдельно от шагов."""
+    start = _measure_decimal(initial)
+    now = _measure_decimal(current)
+    goal = _measure_decimal(target)
+    if start is None or now is None or goal is None:
+        return False
+    if goal == start:
+        return now == goal
+    if goal > start:
+        return now >= goal
+    return now <= goal
+
+
+def _format_measure(value) -> str:
+    number = _measure_decimal(value)
+    if number is None:
+        return "не указано"
+    text = format(number, "f")
+    if "." in text:
+        text = text.rstrip("0").rstrip(".")
+    return text or "0"
+
+
+def _measure_incomplete_detail(unit, current, target) -> str:
+    suffix = f" {unit}" if unit else ""
+    current_text = "не указан" if _measure_decimal(current) is None else f"{_format_measure(current)}{suffix}"
+    target_text = "не указана" if _measure_decimal(target) is None else f"{_format_measure(target)}{suffix}"
+    return f"Сейчас {current_text}, цель {target_text}. Числовой результат ещё не достигнут."
+
+
+def _insert_measure_log(cur, dream_id: int, user_id: int, old_value, new_value, unit):
+    cur.execute(
+        """INSERT INTO dream_measure_log (dream_id, user_id, old_value, new_value, unit)
+           VALUES (%s, %s, %s, %s, %s)
+           RETURNING id, created_at""",
+        (dream_id, user_id, old_value, new_value, unit),
+    )
+    return cur.fetchone()
+
+
 def _step_progress(steps: list[dict]) -> float:
     active = [s for s in (steps or []) if not s.get("deleted")]
     if not active:
@@ -566,6 +607,11 @@ class DreamUpdate(BaseModel):
     measure_initial: Optional[Decimal] = None
     measure_current: Optional[Decimal] = None
     measure_target: Optional[Decimal] = None
+    confirm_incomplete_measure: Optional[bool] = None
+
+
+class MeasureUpdate(BaseModel):
+    value: Decimal
 
 class StepCreate(BaseModel):
     title: str
@@ -3698,6 +3744,107 @@ def create_dream(body: DreamCreate, request: Request):
 # Маппинг status_id -> code для старой схемы (колонка status VARCHAR)
 _STATUS_ID_TO_CODE = {1: "planned", 2: "in_progress", 3: "done"}
 
+def _measure_log_rows(cur, dream_id: int):
+    cur.execute(
+        """SELECT L.id, L.user_id, L.old_value, L.new_value, L.unit, L.created_at,
+                  U.name, U.surname
+           FROM dream_measure_log L
+           JOIN users U ON U.id = L.user_id
+           WHERE L.dream_id = %s
+           ORDER BY L.created_at ASC, L.id ASC""",
+        (dream_id,),
+    )
+    events = []
+    for row in cur.fetchall():
+        author = " ".join(part for part in ((row.get("name") or "").strip(), (row.get("surname") or "").strip()) if part)
+        events.append({
+            "id": row["id"],
+            "user_id": row["user_id"],
+            "author": author or str(row["user_id"]),
+            "old_value": float(row["old_value"]) if row.get("old_value") is not None else None,
+            "new_value": float(row["new_value"]),
+            "unit": row.get("unit"),
+            "created_at": row["created_at"].isoformat() if row.get("created_at") else None,
+        })
+    return events
+
+
+@app.get("/dreams/{dream_id}/measure-log")
+def get_dream_measure_log(dream_id: int, user_id: int, viewer_id: Optional[int] = None):
+    """История количественного результата. Доступна тому, кто может править мечту."""
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            _resolve_editor_and_check_dream(cur, dream_id, user_id, viewer_id)
+            return {"events": _measure_log_rows(cur, dream_id)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        _return_conn(conn)
+
+
+@app.post("/dreams/{dream_id}/measure")
+def update_dream_measure(dream_id: int, body: MeasureUpdate, user_id: int, viewer_id: Optional[int] = None):
+    """Записать новое фактическое значение из карточки и сохранить старое в журнале."""
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            _resolve_editor_and_check_dream(cur, dream_id, user_id, viewer_id)
+            editor_id = viewer_id if viewer_id is not None else user_id
+            cur.execute(
+                """SELECT measure_enabled, measure_unit, measure_initial, measure_current, measure_target
+                   FROM dreams WHERE id = %s""",
+                (dream_id,),
+            )
+            existing = cur.fetchone()
+            if not existing or not existing.get("measure_enabled"):
+                raise HTTPException(status_code=400, detail="У этой мечты нет количественного результата")
+            new_value = _measure_decimal(body.value)
+            if new_value is None:
+                raise HTTPException(status_code=400, detail="Введите число")
+            old_value = _measure_decimal(existing.get("measure_current"))
+            if old_value is not None and new_value == old_value:
+                raise HTTPException(status_code=400, detail="Значение не изменилось")
+            unit = existing.get("measure_unit")
+            cur.execute(
+                "UPDATE dreams SET measure_current = %s WHERE id = %s",
+                (new_value, dream_id),
+            )
+            logged = _insert_measure_log(cur, dream_id, editor_id, old_value, new_value, unit)
+            conn.commit()
+            initial = existing.get("measure_initial")
+            target = existing.get("measure_target")
+            return {
+                "ok": True,
+                "measure_current": float(new_value),
+                "measure_initial": float(initial) if initial is not None else None,
+                "measure_target": float(target) if target is not None else None,
+                "measure_unit": unit,
+                "progress": round(_measured_progress(initial, new_value, target), 2),
+                "progress_source": "measure",
+                "log": {
+                    "id": logged["id"],
+                    "user_id": editor_id,
+                    "old_value": float(old_value) if old_value is not None else None,
+                    "new_value": float(new_value),
+                    "unit": unit,
+                    "created_at": logged["created_at"].isoformat() if logged.get("created_at") else None,
+                },
+            }
+    except HTTPException:
+        raise
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        _return_conn(conn)
+
+
 @app.patch("/dreams/{dream_id}")
 def update_dream(
     dream_id: int,
@@ -3722,6 +3869,7 @@ def update_dream(
             existing = cur.fetchone() or {}
             old_status_id = existing.get("status_id")
             payload = body.model_dump(exclude_unset=True)
+            confirm_incomplete = bool(payload.pop("confirm_incomplete_measure", False))
 
             if "is_public" in payload:
                 actor_id = _require_session_user(request, editor_id)
@@ -3773,6 +3921,17 @@ def update_dream(
                     status_code=400,
                     detail="Для измеримого результата укажите единицу, «Сейчас» и «Хочу»",
                 )
+            if (
+                payload.get("status_id") == 3
+                and old_status_id != 3
+                and final_enabled
+                and not _measure_reached(final_initial, final_current, final_target)
+                and not confirm_incomplete
+            ):
+                raise HTTPException(
+                    status_code=409,
+                    detail=_measure_incomplete_detail(final_unit, final_current, final_target),
+                )
 
             updates, vals = [], []
             if "dream" in payload and payload["dream"] is not None:
@@ -3817,6 +3976,11 @@ def update_dream(
                 "UPDATE dreams SET " + ", ".join(updates) + " WHERE id = %s",
                 vals,
             )
+            if "measure_current" in payload:
+                new_value = _measure_decimal(payload.get("measure_current"))
+                old_value = _measure_decimal(existing.get("measure_current"))
+                if new_value is not None and new_value != old_value:
+                    _insert_measure_log(cur, dream_id, editor_id, old_value, new_value, final_unit)
             conn.commit()
             # При переходе мечты в статус «выполнено» (3) — одна запись в dreams_log (единый источник для лендинга и кабинета)
             if payload.get("status_id") == 3 and old_status_id != 3:

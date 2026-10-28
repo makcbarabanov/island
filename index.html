@@ -1419,7 +1419,13 @@
         .dream-steps-empty-btn { width: 100%; margin: 0; min-height: 44px; padding: 10px 14px; border: 0; border-radius: 999px; background: #2e9b4a; color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; }
         .dream-steps-empty--quiet { padding: 10px 0 0; border: 0; background: transparent; text-align: left; }
         .dream-steps-empty--quiet p { margin: 0; max-width: none; }
-        .dream-result-row { display: flex; justify-content: space-between; gap: 10px; margin-top: 6px; color: #667085; font-size: 12px; }
+        .dream-result-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 6px; color: #667085; font-size: 12px; }
+        .dream-measure-now { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+        .dream-measure-update { width: auto; flex: 0 0 auto; margin: 0; min-height: 0; padding: 2px 8px; border: 1px solid #d7e6d8; border-radius: 999px; background: #fff; color: #2e7d32; font-size: 12px; font-weight: 700; line-height: 1.4; white-space: nowrap; cursor: pointer; }
+        .dream-measure-form { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+        .dream-measure-form.hidden { display: none; }
+        .dream-measure-form input { width: 92px; margin: 0; padding: 6px 8px; }
+        .dream-measure-form button { width: auto; flex: 0 0 auto; margin: 0; min-height: 0; padding: 6px 10px; }
         .dream-progress-track { height: 7px; margin-top: 8px; border-radius: 999px; background: #e5e7eb; overflow: hidden; }
         .dream-progress-fill { height: 100%; border-radius: inherit; background: #55a86b; }
         .dream-product-link { display: inline-block; max-width: 100%; margin-top: 9px; color: #2e7d32; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -2935,7 +2941,7 @@
                         </div>
                     </div>
                     <button type="button" class="app-footer-logout" id="app-footer-logout" title="Выйти" onclick="logout()">Выйти</button>
-                    <span class="app-version" aria-hidden="true">408</span>
+                    <span class="app-version" aria-hidden="true">409</span>
                 </div>
             </footer>
         </div>
@@ -7143,7 +7149,8 @@
                     var eyeIcon = isPublic ? '👁️' : '🙈';
                     var stepsEditableHtml = buildDreamStepPagerHtml(dreamId, steps, titleCounterMap, { canManage: true, isReadOnly: false, compactSeries: true });
                     var cardOwnerId = (dreamEditContext.ownerId != null && dreamEditContext.ownerId !== 0) ? dreamEditContext.ownerId : (currentUser && currentUser.id) || '';
-                    card.innerHTML = buildDreamPhotoHeroHtml(d) + '<div class="dream-card-title-row"><div class="card-dream-text">' + buildDreamCardTitleHtml(text, (d.deadline || '').toString().slice(0, 10)) + '</div></div>' + buildDreamCardProgressHtml(d) + buildDreamProductLinkHtml(d) + '<div class="card-row2"><span class="card-price">' + escapeHtml(price) + ' руб.</span><div class="card-actions"><button type="button" class="dream-eye" data-dream-id="' + dreamId + '" data-public="' + (isPublic ? '1' : '0') + '" data-owner-id="' + cardOwnerId + '">' + eyeIcon + '</button>' + buildStatusPickerHtml(dreamId, statusId) + '<button type="button" class="dream-edit-btn" title="Редактирование">✏️</button></div></div><div class="card-steps">' + stepsEditableHtml + '</div>';
+                    card.innerHTML = buildDreamPhotoHeroHtml(d) + '<div class="dream-card-title-row"><div class="card-dream-text">' + buildDreamCardTitleHtml(text, (d.deadline || '').toString().slice(0, 10)) + '</div></div>' + buildDreamCardProgressHtml(d, true) + buildDreamProductLinkHtml(d) + '<div class="card-row2"><span class="card-price">' + escapeHtml(price) + ' руб.</span><div class="card-actions"><button type="button" class="dream-eye" data-dream-id="' + dreamId + '" data-public="' + (isPublic ? '1' : '0') + '" data-owner-id="' + cardOwnerId + '">' + eyeIcon + '</button>' + buildStatusPickerHtml(dreamId, statusId) + '<button type="button" class="dream-edit-btn" title="Редактирование">✏️</button></div></div><div class="card-steps">' + stepsEditableHtml + '</div>';
+                    wireDreamMeasureUpdate(card);
                     card.querySelector('.dream-edit-btn').addEventListener('click', function(ev) { ev.stopPropagation(); openEditDreamModal(d); });
                     card.querySelector('.dream-eye').addEventListener('click', function(ev) { ev.preventDefault(); ev.stopPropagation(); var oid = this.getAttribute('data-owner-id'); saveDreamPrivacy(dreamId, this.getAttribute('data-public') !== '1', oid ? parseInt(oid, 10) : undefined); });
                     var picker = card.querySelector('.status-picker');
@@ -7171,7 +7178,7 @@
                         }
                     });
                 } else {
-                    card.innerHTML = buildDreamPhotoHeroHtml(d) + '<div class="dream-card-title-row"><div class="card-dream-text">' + buildDreamCardTitleHtml(text, (d.deadline || '').toString().slice(0, 10)) + '</div></div>' + buildDreamCardProgressHtml(d) + buildDreamProductLinkHtml(d) + '<div class="card-row2"><span class="card-price">' + escapeHtml(price) + ' руб.</span></div><div class="card-steps">' + readOnlyPagerHtml + '</div>';
+                    card.innerHTML = buildDreamPhotoHeroHtml(d) + '<div class="dream-card-title-row"><div class="card-dream-text">' + buildDreamCardTitleHtml(text, (d.deadline || '').toString().slice(0, 10)) + '</div></div>' + buildDreamCardProgressHtml(d, false) + buildDreamProductLinkHtml(d) + '<div class="card-row2"><span class="card-price">' + escapeHtml(price) + ' руб.</span></div><div class="card-steps">' + readOnlyPagerHtml + '</div>';
                     wireDreamStepPager(card.querySelector('.dream-step-pager'));
                 }
                 track.appendChild(card);
@@ -9641,7 +9648,7 @@
             var t = buildDreamStepsCellTitle(d);
             return '<div class="dream-step-inline" style="' + buildDreamStepsCellStyle(d) + '" title="' + escapeAttr(t) + '">' + buildDreamStepsLabel(d) + '</div>';
         }
-        function buildDreamCardProgressHtml(d) {
+        function buildDreamCardProgressHtml(d, canUpdate) {
             var m = dreamStepProgressMeta(d);
             var left = m.measured
                 ? ('Сейчас: ' + m.done + (m.unit ? (' ' + m.unit) : ''))
@@ -9649,7 +9656,58 @@
             var right = m.measured
                 ? ('Хочу: ' + m.total + (m.unit ? (' ' + m.unit) : ''))
                 : (Math.round(m.pct) + '%');
-            return '<div class="dream-progress-track" aria-label="' + escapeAttr(buildDreamStepsCellTitle(d)) + '"><div class="dream-progress-fill" style="width:' + m.pct + '%"></div></div><div class="dream-result-row"><span>' + escapeHtml(left) + '</span><span>' + escapeHtml(right) + '</span></div>';
+            var updateBtn = (canUpdate && m.measured)
+                ? '<button type="button" class="dream-measure-update" data-dream-id="' + d.id + '">↻ Обновить</button>'
+                : '';
+            var form = (canUpdate && m.measured)
+                ? '<form class="dream-measure-form hidden" data-dream-id="' + d.id + '"><input type="number" step="any" inputmode="decimal" aria-label="Новое значение" value="' + escapeAttr(m.done == null ? '' : String(m.done)) + '"><button type="submit">Сохранить</button><button type="button" class="dream-measure-cancel">Отмена</button></form>'
+                : '';
+            return '<div class="dream-progress-track" aria-label="' + escapeAttr(buildDreamStepsCellTitle(d)) + '"><div class="dream-progress-fill" style="width:' + m.pct + '%"></div></div><div class="dream-result-row"><span class="dream-measure-now"><span>' + escapeHtml(left) + '</span>' + updateBtn + '</span><span>' + escapeHtml(right) + '</span></div>' + form;
+        }
+        function wireDreamMeasureUpdate(card) {
+            if (!card) return;
+            var button = card.querySelector('.dream-measure-update');
+            var form = card.querySelector('.dream-measure-form');
+            if (!button || !form) return;
+            button.addEventListener('click', function(ev) {
+                ev.preventDefault();
+                ev.stopPropagation();
+                form.classList.remove('hidden');
+                var input = form.querySelector('input');
+                if (input) { input.focus(); input.select(); }
+            });
+            var cancel = form.querySelector('.dream-measure-cancel');
+            if (cancel) cancel.addEventListener('click', function(ev) {
+                ev.preventDefault();
+                ev.stopPropagation();
+                form.classList.add('hidden');
+            });
+            form.addEventListener('submit', function(ev) {
+                ev.preventDefault();
+                ev.stopPropagation();
+                var input = form.querySelector('input');
+                saveDreamMeasure(button.getAttribute('data-dream-id'), input ? input.value : '');
+            });
+        }
+        async function saveDreamMeasure(dreamId, raw) {
+            var value = String(raw == null ? '' : raw).trim().replace(',', '.');
+            if (value === '' || !isFinite(Number(value))) { alert('Введите число'); return; }
+            dreamIdToRestoreAfterRefresh = dreamId;
+            try {
+                var res = await fetch(API_BASE_URL + '/dreams/' + dreamId + '/measure?' + dreamApiUserParams(), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ value: value })
+                });
+                if (!res.ok) {
+                    var e = await res.json().catch(function() { return {}; });
+                    alert(e.detail || 'Ошибка');
+                    return;
+                }
+                await refreshAfterDreamChange();
+            } catch (err) {
+                alert('Ошибка сети');
+            }
         }
         function buildDreamPhotoHeroHtml(d) {
             if (!d || !d.has_photo || !d.image_url) return '';
@@ -9894,7 +9952,8 @@
                 card.className = 'dreams-mobile-card';
                 card.dataset.dreamId = dreamId;
                 var mobileOwnerId = (dreamEditContext.ownerId != null && dreamEditContext.ownerId !== 0) ? dreamEditContext.ownerId : (currentUser && currentUser.id) || '';
-                card.innerHTML = buildDreamPhotoHeroHtml(d) + '<div class="dream-card-title-row"><div class="card-dream-text">' + buildDreamCardTitleHtml(text, (d.deadline || '').toString().slice(0, 10)) + '</div></div>' + buildDreamCardProgressHtml(d) + buildDreamProductLinkHtml(d) + '<div class="card-row2"><span class="card-price">' + escapeHtml(price) + ' руб.</span><div class="card-actions"><button type="button" class="dream-eye" data-dream-id="' + dreamId + '" data-public="' + (isPublic ? '1' : '0') + '" data-owner-id="' + mobileOwnerId + '" aria-label="Приватность">' + eyeIcon + '</button>' + buildStatusPickerHtml(dreamId, statusId) + '<button type="button" class="dream-edit-btn" title="Редактирование">✏️</button></div></div><div class="card-steps">' + stepPagerHtml + '</div>';
+                card.innerHTML = buildDreamPhotoHeroHtml(d) + '<div class="dream-card-title-row"><div class="card-dream-text">' + buildDreamCardTitleHtml(text, (d.deadline || '').toString().slice(0, 10)) + '</div></div>' + buildDreamCardProgressHtml(d, true) + buildDreamProductLinkHtml(d) + '<div class="card-row2"><span class="card-price">' + escapeHtml(price) + ' руб.</span><div class="card-actions"><button type="button" class="dream-eye" data-dream-id="' + dreamId + '" data-public="' + (isPublic ? '1' : '0') + '" data-owner-id="' + mobileOwnerId + '" aria-label="Приватность">' + eyeIcon + '</button>' + buildStatusPickerHtml(dreamId, statusId) + '<button type="button" class="dream-edit-btn" title="Редактирование">✏️</button></div></div><div class="card-steps">' + stepPagerHtml + '</div>';
+                wireDreamMeasureUpdate(card);
                 track.appendChild(card);
                 card.querySelector('.dream-edit-btn').addEventListener('click', function(ev) { ev.stopPropagation(); openEditDreamModal(d); });
                 var eyeBtn = card.querySelector('.dream-eye');
@@ -10458,8 +10517,36 @@
                 if (btn) { btn.disabled = false; btn.textContent = 'Добавить'; }
             }
         }
-        async function saveDreamStatus(dreamId, statusId) {
-            await patchDream(dreamId, { status_id: statusId });
+        async function saveDreamStatus(dreamId, statusId, confirmIncomplete) {
+            var body = { status_id: statusId };
+            if (confirmIncomplete) body.confirm_incomplete_measure = true;
+            dreamIdToRestoreAfterRefresh = dreamId;
+            try {
+                var res = await fetch(API_BASE_URL + '/dreams/' + dreamId + '?' + dreamApiUserParams(), {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                if (res.status === 409) {
+                    var warn = await res.json().catch(function() { return {}; });
+                    var text = typeof warn.detail === 'string' ? warn.detail : 'Числовой результат ещё не достигнут.';
+                    if (window.confirm(text + '\n\nВсё равно отметить мечту исполненной?')) {
+                        return saveDreamStatus(dreamId, statusId, true);
+                    }
+                    await refreshAfterDreamChange();
+                    return;
+                }
+                if (!res.ok) {
+                    var e = await res.json().catch(function() { return {}; });
+                    alert(e.detail || 'Ошибка');
+                    await refreshAfterDreamChange();
+                    return;
+                }
+                await refreshAfterDreamChange();
+            } catch (err) {
+                alert('Ошибка сети');
+                await refreshAfterDreamChange();
+            }
         }
         async function saveDreamPrivacy(dreamId, isPublic, ownerId) {
             var eyeButtons = document.querySelectorAll('.dream-eye[data-dream-id="' + dreamId + '"]');

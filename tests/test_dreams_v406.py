@@ -40,6 +40,18 @@ class DreamProgressTests(unittest.TestCase):
         self.assertEqual(main._measured_progress(5, 5, 5), 100)
         self.assertEqual(main._measured_progress(5, 4, 5), 0)
 
+    def test_weight_loss_reaches_only_at_target(self):
+        self.assertFalse(main._measure_reached(93, 93, 83))
+        self.assertEqual(main._measured_progress(93, 93, 83), 0)
+        self.assertFalse(main._measure_reached(93, 89, 83))
+        self.assertEqual(main._measured_progress(93, 89, 83), 40)
+        self.assertTrue(main._measure_reached(93, 83, 83))
+        self.assertEqual(main._measured_progress(93, 83, 83), 100)
+
+    def test_missing_measure_is_not_reached(self):
+        self.assertFalse(main._measure_reached(93, None, 83))
+        self.assertIn("не указан", main._measure_incomplete_detail("кг", None, 83))
+
     def test_step_progress_ignores_deleted_steps(self):
         steps = [
             {"completed": True, "deleted": False},
@@ -128,6 +140,14 @@ class DreamMobileFormMarkupTests(unittest.TestCase):
         self.assertNotIn("dream-card-deadline", self.html)
         self.assertNotIn("addRowDreamSwipe + stepPagerHtml + addRowDreamSwipe", self.html)
         self.assertNotIn("if (!pages.length) pages.push([]);", self.html)
+
+    def test_card_has_measure_update_and_completion_warning(self):
+        self.assertIn("↻ Обновить", self.html)
+        self.assertIn("function saveDreamMeasure", self.html)
+        self.assertIn("confirm_incomplete_measure", self.html)
+        self.assertIn("Всё равно отметить мечту исполненной?", self.html)
+        self.assertIn("buildDreamCardProgressHtml(d, true)", self.html)
+        self.assertIn("buildDreamCardProgressHtml(d, false)", self.html)
 
 
 if __name__ == "__main__":
