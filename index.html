@@ -1397,7 +1397,7 @@
         .dream-measure-fields input[type="number"] { width: 100%; min-width: 0; margin: 0; box-sizing: border-box; padding: 8px; }
         .dream-initial-fix { display: inline-block; margin-top: 7px; font-size: 12px; color: #2e7d32; }
         .dream-photo-hero { position: relative; height: 210px; margin: -16px -16px 14px; overflow: hidden; background: #edf0ec; border-radius: 14px 14px 0 0; }
-        .dream-photo-hero img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+        .dream-photo-hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
         .dream-favorite-count { position: absolute; right: 8px; bottom: 8px; z-index: 2; display: inline-flex; align-items: center; gap: 4px; min-height: 28px; padding: 4px 9px; border-radius: 12px; background: rgba(32, 36, 34, .62); color: #fff; font-size: 13px; font-weight: 700; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
         .dream-photo-tools { position: absolute; top: 8px; left: 8px; right: 8px; z-index: 2; display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; pointer-events: none; }
         .dream-photo-cluster { pointer-events: auto; display: inline-flex; align-items: center; gap: 2px; max-width: calc(100% - 52px); padding: 3px; border-radius: 16px; background: rgba(32, 36, 34, .62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
@@ -1970,11 +1970,9 @@
             .dreams-mobile-card > .dream-photo-hero {
                 flex: 1 1 96px;
                 height: auto;
-                min-width: 0;
                 min-height: 96px;
                 max-height: none;
                 margin: -16px -16px 8px;
-                overflow: hidden;
             }
             .dreams-mobile-card > .dream-photo-hero.dream-photo-hero--empty {
                 flex: 0 0 108px;
@@ -4224,7 +4222,6 @@
             if (savedDreamsViewMode === 'list' || savedDreamsViewMode === 'slider') dreamsViewMode = savedDreamsViewMode;
         } catch (e) {}
         var dreamsFilter = 'in_progress'; // all | planned | in_progress | done | open | closed — по умолчанию «В работе»
-        var cardStatusHoldId = null;
         var dreamIdToRestoreAfterRefresh = null;
         var currentIndexToRestoreAfterRefresh = null;
         /** Минуты от полуночи для сортировки внутри одного дня: приоритет `start_time`, иначе `end_time` (одно время); без времени — после всех с временем. */
@@ -4357,19 +4354,13 @@
             if (dreamsFilter === 'all') return dreams;
             if (dreamsFilter === 'open') return dreams.filter(function(d) { return d.is_public !== false; });
             if (dreamsFilter === 'closed') return dreams.filter(function(d) { return d.is_public === false; });
-            var filtered = dreams;
             if (dreamsFilter === 'planned' || dreamsFilter === 'in_progress' || dreamsFilter === 'done') {
-                filtered = dreams.filter(function(d) {
+                return dreams.filter(function(d) {
                     var code = d.status_code || d.status || (d.status_obj && d.status_obj.code) || (d.status_id === 1 ? 'planned' : d.status_id === 2 ? 'in_progress' : d.status_id === 3 ? 'done' : 'planned');
                     return code === dreamsFilter;
                 });
             }
-            if (cardStatusHoldId == null) return filtered;
-            var holdId = String(cardStatusHoldId);
-            if (filtered.some(function(d) { return String(d.id) === holdId; })) return filtered;
-            return dreams.filter(function(d) {
-                return String(d.id) === holdId || filtered.some(function(item) { return String(item.id) === String(d.id); });
-            });
+            return dreams;
         }
         function applyDreamsFilterUI() {
             var df = document.getElementById('dreams-filter');
@@ -7402,7 +7393,6 @@
         document.getElementById('menu-my-steps').addEventListener('click', function(e) { e.preventDefault(); switchMenu('steps'); });
         document.querySelectorAll('#dreams-filter .dreams-filter-btn').forEach(function(btn) {
             btn.addEventListener('click', function() {
-                cardStatusHoldId = null;
                 dreamsFilter = this.dataset.filter || 'all';
                 applyDreamsFilterUI();
                 if (!document.getElementById('buddy-block').classList.contains('hidden')) refreshBuddyDreamsDisplay();
@@ -10754,7 +10744,6 @@
                     await refreshAfterDreamChange();
                     return;
                 }
-                cardStatusHoldId = dreamId;
                 await refreshAfterDreamChange();
                 showDreamNotice(dreamStatusNotice(statusId));
             } catch (err) {
