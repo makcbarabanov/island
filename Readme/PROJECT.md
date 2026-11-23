@@ -44,14 +44,14 @@
 
 **Backend:** Python 3.12+, FastAPI, psycopg2-binary, dotenv.  
 **Frontend:** статический HTML/JS/CSS, Fetch API.  
-**БД:** PostgreSQL 14+.  
+**БД:** PostgreSQL. В старых записях указано «14+». На проде 2026-11-24 подтверждено `SELECT version()` из контейнера `island-app-1`: **PostgreSQL 17.12**. Это отдельный сервер, адрес в `DB_HOST`, не контейнер приложения. Рядом на том же хосте есть чужой контейнер `dz8-db-1` (Postgres 16) — к Острову он не относится.  
 **Прод (веб):** Ubuntu, **Docker Compose** (`app`), **Nginx**, TLS (Let’s Encrypt), домен islanddream.ru; приложение на хосте **188.225.44.48**.
 
 **Инфраструктура (справочно):** отдельные хосты для приложения и БД возможны; детали подключения — в `.env` на соответствующих машинах. Пул соединений к БД в коде не реализован — при росте нагрузки имеет смысл добавить.
 
 ### Переменные окружения (`.env`)
 
-`DB_HOST`, `DB_USER`, `DB_PASS`, `DB_NAME`, при необходимости `DB_PORT`, `DB_SSLMODE`, `SECRET_KEY`. Ошибки SSL — см. подсказки в RUNBOOK/коде.
+Имена на проде, снятые 2026-11-24, без значений: `DB_HOST`, `DB_USER`, `DB_PASS`, `DB_NAME`, `DB_PORT`, `DB_SSLMOE` (в файле именно так, не `DB_SSLMODE`), `SESSION_SECRET`, `BOT_API_KEY`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, `GEMINI_API_KEY`, `GEMINI_MODEL`, `HF_TOKEN`, `HF_MODEL`, `VK_CALLBACK_CONFIRMATION`, `VK_CALLBACK_SECRET`, `VK_COMMUNITY_TOKEN`, `VK_GROUP_ID`, `Umoney_API_KEY`. Значения не копировать в документы и чаты.
 
 ---
 
@@ -75,7 +75,7 @@
 | **users** | Пользователи |
 | **dreams** | Мечты |
 | **dreams_steps** | Шаги |
-| **dream_statuses** | Статусы мечты |
+| **dreams_statuses** | Статусы мечты. Имя таблицы именно такое; см. [tables.md](tables.md) |
 | **dreams_categories** | Категории |
 
 ---
@@ -88,10 +88,10 @@
 
 ## Резервное копирование БД
 
-- **Папка:** `db_backups/` в корне проекта.
-- **Скрипт:** `db_backups/bu_db.sh` — по cron; при изменении размера БД — дамп `default_db_YYYYMMDD_HHMMSS.dump` (`pg_dump -F c`).
-- **Лог:** `db_backups/backup.log`.
-- **Восстановление:** `pg_restore` (см. RUNBOOK для контейнеров и хостов).
+- Git хранит исходники. Git **не** хранит содержимое PostgreSQL, каталоги `media/` и `private_media/` и файл `.env`.
+- На сервере 2026-11-24 каталог дампов: `/home/makc/Backups/island/`. Самый новый ненулевой файл в листинге этой проверки — `prod_before_bloom_admin_commands_20261011_112221.dump` (11 октября 2026). В том же каталоге есть файлы размером 0 байт; их как копию не считать. Восстановление из дампа в этой проверке не запускалось.
+- В репозитории также есть `db_backups/` со ссылками на часть тех дампов. Скрипт `db_backups/bu_db.sh` описан исторически; что cron вызывает его сегодня, этой проверкой не подтверждено.
+- Рядом лежат каталоги снимков кода `dreams_v406_20261025_023847`, `dreams_v407_20261025_031559`, `dreams_v408_20261025_103217`. Это не дамп базы.
 
 ---
 

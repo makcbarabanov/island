@@ -77,6 +77,33 @@ class BridgeParseTests(unittest.TestCase):
             date(2026, 9, 3),
         )
 
+    def test_extract_date_formats(self):
+        msg = datetime(2026, 10, 2, 22, 12, tzinfo=MSK)
+        cases = [
+            ("Отчёт 02.10.2026", date(2026, 10, 2)),
+            ("Отчёт за 02.10", date(2026, 10, 2)),
+            ("Отчет за 2.10:", date(2026, 10, 2)),
+            ("Отчёт за 2 октября", date(2026, 10, 2)),
+            ("Отчёт за 02 октября", date(2026, 10, 2)),
+            ("Отчёт 02. 10.2026", date(2026, 10, 2)),
+        ]
+        for text, expected in cases:
+            with self.subTest(text=text):
+                self.assertEqual(
+                    extract_report_date(text, message_date=msg),
+                    expected,
+                )
+
+    def test_extract_multiple_dates(self):
+        from bridge_parse import extract_report_dates
+
+        text = "Отчёт 02.10.2026\n...\nОтчёт 03.10.2026\n..."
+        self.assertEqual(
+            extract_report_dates(text, message_date=datetime(2026, 10, 4, tzinfo=MSK)),
+            [date(2026, 10, 2), date(2026, 10, 3)],
+        )
+
+
 
 if __name__ == "__main__":
     unittest.main()

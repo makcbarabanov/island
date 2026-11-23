@@ -13,6 +13,7 @@ TELEGRAM_USERNAME_TO_USER_ID: dict[str, int] = {
     "timur_shamsudinov": 29,
     "writer_ksenia": 58,
     "aigul_star": 67,
+    "ekaterinakikas": 129,
 }
 
 USER_ID_TO_LABEL: dict[int, str] = {
@@ -21,6 +22,7 @@ USER_ID_TO_LABEL: dict[int, str] = {
     29: "Тимур",
     58: "Ксения",
     67: "Айгуль",
+    129: "Катя",
 }
 
 

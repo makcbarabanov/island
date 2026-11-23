@@ -23,7 +23,9 @@ from manual_report import build_preview  # noqa: E402
 from marathon_digest_format import format_telegram_evening_digest  # noqa: E402
 
 SEP1 = date(2026, 9, 1)
+OCT1 = date(2026, 10, 1)
 ALLOWLIST = {1, 17, 29, 67, 58}
+OCT_ALLOWLIST = {1, 17, 29, 67, 58, 129}
 
 
 class AllowlistTests(unittest.TestCase):
@@ -37,11 +39,19 @@ class AllowlistTests(unittest.TestCase):
         self.assertNotIn(19, ids)
         self.assertNotIn(128, ids)
 
-    def test_digest_excludes_non_allowlist(self):
+    def test_october_allowlist_six(self):
+        ids = get_allowlist_user_ids(OCT1)
+        self.assertEqual(ids, OCT_ALLOWLIST)
+        self.assertIn(129, ids)
+
+    def test_digest_roster_is_full_allowlist(self):
         users = {
             1: {"id": 1, "name": "Макс", "display_label": "@makc"},
+            17: {"id": 17, "name": "Света", "display_label": "@sveta"},
             19: {"id": 19, "name": "Александр", "display_label": "Александр"},
             29: {"id": 29, "name": "Тимур", "display_label": "@timur"},
+            58: {"id": 58, "name": "Ксения", "display_label": "@ksenia"},
+            67: {"id": 67, "name": "Айгуль", "display_label": "@aigul"},
         }
         snap, diag = build_digest_payload(
             SEP1,
@@ -54,8 +64,9 @@ class AllowlistTests(unittest.TestCase):
             },
             reports={},
         )
-        self.assertEqual(snap["today"]["active"], 2)
+        self.assertEqual(snap["today"]["active"], 5)
         active_ids = [p["id"] for p in snap["participants"] if p.get("active_today")]
+        self.assertEqual(sorted(active_ids), sorted(ALLOWLIST))
         self.assertNotIn(19, active_ids)
         names = [
             p.get("display_label")

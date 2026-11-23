@@ -42,7 +42,9 @@
 
 ---
 
-*Счётчик сборки в UI: элемент `.app-version` в `index.html` (текущая **стабильная веха** — [Readme/STABLE_BASELINE.md](Readme/STABLE_BASELINE.md)).*
+*Счётчик сборки в UI: элемент `.app-version` в `index.html`. Какой номер сейчас на проде — верх [Readme/STABLE_BASELINE.md](Readme/STABLE_BASELINE.md). Нижняя часть того файла — старая заморозка вёрстки, не текущий релиз.*
+
+Порядок чтения для нового агента (Cursor или Codex): этот файл, затем [AGENTS.md](AGENTS.md).
 
 ## Правило дневника шагов
 

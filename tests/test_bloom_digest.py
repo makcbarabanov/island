@@ -137,7 +137,8 @@ class BloomDigestTests(unittest.TestCase):
       _, d2 = build_digest_payload(self.TARGET, **kwargs)
       self.assertEqual(d1, d2)
 
-  def test_marathon_member_without_steps_today_not_in_active_list(self):
+  def test_marathon_member_without_steps_today_still_in_roster(self):
+      """N = allowlist: участник без шагов на день всё равно в активных."""
       snap, diag = build_digest_payload(
           self.TARGET,
           users=_users((1, "Макс"), (99, "Гость")),
@@ -145,12 +146,12 @@ class BloomDigestTests(unittest.TestCase):
           steps_by_user=_steps(1, [(1, "a", False, self.TARGET)]),
           reports={},
       )
-      self.assertEqual(diag["scheduled_today_user_ids"], [1])
+      self.assertEqual(diag["scheduled_today_user_ids"], [1, 99])
+      self.assertEqual(snap["today"]["active"], 2)
       guest = diag["per_user"].get("99") or diag["per_user"].get(99)
-      if guest:
-          self.assertFalse(guest["active_today"])
+      self.assertTrue(guest["active_today"])
       active_lines = [p for p in snap["participants"] if p["active_today"]]
-      self.assertEqual(len(active_lines), 1)
+      self.assertEqual(len(active_lines), 2)
 
   def test_unchecking_changes_result(self):
       done = _steps(1, [(1, "a", True, self.TARGET)])

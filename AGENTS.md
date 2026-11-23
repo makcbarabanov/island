@@ -32,3 +32,26 @@
 
 - Роли и границы: [Readme/PROJECT.md](Readme/PROJECT.md), корневой [README.md](README.md).
 - Деплой: [Readme/RUNBOOK.md](Readme/RUNBOOK.md).
+- Что сейчас отдаётся пользователям: верх [Readme/STABLE_BASELINE.md](Readme/STABLE_BASELINE.md). Ниже в том файле — историческая заморозка таблицы, не живой прод.
+
+## Старт для Cursor и Codex
+
+Codex не видит чаты Cursor. Начинай с файлов, не с пересказа.
+
+Открывай каталог `/home/makc/Data/Apps/island`. Это тот же каталог, что `~/Apps/island` (одна папка на диске). Не открывай `~/Apps/island-stabilize-prod` как основной проект: это отдельное рабочее дерево, его `index.html` не совпадает с продом.
+
+Порядок чтения:
+
+1. [README.md](README.md) — карта документов.
+2. Этот файл — роли и запреты.
+3. [Readme/AGENTS.md](Readme/AGENTS.md) — роли команды. Таблица «Форж / Продагент» относится к окнам Cursor.
+4. [Readme/RUNBOOK.md](Readme/RUNBOOK.md) — запуск и деплой.
+5. [Readme/PROJECT.md](Readme/PROJECT.md) — стек, окружение, бэкапы.
+6. [Readme/tables.md](Readme/tables.md) — схема БД.
+7. Верх [Readme/STABLE_BASELINE.md](Readme/STABLE_BASELINE.md) — какой номер версии сейчас на проде.
+
+Перед правкой: `git status` и `git rev-parse --short HEAD`. Локальная ветка `main` отстаёт от `origin/main`. В рабочем дереве есть незакоммиченный `index.html`, который короче и файла в git, и файла на проде. Его нельзя копировать на сервер и нельзя «чинить» через `git checkout`, `reset` или `clean` без отдельного согласия Макса.
+
+Проверено чтением 2026-11-24, без изменений на сервере. Прод: `ssh timeweb`, каталог `/home/makc/Apps/island`, ветка `main`, коммит `b0b6c43`, в футере `.app-version` **413**. Контейнер `island-app-1`, политика перезапуска `no`. Nginx `islanddream.ru` проксирует на `127.0.0.1:8000`.
+
+Пока Макс отдельно не сказал «Деплой» или другую явную команду на запись: не коммитить, не пушить, не делать `git pull` на проде, не пересобирать контейнер, не трогать PostgreSQL, Nginx и файлы на Timeweb. Чтение сервера допустимо. История этого чата не заменяет перечисленные файлы.
